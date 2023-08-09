@@ -1,0 +1,14 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+        - cisco.dcnm.dcnm_easy_fabric:
+            state: merged
+            config:
+            -   fabric_name: IR-Fabric
+                bgp_as: 100
+                replication_mode: Ingress
+            -   fabric_name: Mcast-Fabric
+                bgp_as: 200
+                # replication_mode: Multicast
+                pm_enable: True
