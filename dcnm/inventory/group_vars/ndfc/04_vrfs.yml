@@ -1,0 +1,126 @@
+vrfs:
+  f1_v1:
+    name: f1_v1
+    fabric: "{{ easy_fabric.f1.FABRIC_NAME }}"
+    vrf_name: v1
+    vrf_id: 63031
+    vlan_id: 3031
+    import_vpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    import_evpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    # import_vpn_rt: 65001:63031,65002:63032
+    # import_evpn_rt: 65001:63031,65002:63032
+    vrf_template: Default_VRF_Universal
+    vrf_extension_template: Default_VRF_Extension_Universal
+    service_vrf_template: null
+    attach:
+    - ip_address: "{{ devices.leaf_1.ip }}"
+    - ip_address: "{{ devices.leaf_2.ip }}"
+    - ip_address: "{{ devices.leaf_3.ip }}"
+    - ip_address: "{{ devices.leaf_4.ip }}"
+
+  f1_v2:
+    name: f1_v2
+    fabric: "{{ easy_fabric.f1.FABRIC_NAME }}"
+    vrf_name: v2
+    vrf_id: 63032
+    vlan_id: 3032
+    import_vpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    import_evpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    vrf_template: Default_VRF_Universal
+    vrf_extension_template: Default_VRF_Extension_Universal
+    service_vrf_template: null
+    attach:
+    - ip_address: "{{ devices.leaf_1.ip }}"
+    - ip_address: "{{ devices.leaf_2.ip }}"
+    - ip_address: "{{ devices.leaf_3.ip }}"
+    - ip_address: "{{ devices.leaf_4.ip }}"
+
+  f2_v1:
+    name: f2_v1
+    fabric: "{{ easy_fabric.f2.FABRIC_NAME }}"
+    vrf_name: v1
+    vrf_id: 63031
+    vlan_id: 3031
+    import_vpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    import_evpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    vrf_template: Default_VRF_Universal
+    vrf_extension_template: Default_VRF_Extension_Universal
+    service_vrf_template: null
+    attach:
+    - ip_address: "{{ devices.leaf_5.ip }}"
+    - ip_address: "{{ devices.leaf_6.ip }}"
+    - ip_address: "{{ devices.leaf_7.ip }}"
+    - ip_address: "{{ devices.leaf_8.ip }}"
+
+  f2_v2:
+    name: f2_v2
+    fabric: "{{ easy_fabric.f2.FABRIC_NAME }}"
+    vrf_name: v2
+    vrf_id: 63032
+    vlan_id: 3032
+    import_vpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    import_evpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    vrf_template: Default_VRF_Universal
+    vrf_extension_template: Default_VRF_Extension_Universal
+    service_vrf_template: null
+    attach:
+    - ip_address: "{{ devices.leaf_5.ip }}"
+    - ip_address: "{{ devices.leaf_6.ip }}"
+    - ip_address: "{{ devices.leaf_7.ip }}"
+    - ip_address: "{{ devices.leaf_8.ip }}"
+
+### If using an MSD fabric to interconnect sites, we need to apply networks and
+### VRFs to the MSD fabric, rather than the individual site fabrics.  The
+### VRFs below are duplicates of the above site/switch fabric VRFs but additionally define
+### attachments for the border_gateway roles, and will be used if the fabric name
+### is an MSD fabric.
+
+  msd_v1:
+    name: msd_v1
+    fabric: "{{ msd.MSD.FABRIC_NAME }}"
+    vrf_name: v1
+    vrf_id: 63031
+    vlan_id: 3031
+    import_vpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    import_evpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    vrf_template: Default_VRF_Universal
+    vrf_extension_template: Default_VRF_Extension_Universal
+    service_vrf_template: null
+    attach:
+    - ip_address: "{{ devices.leaf_1.ip }}"
+    - ip_address: "{{ devices.leaf_2.ip }}"
+    - ip_address: "{{ devices.leaf_3.ip }}"
+    - ip_address: "{{ devices.leaf_4.ip }}"
+    - ip_address: "{{ devices.leaf_5.ip }}"
+    - ip_address: "{{ devices.leaf_6.ip }}"
+    - ip_address: "{{ devices.leaf_7.ip }}"
+    - ip_address: "{{ devices.leaf_8.ip }}"
+    - ip_address: "{{ devices.border_gateway_1.ip }}"
+    - ip_address: "{{ devices.border_gateway_2.ip }}"
+    - ip_address: "{{ devices.border_gateway_3.ip }}"
+    - ip_address: "{{ devices.border_gateway_4.ip }}"
+
+  msd_v2:
+    name: msd_v2
+    fabric: "{{ msd.MSD.FABRIC_NAME }}"
+    vrf_name: v2
+    vrf_id: 63032
+    vlan_id: 3032
+    import_vpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    import_evpn_rt: "{{ easy_fabric.f1.BGP_AS }}:63031,{{ easy_fabric.f2.BGP_AS }}:63032"
+    vrf_template: Default_VRF_Universal
+    vrf_extension_template: Default_VRF_Extension_Universal
+    service_vrf_template: null
+    attach:
+    - ip_address: "{{ devices.leaf_1.ip }}"
+    - ip_address: "{{ devices.leaf_2.ip }}"
+    - ip_address: "{{ devices.leaf_3.ip }}"
+    - ip_address: "{{ devices.leaf_4.ip }}"
+    - ip_address: "{{ devices.leaf_5.ip }}"
+    - ip_address: "{{ devices.leaf_6.ip }}"
+    - ip_address: "{{ devices.leaf_7.ip }}"
+    - ip_address: "{{ devices.leaf_8.ip }}"
+    - ip_address: "{{ devices.border_gateway_1.ip }}"
+    - ip_address: "{{ devices.border_gateway_2.ip }}"
+    - ip_address: "{{ devices.border_gateway_3.ip }}"
+    - ip_address: "{{ devices.border_gateway_4.ip }}"
