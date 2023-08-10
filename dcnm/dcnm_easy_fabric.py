@@ -107,6 +107,7 @@ EXAMPLES = """
 
 import copy
 import json
+import re
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm import (
     dcnm_send,
@@ -608,29 +609,33 @@ class DcnmFabric:
         - default_vrf
         - REPLICATION_MODE
 
-        This method handles the most common case (uppercase dunder e.g. 
-        REPLICATION_MODE) to build a set of playbook parameters that can
-        be safely converted to uppercase dunder style.
+        This method builds a set of playbook parameters that conform to the
+        most common case (uppercase dunder e.g. REPLICATION_MODE) and so
+        can safely be translated to uppercase dunder style that NDFC expects
+        in the payload.
 
-        Special cases are handled in self.translate_to_ndfc_nv_pairs.
-        So far, all playbook-supported parameters are covered with this
-        method. We can add methods to translate the other cases if/when
-        they are needed.
+        See also: self.translate_to_ndfc_nv_pairs, where the actual
+        translation happens.
         """
+        # self._default_nv_pairs is already built via create_fabric()
+        re_spec = "^[A-Z0-9]+_[A-Z0-9]+"
         self.translatable_nv_pairs = set()
-        self.translatable_nv_pairs.add("anycast_lb_id")
-        self.translatable_nv_pairs.add("anycast_rp_ip_range")
-        self.translatable_nv_pairs.add("aaa_remote_ip_enabled")
-        self.translatable_nv_pairs.add("bgp_as")
-        self.translatable_nv_pairs.add("fabric_name")
-        self.translatable_nv_pairs.add("pm_enable")
-        self.translatable_nv_pairs.add("replication_mode")
+        for param in self._default_nv_pairs:
+            if re.search(re_spec, param):
+                self.translatable_nv_pairs.add(param)
+        msg = f"translatable_nv_pairs: {self.translatable_nv_pairs}"
+        self.log_msg(msg=msg)
 
     def translate_to_ndfc_nv_pairs(self, params):
         """
         translate keys in params dict into what NDFC
         expects in nvPairs and populate dict 
         self.translated_nv_pairs
+
+        TODO:
+        -   We currently don't handle non-dunder uppercase and lowercase,
+            e.g. THIS or that.  But (knock on wood), so far there are no
+            cases like this (or THAT).
         """
         self.log_msg(f"translate_to_ndfc_nv_pairs params {params}")
         self.translated_nv_pairs = {}
