@@ -42,6 +42,18 @@ options:
     type: list
     elements: dict
     suboptions:
+      anycast_lb_id:
+        description:
+        - Underlay Anycast Loopback Id
+        type: int
+        required: false
+        default: ""
+      anycast_rp_ip_range:
+        description:
+        - Anycast or Phantom RP IP Address Range
+        type: str
+        required: false
+        default: 10.254.254.0/24
       aaa_remote_ip_enabled:
         description:
         - Enable (True) or disable (False) AAA remote IP
@@ -208,54 +220,90 @@ class DcnmFabric:
         state = self.params["state"]
 
         if state != "merged":
-            msg = f"We only support merged state. Got state {state}"
+            msg = f"Only merged state is supported. Got state {state}"
             self.module.fail_json(msg=msg)
 
         if state == "merged":
-            inv_spec = dict(
-                aaa_remote_ip_enabled=dict(required=False, type="bool", default=False),
-                fabric_name=dict(required=True, type="str"),
-                bgp_as=dict(required=True, type="str"),
-                pm_enable=dict(required=False, type="bool", default=False),
+            params_spec = {}
+            params_spec.update(
+                aaa_remote_ip_enabled=dict(
+                    required=False,
+                    type="bool",
+                    default=False
+                )
+            )
+            params_spec.update(
+                anycast_lb_id=dict(
+                    required=False,
+                    type="int",
+                    range_min=0,
+                    range_max=1023,
+                    default=""
+                )
+            )
+            params_spec.update(
+                anycast_rp_ip_range=dict(
+                    required=False,
+                    type="ipv4_subnet",
+                    default="10.254.254.0/24"
+                )
+            )
+            params_spec.update(
+                bgp_as=dict(
+                    required=True,
+                    type="str"
+                )
+            )
+            params_spec.update(
+                fabric_name=dict(
+                    required=True,
+                    type="str"
+                )
+            )
+            params_spec.update(
+                pm_enable=dict(
+                    required=False,
+                    type="bool",
+                    default=False
+                )
+            )
+            params_spec.update(
                 replication_mode=dict(
                     required=False,
                     type="str",
                     default="Multicast",
                     choices=["Ingress", "Multicast"],
-                ),
+                )
             )
 
             msg = None
-            if self.config:
-                self.log_msg(f"validate_input(): self.config {self.config}")
-                for inv in self.config:
-                    if "fabric_name" not in inv:
-                        msg = "fabric_name is mandatory"
-                        break
-                    if "bgp_as" not in inv:
-                        msg = "bgp_as is mandatory"
-                        break
-                    # if msg:
-                    #     self.module.fail_json(msg=msg)
-            else:
+            if not self.config:
                 if state == "merged":
                     msg = f"config: element is mandatory for state {state}"
+                    self.module.fail_json(msg=msg)
+            self.log_msg(f"validate_input(): self.config {self.config}")
+            for param in self.config:
+                if "fabric_name" not in param:
+                    msg = "fabric_name is mandatory"
+                    break
+                if "bgp_as" not in param:
+                    msg = "bgp_as is mandatory"
+                    break
             if msg:
                 self.module.fail_json(msg=msg)
 
-            valid_inv, invalid_params = validate_list_of_dicts(
-                self.config, inv_spec, self.module
+            valid_params, invalid_params = validate_list_of_dicts(
+                self.config, params_spec, self.module
             )
-            for inv in valid_inv:
-                self.validated.append(inv)
+            for param in valid_params:
+                self.validated.append(param)
 
             if invalid_params:
-                inv_params = "\n".join(invalid_params)
-                msg = f"Invalid parameters in playbook: {inv_params}"
+                msg = f"Invalid parameters in playbook: "
+                msg += f"{','.join(invalid_params)}"
                 self.module.fail_json(msg=msg)
 
     def log_msg(self, msg):
-
         if self.fd is None:
             self.fd = open("/tmp/dcnm_easy_fabric.log", "a+")
         if self.fd is not None:
@@ -263,267 +311,267 @@ class DcnmFabric:
             self.fd.write("\n")
             self.fd.flush()
 
-    def build_fabric_fabric_nv_pairs_default(self):
-        self._fabric_nv_pairs_default = {}
-        self._fabric_nv_pairs_default["AAA_REMOTE_IP_ENABLED"] = False
-        self._fabric_nv_pairs_default["AAA_SERVER_CONF"] = ""
-        self._fabric_nv_pairs_default["ACTIVE_MIGRATION"] = False
-        self._fabric_nv_pairs_default["ADVERTISE_PIP_BGP"] = False
-        self._fabric_nv_pairs_default["AGENT_INTF"] = "eth0"
-        self._fabric_nv_pairs_default["ANYCAST_BGW_ADVERTISE_PIP"] = False
-        self._fabric_nv_pairs_default["ANYCAST_GW_MAC"] = "2020.0000.00aa"
-        self._fabric_nv_pairs_default["ANYCAST_LB_ID"] = ""
-        self._fabric_nv_pairs_default["ANYCAST_RP_IP_RANGE"] = "10.254.254.0/24"
-        self._fabric_nv_pairs_default["ANYCAST_RP_IP_RANGE_INTERNAL"] = ""
-        self._fabric_nv_pairs_default["AUTO_SYMMETRIC_DEFAULT_VRF"] = False
-        self._fabric_nv_pairs_default["AUTO_SYMMETRIC_VRF_LITE"] = False
-        self._fabric_nv_pairs_default["AUTO_VRFLITE_IFC_DEFAULT_VRF"] = False
-        self._fabric_nv_pairs_default["BFD_AUTH_ENABLE"] = False
-        self._fabric_nv_pairs_default["BFD_AUTH_KEY"] = ""
-        self._fabric_nv_pairs_default["BFD_AUTH_KEY_ID"] = ""
-        self._fabric_nv_pairs_default["BFD_ENABLE"] = False
-        self._fabric_nv_pairs_default["BFD_IBGP_ENABLE"] = False
-        self._fabric_nv_pairs_default["BFD_ISIS_ENABLE"] = False
-        self._fabric_nv_pairs_default["BFD_OSPF_ENABLE"] = False
-        self._fabric_nv_pairs_default["BFD_PIM_ENABLE"] = False
-        self._fabric_nv_pairs_default["BGP_AS"] = "1"
-        self._fabric_nv_pairs_default["BGP_AS_PREV"] = ""
-        self._fabric_nv_pairs_default["BGP_AUTH_ENABLE"] = False
-        self._fabric_nv_pairs_default["BGP_AUTH_KEY"] = ""
-        self._fabric_nv_pairs_default["BGP_AUTH_KEY_TYPE"] = ""
-        self._fabric_nv_pairs_default["BGP_LB_ID"] = "0"
-        self._fabric_nv_pairs_default["BOOTSTRAP_CONF"] = ""
-        self._fabric_nv_pairs_default["BOOTSTRAP_ENABLE"] = False
-        self._fabric_nv_pairs_default["BOOTSTRAP_ENABLE_PREV"] = False
-        self._fabric_nv_pairs_default["BOOTSTRAP_MULTISUBNET"] = ""
-        self._fabric_nv_pairs_default["BOOTSTRAP_MULTISUBNET_INTERNAL"] = ""
-        self._fabric_nv_pairs_default["BRFIELD_DEBUG_FLAG"] = "Disable"
-        self._fabric_nv_pairs_default[
+    def build_default_nv_pairs(self):
+        self._default_nv_pairs = {}
+        self._default_nv_pairs["AAA_REMOTE_IP_ENABLED"] = False
+        self._default_nv_pairs["AAA_SERVER_CONF"] = ""
+        self._default_nv_pairs["ACTIVE_MIGRATION"] = False
+        self._default_nv_pairs["ADVERTISE_PIP_BGP"] = False
+        self._default_nv_pairs["AGENT_INTF"] = "eth0"
+        self._default_nv_pairs["ANYCAST_BGW_ADVERTISE_PIP"] = False
+        self._default_nv_pairs["ANYCAST_GW_MAC"] = "2020.0000.00aa"
+        self._default_nv_pairs["ANYCAST_LB_ID"] = ""
+        self._default_nv_pairs["ANYCAST_RP_IP_RANGE"] = "10.254.254.0/24"
+        self._default_nv_pairs["ANYCAST_RP_IP_RANGE_INTERNAL"] = ""
+        self._default_nv_pairs["AUTO_SYMMETRIC_DEFAULT_VRF"] = False
+        self._default_nv_pairs["AUTO_SYMMETRIC_VRF_LITE"] = False
+        self._default_nv_pairs["AUTO_VRFLITE_IFC_DEFAULT_VRF"] = False
+        self._default_nv_pairs["BFD_AUTH_ENABLE"] = False
+        self._default_nv_pairs["BFD_AUTH_KEY"] = ""
+        self._default_nv_pairs["BFD_AUTH_KEY_ID"] = ""
+        self._default_nv_pairs["BFD_ENABLE"] = False
+        self._default_nv_pairs["BFD_IBGP_ENABLE"] = False
+        self._default_nv_pairs["BFD_ISIS_ENABLE"] = False
+        self._default_nv_pairs["BFD_OSPF_ENABLE"] = False
+        self._default_nv_pairs["BFD_PIM_ENABLE"] = False
+        self._default_nv_pairs["BGP_AS"] = "1"
+        self._default_nv_pairs["BGP_AS_PREV"] = ""
+        self._default_nv_pairs["BGP_AUTH_ENABLE"] = False
+        self._default_nv_pairs["BGP_AUTH_KEY"] = ""
+        self._default_nv_pairs["BGP_AUTH_KEY_TYPE"] = ""
+        self._default_nv_pairs["BGP_LB_ID"] = "0"
+        self._default_nv_pairs["BOOTSTRAP_CONF"] = ""
+        self._default_nv_pairs["BOOTSTRAP_ENABLE"] = False
+        self._default_nv_pairs["BOOTSTRAP_ENABLE_PREV"] = False
+        self._default_nv_pairs["BOOTSTRAP_MULTISUBNET"] = ""
+        self._default_nv_pairs["BOOTSTRAP_MULTISUBNET_INTERNAL"] = ""
+        self._default_nv_pairs["BRFIELD_DEBUG_FLAG"] = "Disable"
+        self._default_nv_pairs[
             "BROWNFIELD_NETWORK_NAME_FORMAT"
         ] = "Auto_Net_VNI$$VNI$$_VLAN$$VLAN_ID$$"
         key = "BROWNFIELD_SKIP_OVERLAY_NETWORK_ATTACHMENTS"
-        self._fabric_nv_pairs_default[key] = False
-        self._fabric_nv_pairs_default["CDP_ENABLE"] = False
-        self._fabric_nv_pairs_default["COPP_POLICY"] = "strict"
-        self._fabric_nv_pairs_default["DCI_SUBNET_RANGE"] = "10.33.0.0/16"
-        self._fabric_nv_pairs_default["DCI_SUBNET_TARGET_MASK"] = "30"
-        self._fabric_nv_pairs_default["DEAFULT_QUEUING_POLICY_CLOUDSCALE"] = ""
-        self._fabric_nv_pairs_default["DEAFULT_QUEUING_POLICY_OTHER"] = ""
-        self._fabric_nv_pairs_default["DEAFULT_QUEUING_POLICY_R_SERIES"] = ""
-        self._fabric_nv_pairs_default["DEFAULT_VRF_REDIS_BGP_RMAP"] = ""
-        self._fabric_nv_pairs_default["DEPLOYMENT_FREEZE"] = False
-        self._fabric_nv_pairs_default["DHCP_ENABLE"] = False
-        self._fabric_nv_pairs_default["DHCP_END"] = ""
-        self._fabric_nv_pairs_default["DHCP_END_INTERNAL"] = ""
-        self._fabric_nv_pairs_default["DHCP_IPV6_ENABLE"] = ""
-        self._fabric_nv_pairs_default["DHCP_IPV6_ENABLE_INTERNAL"] = ""
-        self._fabric_nv_pairs_default["DHCP_START"] = ""
-        self._fabric_nv_pairs_default["DHCP_START_INTERNAL"] = ""
-        self._fabric_nv_pairs_default["DNS_SERVER_IP_LIST"] = ""
-        self._fabric_nv_pairs_default["DNS_SERVER_VRF"] = ""
-        self._fabric_nv_pairs_default["ENABLE_AAA"] = False
-        self._fabric_nv_pairs_default["ENABLE_AGENT"] = False
-        self._fabric_nv_pairs_default["ENABLE_DEFAULT_QUEUING_POLICY"] = False
-        self._fabric_nv_pairs_default["ENABLE_EVPN"] = True
-        self._fabric_nv_pairs_default["ENABLE_FABRIC_VPC_DOMAIN_ID"] = False
-        self._fabric_nv_pairs_default["ENABLE_FABRIC_VPC_DOMAIN_ID_PREV"] = ""
-        self._fabric_nv_pairs_default["ENABLE_MACSEC"] = False
-        self._fabric_nv_pairs_default["ENABLE_NETFLOW"] = False
-        self._fabric_nv_pairs_default["ENABLE_NETFLOW_PREV"] = ""
-        self._fabric_nv_pairs_default["ENABLE_NGOAM"] = True
-        self._fabric_nv_pairs_default["ENABLE_NXAPI"] = True
-        self._fabric_nv_pairs_default["ENABLE_NXAPI_HTTP"] = True
-        self._fabric_nv_pairs_default["ENABLE_PBR"] = False
-        self._fabric_nv_pairs_default["ENABLE_PVLAN"] = False
-        self._fabric_nv_pairs_default["ENABLE_PVLAN_PREV"] = ""
-        self._fabric_nv_pairs_default["ENABLE_TENANT_DHCP"] = True
-        self._fabric_nv_pairs_default["ENABLE_TRM"] = False
-        self._fabric_nv_pairs_default["ENABLE_VPC_PEER_LINK_NATIVE_VLAN"] = False
-        self._fabric_nv_pairs_default["EXTRA_CONF_INTRA_LINKS"] = ""
-        self._fabric_nv_pairs_default["EXTRA_CONF_LEAF"] = ""
-        self._fabric_nv_pairs_default["EXTRA_CONF_SPINE"] = ""
-        self._fabric_nv_pairs_default["EXTRA_CONF_TOR"] = ""
-        self._fabric_nv_pairs_default["FABRIC_INTERFACE_TYPE"] = "p2p"
-        self._fabric_nv_pairs_default["FABRIC_MTU"] = "9216"
-        self._fabric_nv_pairs_default["FABRIC_MTU_PREV"] = "9216"
-        self._fabric_nv_pairs_default["FABRIC_NAME"] = "easy-fabric"
-        self._fabric_nv_pairs_default["FABRIC_TYPE"] = "Switch_Fabric"
-        self._fabric_nv_pairs_default["FABRIC_VPC_DOMAIN_ID"] = ""
-        self._fabric_nv_pairs_default["FABRIC_VPC_DOMAIN_ID_PREV"] = ""
-        self._fabric_nv_pairs_default["FABRIC_VPC_QOS"] = False
-        self._fabric_nv_pairs_default["FABRIC_VPC_QOS_POLICY_NAME"] = ""
-        self._fabric_nv_pairs_default["FEATURE_PTP"] = False
-        self._fabric_nv_pairs_default["FEATURE_PTP_INTERNAL"] = False
-        self._fabric_nv_pairs_default["FF"] = "Easy_Fabric"
-        self._fabric_nv_pairs_default["GRFIELD_DEBUG_FLAG"] = "Disable"
-        self._fabric_nv_pairs_default["HD_TIME"] = "180"
-        self._fabric_nv_pairs_default["HOST_INTF_ADMIN_STATE"] = True
-        self._fabric_nv_pairs_default["IBGP_PEER_TEMPLATE"] = ""
-        self._fabric_nv_pairs_default["IBGP_PEER_TEMPLATE_LEAF"] = ""
-        self._fabric_nv_pairs_default["INBAND_DHCP_SERVERS"] = ""
-        self._fabric_nv_pairs_default["INBAND_MGMT"] = False
-        self._fabric_nv_pairs_default["INBAND_MGMT_PREV"] = False
-        self._fabric_nv_pairs_default["ISIS_AUTH_ENABLE"] = False
-        self._fabric_nv_pairs_default["ISIS_AUTH_KEY"] = ""
-        self._fabric_nv_pairs_default["ISIS_AUTH_KEYCHAIN_KEY_ID"] = ""
-        self._fabric_nv_pairs_default["ISIS_AUTH_KEYCHAIN_NAME"] = ""
-        self._fabric_nv_pairs_default["ISIS_LEVEL"] = ""
-        self._fabric_nv_pairs_default["ISIS_OVERLOAD_ELAPSE_TIME"] = ""
-        self._fabric_nv_pairs_default["ISIS_OVERLOAD_ENABLE"] = False
-        self._fabric_nv_pairs_default["ISIS_P2P_ENABLE"] = False
-        self._fabric_nv_pairs_default["L2_HOST_INTF_MTU"] = "9216"
-        self._fabric_nv_pairs_default["L2_HOST_INTF_MTU_PREV"] = "9216"
-        self._fabric_nv_pairs_default["L2_SEGMENT_ID_RANGE"] = "30000-49000"
-        self._fabric_nv_pairs_default["L3VNI_MCAST_GROUP"] = ""
-        self._fabric_nv_pairs_default["L3_PARTITION_ID_RANGE"] = "50000-59000"
-        self._fabric_nv_pairs_default["LINK_STATE_ROUTING"] = "ospf"
-        self._fabric_nv_pairs_default["LINK_STATE_ROUTING_TAG"] = "UNDERLAY"
-        self._fabric_nv_pairs_default["LINK_STATE_ROUTING_TAG_PREV"] = ""
-        self._fabric_nv_pairs_default["LOOPBACK0_IPV6_RANGE"] = ""
-        self._fabric_nv_pairs_default["LOOPBACK0_IP_RANGE"] = "10.2.0.0/22"
-        self._fabric_nv_pairs_default["LOOPBACK1_IPV6_RANGE"] = ""
-        self._fabric_nv_pairs_default["LOOPBACK1_IP_RANGE"] = "10.3.0.0/22"
-        self._fabric_nv_pairs_default["MACSEC_ALGORITHM"] = ""
-        self._fabric_nv_pairs_default["MACSEC_CIPHER_SUITE"] = ""
-        self._fabric_nv_pairs_default["MACSEC_FALLBACK_ALGORITHM"] = ""
-        self._fabric_nv_pairs_default["MACSEC_FALLBACK_KEY_STRING"] = ""
-        self._fabric_nv_pairs_default["MACSEC_KEY_STRING"] = ""
-        self._fabric_nv_pairs_default["MACSEC_REPORT_TIMER"] = ""
-        self._fabric_nv_pairs_default["MGMT_GW"] = ""
-        self._fabric_nv_pairs_default["MGMT_GW_INTERNAL"] = ""
-        self._fabric_nv_pairs_default["MGMT_PREFIX"] = ""
-        self._fabric_nv_pairs_default["MGMT_PREFIX_INTERNAL"] = ""
-        self._fabric_nv_pairs_default["MGMT_V6PREFIX"] = "64"
-        self._fabric_nv_pairs_default["MGMT_V6PREFIX_INTERNAL"] = ""
-        self._fabric_nv_pairs_default["MPLS_HANDOFF"] = False
-        self._fabric_nv_pairs_default["MPLS_LB_ID"] = ""
-        self._fabric_nv_pairs_default["MPLS_LOOPBACK_IP_RANGE"] = ""
-        self._fabric_nv_pairs_default["MSO_CONNECTIVITY_DEPLOYED"] = ""
-        self._fabric_nv_pairs_default["MSO_CONTROLER_ID"] = ""
-        self._fabric_nv_pairs_default["MSO_SITE_GROUP_NAME"] = ""
-        self._fabric_nv_pairs_default["MSO_SITE_ID"] = ""
-        self._fabric_nv_pairs_default["MST_INSTANCE_RANGE"] = ""
-        self._fabric_nv_pairs_default["MULTICAST_GROUP_SUBNET"] = "239.1.1.0/25"
-        self._fabric_nv_pairs_default["NETFLOW_EXPORTER_LIST"] = ""
-        self._fabric_nv_pairs_default["NETFLOW_MONITOR_LIST"] = ""
-        self._fabric_nv_pairs_default["NETFLOW_RECORD_LIST"] = ""
-        self._fabric_nv_pairs_default["NETWORK_VLAN_RANGE"] = "2300-2999"
-        self._fabric_nv_pairs_default["NTP_SERVER_IP_LIST"] = ""
-        self._fabric_nv_pairs_default["NTP_SERVER_VRF"] = ""
-        self._fabric_nv_pairs_default["NVE_LB_ID"] = "1"
-        self._fabric_nv_pairs_default["OSPF_AREA_ID"] = "0.0.0.0"
-        self._fabric_nv_pairs_default["OSPF_AUTH_ENABLE"] = False
-        self._fabric_nv_pairs_default["OSPF_AUTH_KEY"] = ""
-        self._fabric_nv_pairs_default["OSPF_AUTH_KEY_ID"] = ""
-        self._fabric_nv_pairs_default["OVERLAY_MODE"] = "config-profile"
-        self._fabric_nv_pairs_default["OVERLAY_MODE_PREV"] = ""
-        self._fabric_nv_pairs_default["PHANTOM_RP_LB_ID1"] = ""
-        self._fabric_nv_pairs_default["PHANTOM_RP_LB_ID2"] = ""
-        self._fabric_nv_pairs_default["PHANTOM_RP_LB_ID3"] = ""
-        self._fabric_nv_pairs_default["PHANTOM_RP_LB_ID4"] = ""
-        self._fabric_nv_pairs_default["PIM_HELLO_AUTH_ENABLE"] = False
-        self._fabric_nv_pairs_default["PIM_HELLO_AUTH_KEY"] = ""
-        self._fabric_nv_pairs_default["PM_ENABLE"] = False
-        self._fabric_nv_pairs_default["PM_ENABLE_PREV"] = False
-        self._fabric_nv_pairs_default["POWER_REDUNDANCY_MODE"] = "ps-redundant"
-        self._fabric_nv_pairs_default["PREMSO_PARENT_FABRIC"] = ""
-        self._fabric_nv_pairs_default["PTP_DOMAIN_ID"] = ""
-        self._fabric_nv_pairs_default["PTP_LB_ID"] = ""
-        self._fabric_nv_pairs_default["REPLICATION_MODE"] = "Multicast"
-        self._fabric_nv_pairs_default["ROUTER_ID_RANGE"] = ""
-        self._fabric_nv_pairs_default["ROUTE_MAP_SEQUENCE_NUMBER_RANGE"] = "1-65534"
-        self._fabric_nv_pairs_default["RP_COUNT"] = "2"
-        self._fabric_nv_pairs_default["RP_LB_ID"] = "254"
-        self._fabric_nv_pairs_default["RP_MODE"] = "asm"
-        self._fabric_nv_pairs_default["RR_COUNT"] = "2"
-        self._fabric_nv_pairs_default["SEED_SWITCH_CORE_INTERFACES"] = ""
-        self._fabric_nv_pairs_default["SERVICE_NETWORK_VLAN_RANGE"] = "3000-3199"
-        self._fabric_nv_pairs_default["SITE_ID"] = ""
-        self._fabric_nv_pairs_default["SNMP_SERVER_HOST_TRAP"] = True
-        self._fabric_nv_pairs_default["SPINE_COUNT"] = "0"
-        self._fabric_nv_pairs_default["SPINE_SWITCH_CORE_INTERFACES"] = ""
-        self._fabric_nv_pairs_default["SSPINE_ADD_DEL_DEBUG_FLAG"] = "Disable"
-        self._fabric_nv_pairs_default["SSPINE_COUNT"] = "0"
-        self._fabric_nv_pairs_default["STATIC_UNDERLAY_IP_ALLOC"] = False
-        self._fabric_nv_pairs_default["STP_BRIDGE_PRIORITY"] = ""
-        self._fabric_nv_pairs_default["STP_ROOT_OPTION"] = "unmanaged"
-        self._fabric_nv_pairs_default["STP_VLAN_RANGE"] = ""
-        self._fabric_nv_pairs_default["STRICT_CC_MODE"] = False
-        self._fabric_nv_pairs_default["SUBINTERFACE_RANGE"] = "2-511"
-        self._fabric_nv_pairs_default["SUBNET_RANGE"] = "10.4.0.0/16"
-        self._fabric_nv_pairs_default["SUBNET_TARGET_MASK"] = "30"
-        self._fabric_nv_pairs_default["SYSLOG_SERVER_IP_LIST"] = ""
-        self._fabric_nv_pairs_default["SYSLOG_SERVER_VRF"] = ""
-        self._fabric_nv_pairs_default["SYSLOG_SEV"] = ""
-        self._fabric_nv_pairs_default["TCAM_ALLOCATION"] = True
-        self._fabric_nv_pairs_default["UNDERLAY_IS_V6"] = False
-        self._fabric_nv_pairs_default["UNNUM_BOOTSTRAP_LB_ID"] = ""
-        self._fabric_nv_pairs_default["UNNUM_DHCP_END"] = ""
-        self._fabric_nv_pairs_default["UNNUM_DHCP_END_INTERNAL"] = ""
-        self._fabric_nv_pairs_default["UNNUM_DHCP_START"] = ""
-        self._fabric_nv_pairs_default["UNNUM_DHCP_START_INTERNAL"] = ""
-        self._fabric_nv_pairs_default["USE_LINK_LOCAL"] = False
-        self._fabric_nv_pairs_default["V6_SUBNET_RANGE"] = ""
-        self._fabric_nv_pairs_default["V6_SUBNET_TARGET_MASK"] = ""
-        self._fabric_nv_pairs_default["VPC_AUTO_RECOVERY_TIME"] = "360"
-        self._fabric_nv_pairs_default["VPC_DELAY_RESTORE"] = "150"
-        self._fabric_nv_pairs_default["VPC_DELAY_RESTORE_TIME"] = "60"
-        self._fabric_nv_pairs_default["VPC_DOMAIN_ID_RANGE"] = "1-1000"
-        self._fabric_nv_pairs_default["VPC_ENABLE_IPv6_ND_SYNC"] = True
-        self._fabric_nv_pairs_default["VPC_PEER_KEEP_ALIVE_OPTION"] = "management"
-        self._fabric_nv_pairs_default["VPC_PEER_LINK_PO"] = "500"
-        self._fabric_nv_pairs_default["VPC_PEER_LINK_VLAN"] = "3600"
-        self._fabric_nv_pairs_default["VRF_LITE_AUTOCONFIG"] = "Manual"
-        self._fabric_nv_pairs_default["VRF_VLAN_RANGE"] = "2000-2299"
-        self._fabric_nv_pairs_default["abstract_anycast_rp"] = "anycast_rp"
-        self._fabric_nv_pairs_default["abstract_bgp"] = "base_bgp"
+        self._default_nv_pairs[key] = False
+        self._default_nv_pairs["CDP_ENABLE"] = False
+        self._default_nv_pairs["COPP_POLICY"] = "strict"
+        self._default_nv_pairs["DCI_SUBNET_RANGE"] = "10.33.0.0/16"
+        self._default_nv_pairs["DCI_SUBNET_TARGET_MASK"] = "30"
+        self._default_nv_pairs["DEAFULT_QUEUING_POLICY_CLOUDSCALE"] = ""
+        self._default_nv_pairs["DEAFULT_QUEUING_POLICY_OTHER"] = ""
+        self._default_nv_pairs["DEAFULT_QUEUING_POLICY_R_SERIES"] = ""
+        self._default_nv_pairs["DEFAULT_VRF_REDIS_BGP_RMAP"] = ""
+        self._default_nv_pairs["DEPLOYMENT_FREEZE"] = False
+        self._default_nv_pairs["DHCP_ENABLE"] = False
+        self._default_nv_pairs["DHCP_END"] = ""
+        self._default_nv_pairs["DHCP_END_INTERNAL"] = ""
+        self._default_nv_pairs["DHCP_IPV6_ENABLE"] = ""
+        self._default_nv_pairs["DHCP_IPV6_ENABLE_INTERNAL"] = ""
+        self._default_nv_pairs["DHCP_START"] = ""
+        self._default_nv_pairs["DHCP_START_INTERNAL"] = ""
+        self._default_nv_pairs["DNS_SERVER_IP_LIST"] = ""
+        self._default_nv_pairs["DNS_SERVER_VRF"] = ""
+        self._default_nv_pairs["ENABLE_AAA"] = False
+        self._default_nv_pairs["ENABLE_AGENT"] = False
+        self._default_nv_pairs["ENABLE_DEFAULT_QUEUING_POLICY"] = False
+        self._default_nv_pairs["ENABLE_EVPN"] = True
+        self._default_nv_pairs["ENABLE_FABRIC_VPC_DOMAIN_ID"] = False
+        self._default_nv_pairs["ENABLE_FABRIC_VPC_DOMAIN_ID_PREV"] = ""
+        self._default_nv_pairs["ENABLE_MACSEC"] = False
+        self._default_nv_pairs["ENABLE_NETFLOW"] = False
+        self._default_nv_pairs["ENABLE_NETFLOW_PREV"] = ""
+        self._default_nv_pairs["ENABLE_NGOAM"] = True
+        self._default_nv_pairs["ENABLE_NXAPI"] = True
+        self._default_nv_pairs["ENABLE_NXAPI_HTTP"] = True
+        self._default_nv_pairs["ENABLE_PBR"] = False
+        self._default_nv_pairs["ENABLE_PVLAN"] = False
+        self._default_nv_pairs["ENABLE_PVLAN_PREV"] = ""
+        self._default_nv_pairs["ENABLE_TENANT_DHCP"] = True
+        self._default_nv_pairs["ENABLE_TRM"] = False
+        self._default_nv_pairs["ENABLE_VPC_PEER_LINK_NATIVE_VLAN"] = False
+        self._default_nv_pairs["EXTRA_CONF_INTRA_LINKS"] = ""
+        self._default_nv_pairs["EXTRA_CONF_LEAF"] = ""
+        self._default_nv_pairs["EXTRA_CONF_SPINE"] = ""
+        self._default_nv_pairs["EXTRA_CONF_TOR"] = ""
+        self._default_nv_pairs["FABRIC_INTERFACE_TYPE"] = "p2p"
+        self._default_nv_pairs["FABRIC_MTU"] = "9216"
+        self._default_nv_pairs["FABRIC_MTU_PREV"] = "9216"
+        self._default_nv_pairs["FABRIC_NAME"] = "easy-fabric"
+        self._default_nv_pairs["FABRIC_TYPE"] = "Switch_Fabric"
+        self._default_nv_pairs["FABRIC_VPC_DOMAIN_ID"] = ""
+        self._default_nv_pairs["FABRIC_VPC_DOMAIN_ID_PREV"] = ""
+        self._default_nv_pairs["FABRIC_VPC_QOS"] = False
+        self._default_nv_pairs["FABRIC_VPC_QOS_POLICY_NAME"] = ""
+        self._default_nv_pairs["FEATURE_PTP"] = False
+        self._default_nv_pairs["FEATURE_PTP_INTERNAL"] = False
+        self._default_nv_pairs["FF"] = "Easy_Fabric"
+        self._default_nv_pairs["GRFIELD_DEBUG_FLAG"] = "Disable"
+        self._default_nv_pairs["HD_TIME"] = "180"
+        self._default_nv_pairs["HOST_INTF_ADMIN_STATE"] = True
+        self._default_nv_pairs["IBGP_PEER_TEMPLATE"] = ""
+        self._default_nv_pairs["IBGP_PEER_TEMPLATE_LEAF"] = ""
+        self._default_nv_pairs["INBAND_DHCP_SERVERS"] = ""
+        self._default_nv_pairs["INBAND_MGMT"] = False
+        self._default_nv_pairs["INBAND_MGMT_PREV"] = False
+        self._default_nv_pairs["ISIS_AUTH_ENABLE"] = False
+        self._default_nv_pairs["ISIS_AUTH_KEY"] = ""
+        self._default_nv_pairs["ISIS_AUTH_KEYCHAIN_KEY_ID"] = ""
+        self._default_nv_pairs["ISIS_AUTH_KEYCHAIN_NAME"] = ""
+        self._default_nv_pairs["ISIS_LEVEL"] = ""
+        self._default_nv_pairs["ISIS_OVERLOAD_ELAPSE_TIME"] = ""
+        self._default_nv_pairs["ISIS_OVERLOAD_ENABLE"] = False
+        self._default_nv_pairs["ISIS_P2P_ENABLE"] = False
+        self._default_nv_pairs["L2_HOST_INTF_MTU"] = "9216"
+        self._default_nv_pairs["L2_HOST_INTF_MTU_PREV"] = "9216"
+        self._default_nv_pairs["L2_SEGMENT_ID_RANGE"] = "30000-49000"
+        self._default_nv_pairs["L3VNI_MCAST_GROUP"] = ""
+        self._default_nv_pairs["L3_PARTITION_ID_RANGE"] = "50000-59000"
+        self._default_nv_pairs["LINK_STATE_ROUTING"] = "ospf"
+        self._default_nv_pairs["LINK_STATE_ROUTING_TAG"] = "UNDERLAY"
+        self._default_nv_pairs["LINK_STATE_ROUTING_TAG_PREV"] = ""
+        self._default_nv_pairs["LOOPBACK0_IPV6_RANGE"] = ""
+        self._default_nv_pairs["LOOPBACK0_IP_RANGE"] = "10.2.0.0/22"
+        self._default_nv_pairs["LOOPBACK1_IPV6_RANGE"] = ""
+        self._default_nv_pairs["LOOPBACK1_IP_RANGE"] = "10.3.0.0/22"
+        self._default_nv_pairs["MACSEC_ALGORITHM"] = ""
+        self._default_nv_pairs["MACSEC_CIPHER_SUITE"] = ""
+        self._default_nv_pairs["MACSEC_FALLBACK_ALGORITHM"] = ""
+        self._default_nv_pairs["MACSEC_FALLBACK_KEY_STRING"] = ""
+        self._default_nv_pairs["MACSEC_KEY_STRING"] = ""
+        self._default_nv_pairs["MACSEC_REPORT_TIMER"] = ""
+        self._default_nv_pairs["MGMT_GW"] = ""
+        self._default_nv_pairs["MGMT_GW_INTERNAL"] = ""
+        self._default_nv_pairs["MGMT_PREFIX"] = ""
+        self._default_nv_pairs["MGMT_PREFIX_INTERNAL"] = ""
+        self._default_nv_pairs["MGMT_V6PREFIX"] = "64"
+        self._default_nv_pairs["MGMT_V6PREFIX_INTERNAL"] = ""
+        self._default_nv_pairs["MPLS_HANDOFF"] = False
+        self._default_nv_pairs["MPLS_LB_ID"] = ""
+        self._default_nv_pairs["MPLS_LOOPBACK_IP_RANGE"] = ""
+        self._default_nv_pairs["MSO_CONNECTIVITY_DEPLOYED"] = ""
+        self._default_nv_pairs["MSO_CONTROLER_ID"] = ""
+        self._default_nv_pairs["MSO_SITE_GROUP_NAME"] = ""
+        self._default_nv_pairs["MSO_SITE_ID"] = ""
+        self._default_nv_pairs["MST_INSTANCE_RANGE"] = ""
+        self._default_nv_pairs["MULTICAST_GROUP_SUBNET"] = "239.1.1.0/25"
+        self._default_nv_pairs["NETFLOW_EXPORTER_LIST"] = ""
+        self._default_nv_pairs["NETFLOW_MONITOR_LIST"] = ""
+        self._default_nv_pairs["NETFLOW_RECORD_LIST"] = ""
+        self._default_nv_pairs["NETWORK_VLAN_RANGE"] = "2300-2999"
+        self._default_nv_pairs["NTP_SERVER_IP_LIST"] = ""
+        self._default_nv_pairs["NTP_SERVER_VRF"] = ""
+        self._default_nv_pairs["NVE_LB_ID"] = "1"
+        self._default_nv_pairs["OSPF_AREA_ID"] = "0.0.0.0"
+        self._default_nv_pairs["OSPF_AUTH_ENABLE"] = False
+        self._default_nv_pairs["OSPF_AUTH_KEY"] = ""
+        self._default_nv_pairs["OSPF_AUTH_KEY_ID"] = ""
+        self._default_nv_pairs["OVERLAY_MODE"] = "config-profile"
+        self._default_nv_pairs["OVERLAY_MODE_PREV"] = ""
+        self._default_nv_pairs["PHANTOM_RP_LB_ID1"] = ""
+        self._default_nv_pairs["PHANTOM_RP_LB_ID2"] = ""
+        self._default_nv_pairs["PHANTOM_RP_LB_ID3"] = ""
+        self._default_nv_pairs["PHANTOM_RP_LB_ID4"] = ""
+        self._default_nv_pairs["PIM_HELLO_AUTH_ENABLE"] = False
+        self._default_nv_pairs["PIM_HELLO_AUTH_KEY"] = ""
+        self._default_nv_pairs["PM_ENABLE"] = False
+        self._default_nv_pairs["PM_ENABLE_PREV"] = False
+        self._default_nv_pairs["POWER_REDUNDANCY_MODE"] = "ps-redundant"
+        self._default_nv_pairs["PREMSO_PARENT_FABRIC"] = ""
+        self._default_nv_pairs["PTP_DOMAIN_ID"] = ""
+        self._default_nv_pairs["PTP_LB_ID"] = ""
+        self._default_nv_pairs["REPLICATION_MODE"] = "Multicast"
+        self._default_nv_pairs["ROUTER_ID_RANGE"] = ""
+        self._default_nv_pairs["ROUTE_MAP_SEQUENCE_NUMBER_RANGE"] = "1-65534"
+        self._default_nv_pairs["RP_COUNT"] = "2"
+        self._default_nv_pairs["RP_LB_ID"] = "254"
+        self._default_nv_pairs["RP_MODE"] = "asm"
+        self._default_nv_pairs["RR_COUNT"] = "2"
+        self._default_nv_pairs["SEED_SWITCH_CORE_INTERFACES"] = ""
+        self._default_nv_pairs["SERVICE_NETWORK_VLAN_RANGE"] = "3000-3199"
+        self._default_nv_pairs["SITE_ID"] = ""
+        self._default_nv_pairs["SNMP_SERVER_HOST_TRAP"] = True
+        self._default_nv_pairs["SPINE_COUNT"] = "0"
+        self._default_nv_pairs["SPINE_SWITCH_CORE_INTERFACES"] = ""
+        self._default_nv_pairs["SSPINE_ADD_DEL_DEBUG_FLAG"] = "Disable"
+        self._default_nv_pairs["SSPINE_COUNT"] = "0"
+        self._default_nv_pairs["STATIC_UNDERLAY_IP_ALLOC"] = False
+        self._default_nv_pairs["STP_BRIDGE_PRIORITY"] = ""
+        self._default_nv_pairs["STP_ROOT_OPTION"] = "unmanaged"
+        self._default_nv_pairs["STP_VLAN_RANGE"] = ""
+        self._default_nv_pairs["STRICT_CC_MODE"] = False
+        self._default_nv_pairs["SUBINTERFACE_RANGE"] = "2-511"
+        self._default_nv_pairs["SUBNET_RANGE"] = "10.4.0.0/16"
+        self._default_nv_pairs["SUBNET_TARGET_MASK"] = "30"
+        self._default_nv_pairs["SYSLOG_SERVER_IP_LIST"] = ""
+        self._default_nv_pairs["SYSLOG_SERVER_VRF"] = ""
+        self._default_nv_pairs["SYSLOG_SEV"] = ""
+        self._default_nv_pairs["TCAM_ALLOCATION"] = True
+        self._default_nv_pairs["UNDERLAY_IS_V6"] = False
+        self._default_nv_pairs["UNNUM_BOOTSTRAP_LB_ID"] = ""
+        self._default_nv_pairs["UNNUM_DHCP_END"] = ""
+        self._default_nv_pairs["UNNUM_DHCP_END_INTERNAL"] = ""
+        self._default_nv_pairs["UNNUM_DHCP_START"] = ""
+        self._default_nv_pairs["UNNUM_DHCP_START_INTERNAL"] = ""
+        self._default_nv_pairs["USE_LINK_LOCAL"] = False
+        self._default_nv_pairs["V6_SUBNET_RANGE"] = ""
+        self._default_nv_pairs["V6_SUBNET_TARGET_MASK"] = ""
+        self._default_nv_pairs["VPC_AUTO_RECOVERY_TIME"] = "360"
+        self._default_nv_pairs["VPC_DELAY_RESTORE"] = "150"
+        self._default_nv_pairs["VPC_DELAY_RESTORE_TIME"] = "60"
+        self._default_nv_pairs["VPC_DOMAIN_ID_RANGE"] = "1-1000"
+        self._default_nv_pairs["VPC_ENABLE_IPv6_ND_SYNC"] = True
+        self._default_nv_pairs["VPC_PEER_KEEP_ALIVE_OPTION"] = "management"
+        self._default_nv_pairs["VPC_PEER_LINK_PO"] = "500"
+        self._default_nv_pairs["VPC_PEER_LINK_VLAN"] = "3600"
+        self._default_nv_pairs["VRF_LITE_AUTOCONFIG"] = "Manual"
+        self._default_nv_pairs["VRF_VLAN_RANGE"] = "2000-2299"
+        self._default_nv_pairs["abstract_anycast_rp"] = "anycast_rp"
+        self._default_nv_pairs["abstract_bgp"] = "base_bgp"
         value = "evpn_bgp_rr_neighbor"
-        self._fabric_nv_pairs_default["abstract_bgp_neighbor"] = value
-        self._fabric_nv_pairs_default["abstract_bgp_rr"] = "evpn_bgp_rr"
-        self._fabric_nv_pairs_default["abstract_dhcp"] = "base_dhcp"
-        self._fabric_nv_pairs_default[
+        self._default_nv_pairs["abstract_bgp_neighbor"] = value
+        self._default_nv_pairs["abstract_bgp_rr"] = "evpn_bgp_rr"
+        self._default_nv_pairs["abstract_dhcp"] = "base_dhcp"
+        self._default_nv_pairs[
             "abstract_extra_config_bootstrap"
         ] = "extra_config_bootstrap_11_1"
         value = "extra_config_leaf"
-        self._fabric_nv_pairs_default["abstract_extra_config_leaf"] = value
+        self._default_nv_pairs["abstract_extra_config_leaf"] = value
         value = "extra_config_spine"
-        self._fabric_nv_pairs_default["abstract_extra_config_spine"] = value
+        self._default_nv_pairs["abstract_extra_config_spine"] = value
         value = "extra_config_tor"
-        self._fabric_nv_pairs_default["abstract_extra_config_tor"] = value
+        self._default_nv_pairs["abstract_extra_config_tor"] = value
         value = "base_feature_leaf_upg"
-        self._fabric_nv_pairs_default["abstract_feature_leaf"] = value
+        self._default_nv_pairs["abstract_feature_leaf"] = value
         value = "base_feature_spine_upg"
-        self._fabric_nv_pairs_default["abstract_feature_spine"] = value
-        self._fabric_nv_pairs_default["abstract_isis"] = "base_isis_level2"
-        self._fabric_nv_pairs_default["abstract_isis_interface"] = "isis_interface"
-        self._fabric_nv_pairs_default[
+        self._default_nv_pairs["abstract_feature_spine"] = value
+        self._default_nv_pairs["abstract_isis"] = "base_isis_level2"
+        self._default_nv_pairs["abstract_isis_interface"] = "isis_interface"
+        self._default_nv_pairs[
             "abstract_loopback_interface"
         ] = "int_fabric_loopback_11_1"
-        self._fabric_nv_pairs_default["abstract_multicast"] = "base_multicast_11_1"
-        self._fabric_nv_pairs_default["abstract_ospf"] = "base_ospf"
+        self._default_nv_pairs["abstract_multicast"] = "base_multicast_11_1"
+        self._default_nv_pairs["abstract_ospf"] = "base_ospf"
         value = "ospf_interface_11_1"
-        self._fabric_nv_pairs_default["abstract_ospf_interface"] = value
-        self._fabric_nv_pairs_default["abstract_pim_interface"] = "pim_interface"
-        self._fabric_nv_pairs_default["abstract_route_map"] = "route_map"
-        self._fabric_nv_pairs_default["abstract_routed_host"] = "int_routed_host"
-        self._fabric_nv_pairs_default["abstract_trunk_host"] = "int_trunk_host"
+        self._default_nv_pairs["abstract_ospf_interface"] = value
+        self._default_nv_pairs["abstract_pim_interface"] = "pim_interface"
+        self._default_nv_pairs["abstract_route_map"] = "route_map"
+        self._default_nv_pairs["abstract_routed_host"] = "int_routed_host"
+        self._default_nv_pairs["abstract_trunk_host"] = "int_trunk_host"
         value = "int_fabric_vlan_11_1"
-        self._fabric_nv_pairs_default["abstract_vlan_interface"] = value
-        self._fabric_nv_pairs_default["abstract_vpc_domain"] = "base_vpc_domain_11_1"
+        self._default_nv_pairs["abstract_vlan_interface"] = value
+        self._default_nv_pairs["abstract_vpc_domain"] = "base_vpc_domain_11_1"
         value = "Default_Network_Universal"
-        self._fabric_nv_pairs_default["default_network"] = value
-        self._fabric_nv_pairs_default["default_pvlan_sec_network"] = ""
-        self._fabric_nv_pairs_default["default_vrf"] = "Default_VRF_Universal"
-        self._fabric_nv_pairs_default["enableRealTimeBackup"] = ""
-        self._fabric_nv_pairs_default["enableScheduledBackup"] = ""
-        self._fabric_nv_pairs_default[
+        self._default_nv_pairs["default_network"] = value
+        self._default_nv_pairs["default_pvlan_sec_network"] = ""
+        self._default_nv_pairs["default_vrf"] = "Default_VRF_Universal"
+        self._default_nv_pairs["enableRealTimeBackup"] = ""
+        self._default_nv_pairs["enableScheduledBackup"] = ""
+        self._default_nv_pairs[
             "network_extension_template"
         ] = "Default_Network_Extension_Universal"
-        self._fabric_nv_pairs_default["scheduledTime"] = ""
-        self._fabric_nv_pairs_default["temp_anycast_gateway"] = "anycast_gateway"
-        self._fabric_nv_pairs_default["temp_vpc_domain_mgmt"] = "vpc_domain_mgmt"
-        self._fabric_nv_pairs_default["temp_vpc_peer_link"] = "int_vpc_peer_link_po"
-        self._fabric_nv_pairs_default[
+        self._default_nv_pairs["scheduledTime"] = ""
+        self._default_nv_pairs["temp_anycast_gateway"] = "anycast_gateway"
+        self._default_nv_pairs["temp_vpc_domain_mgmt"] = "vpc_domain_mgmt"
+        self._default_nv_pairs["temp_vpc_peer_link"] = "int_vpc_peer_link_po"
+        self._default_nv_pairs[
             "vrf_extension_template"
         ] = "Default_VRF_Extension_Universal"
 
@@ -564,11 +612,14 @@ class DcnmFabric:
         REPLICATION_MODE) to build a set of playbook parameters that can
         be safely converted to uppercase dunder style.
 
+        Special cases are handled in self.translate_to_ndfc_nv_pairs.
         So far, all playbook-supported parameters are covered with this
         method. We can add methods to translate the other cases if/when
         they are needed.
         """
         self.translatable_nv_pairs = set()
+        self.translatable_nv_pairs.add("anycast_lb_id")
+        self.translatable_nv_pairs.add("anycast_rp_ip_range")
         self.translatable_nv_pairs.add("aaa_remote_ip_enabled")
         self.translatable_nv_pairs.add("bgp_as")
         self.translatable_nv_pairs.add("fabric_name")
@@ -578,19 +629,172 @@ class DcnmFabric:
     def translate_to_ndfc_nv_pairs(self, params):
         """
         translate keys in params dict into what NDFC
-        expects in nvPairs and return the translated
-        params as a dict.
+        expects in nvPairs and populate dict 
+        self.translated_nv_pairs
         """
         self.log_msg(f"translate_to_ndfc_nv_pairs params {params}")
         self.translated_nv_pairs = {}
+        # upper-case dunder keys
         for param in self.translatable_nv_pairs:
-            if param in params:
-                self.translated_nv_pairs[param.upper()] = params[param]
+            if param not in params:
+                continue
+            self.translated_nv_pairs[param.upper()] = params[param]
+        # special cases
+        # dunder keys, these need no modification
+        dunder_keys = {
+            "default_network",
+            "default_vrf",
+            "network_extension_template",
+            "vrf_extension_template"
+        }
+        for key in dunder_keys:
+            if key not in params:
+                continue
+            self.translated_nv_pairs[key] = params[key]
+        # camelCase keys
+        camel_keys = {
+            "enableRealTimeBackup": "enable_realtime_backup",
+            "enableScheduledBackup": "enable_scheduled_backup",
+            "scheduledTime": "scheduled_time"
+        }
+        for camel_key,dunder_key in camel_keys.items():
+            if dunder_key not in params:
+                continue
+            self.translated_nv_pairs[camel_key] = params[dunder_key]
+
         self.log_msg(f"translate_to_ndfc_nv_pairs {self.translated_nv_pairs}")
 
+
+    def build_mandatory_params(self):
+        """
+        build a map of mandatory parameters.
+
+        Certain parameters become mandatory only if another parameter is
+        set, or only if it's set to a specific value.  For example, if
+        underlay_is_v6 is set to True, the following parameters become
+        mandatory:
+        -   anycast_lb_id
+        -   loopback0_ipv6_range
+        -   loopback1_ipv6_range
+        -   router_id_range
+        -   v6_subnet_range
+        -   v6_subnet_target_mask
+
+        self.mandatory_params is a dictionary, keyed on parameter.
+        The value is a dictionary with the following keys:
+
+        value:  The parameter value that makes the dependent parameters
+                mandatory.  Using underlay_is_v6 as an example, it must
+                have a value of True, for the six dependent parameters to
+                be considered mandatory.
+        mandatory: a python set() containing mandatory parameters.
+
+        NOTE: Individual mandatory parameter values are validated elsewhere
+
+        Hence, we have the following structure for the 
+        self.mandatory_params dictionary, to handle the case where
+        underlay_is_v6 is set to True:
+
+        self.mandatory_params = {
+            "underlay_is_v6": {
+                "value": True,
+                "mandatory": {
+                    "anycast_lb_id",
+                    "loopback0_ipv6_range",
+                    "loopback1_ipv6_range",
+                    "router_id_range",
+                    "v6_subnet_range",
+                    "v6_subnet_target_mask"
+                }
+            }
+        }
+
+        Above, we validate that all mandatory parameters are set, only
+        if the value of underlay_is_v6 is True.
+
+        Set "value:" above to "any" if the dependent parameters are mandatory
+        regardless of the parameter's value.  For example, if we wanted to
+        verify that underlay_is_v6 is set in the case that anycast_lb_id is
+        set (which can be a value between 1-1023) we don't care what the
+        value of anycast_lb_id is.  We only care that underlay_is_v6 is
+        set.  In this case, we could add the following:
+
+        self.mandatory_params.update = {
+            "anycast_lb_id": {
+                "value": "any",
+                "mandatory": {
+                    "underlay_is_v6"
+                }
+            }
+        }
+
+        """
+        self.mandatory_params = {}
+        self.mandatory_params.update(
+            {
+                "anycast_lb_id": {
+                    "value": "any",
+                    "mandatory": {
+                        "underlay_is_v6"
+                    }
+                }
+            }
+        )
+        self.mandatory_params.update(
+            {
+                "underlay_is_v6": {
+                    "value": True,
+                    "mandatory": {
+                        "anycast_lb_id",
+                        "loopback0_ipv6_range",
+                        "loopback1_ipv6_range",
+                        "router_id_range",
+                        "v6_subnet_range",
+                        "v6_subnet_target_mask"
+                    }
+                }
+            }
+        )
+
+
+    def validate_dependencies(self, params):
+        self.build_mandatory_params()
+        for param in params:
+            # param doesn't have any dependent parameters
+            if param not in self.mandatory_params:
+                continue
+            needs_validation = False
+            if self.mandatory_params[param]["value"] == "any":
+                needs_validation = True
+            if params[param] == self.mandatory_params[param]["value"]:
+                needs_validation = True
+            if not needs_validation:
+                continue
+            for mandatory_param in self.mandatory_params[param]["mandatory"]:
+                failed_dependencies = set()
+                if mandatory_param not in params:
+                    # The user hasn't set this mandatory parameter, but if it
+                    # has a non-null default value, it's OK and we can skip it
+                    param_up = mandatory_param.upper()
+                    if param_up in self._default_nv_pairs:
+                        if self._default_nv_pairs[param_up] != "":
+                            continue
+                    failed_dependencies.add(mandatory_param)
+                    continue
+                if params[mandatory_param] is None:
+                    failed_dependencies.add(mandatory_param)
+                    continue
+                if params[mandatory_param] == "":
+                    failed_dependencies.add(mandatory_param)
+                    continue
+            if failed_dependencies:
+                msg = f"When {param} is set to "
+                msg += f"{self.mandatory_params[param]['value']}, the "
+                msg += "following are mandatory "
+                msg += f"{','.join(sorted(failed_dependencies))}"
+                self.module.fail_json(msg=msg)
+
     def create_fabrics(self):
-
-
         method = "POST"
         path = f"/rest/control/fabrics"
         if self.nd:
@@ -602,12 +806,13 @@ class DcnmFabric:
             bgp_as = item["bgp_as"]
 
             self.build_fabric_params_default()
-            self.build_fabric_fabric_nv_pairs_default()
+            self.build_default_nv_pairs()
             self.build_translatable_nv_pairs()
+            self.validate_dependencies(item)
             payload = self._fabric_params_default
             payload["fabricName"] = fabric
             payload["asn"] = bgp_as
-            payload["nvPairs"] = self._fabric_nv_pairs_default
+            payload["nvPairs"] = self._default_nv_pairs
             self.translate_to_ndfc_nv_pairs(item)
             for key,value in self.translated_nv_pairs.items():
                 self.log_msg(f"create_fabrics(): key {key}, value {value}")
