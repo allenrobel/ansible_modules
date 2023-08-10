@@ -6,9 +6,11 @@
             state: merged
             config:
             -   fabric_name: IR-Fabric
-                bgp_as: 100
+                bgp_as: 65535.65535
+                anycast_rp_ip_range: 10.65.0.0/16
                 replication_mode: Ingress
-            -   fabric_name: Mcast-Fabric
-                bgp_as: 200
-                # replication_mode: Multicast
+            -   fabric_name: MC-Fabric
+                bgp_as: 65535.0
+            -   fabric_name: AS_Plain
+                bgp_as: 4294967295
                 pm_enable: True
