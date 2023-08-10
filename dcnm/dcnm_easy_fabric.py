@@ -655,15 +655,33 @@ class DcnmFabric:
                 continue
             self.translated_nv_pairs[key] = params[key]
         # camelCase keys
+        # These are currently manually mapped with a dictionary.
+        #
+        # TODO: Use a regex so we don't have to manually translate these
+        # The regex below sort of works, but doesn't handle camelCase
+        # with multiple upper-case letters e.g. myCoolAI would fail and
+        # become my_cool_a_i.  This single case could be fixed with e.g.
+        # r"(?<!^)(?=[A-Z]{2})" but would fail for myCoolAIBOT.
+        # Same for {3}, {4}...
+        #
+        # Tentative code for this, once we improve the regex:
+        #
+        # pattern = r"(?<!^)(?=[A-Z])"
+        # for camel_key in camel_keys:
+        #     dunder_key = re.sub(pattern, "_", param).lower()
+        #     if dunder_key not in params:
+        #         continue
+        # self.translated_nv_pairs[camel_key] = params[dunder_key]
+        # 
         camel_keys = {
-            "enableRealTimeBackup": "enable_realtime_backup",
+            "enableRealTimeBackup": "enable_real_time_backup",
             "enableScheduledBackup": "enable_scheduled_backup",
             "scheduledTime": "scheduled_time"
         }
-        for camel_key,dunder_key in camel_keys.items():
-            if dunder_key not in params:
+        for ndfc_key,user_key in camel_keys.items():
+            if user_key not in params:
                 continue
-            self.translated_nv_pairs[camel_key] = params[dunder_key]
+            self.translated_nv_pairs[ndfc_key] = params[user_key]
 
         self.log_msg(f"translate_to_ndfc_nv_pairs {self.translated_nv_pairs}")
 
