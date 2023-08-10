@@ -225,6 +225,9 @@ class DcnmFabric:
                     default=False
                 )
             )
+            # TODO:6 active_migration doesn't seem to be represented in
+            # the NDFC EasyFabric GUI.  Add this param if we figure out
+            # what it's used for and where in the GUI it's represented
             params_spec.update(
                 anycast_lb_id=dict(
                     required=False,
