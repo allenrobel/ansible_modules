@@ -42,6 +42,24 @@ options:
     type: list
     elements: dict
     suboptions:
+      aaa_remote_ip_enabled:
+        description:
+        - Enable (True) or disable (False) AAA remote IP
+        type: bool
+        required: false
+        default: False
+      advertise_pip_bgp:
+        description:
+        - Enable (True) or disable (False) usage of Primary VTEP IP Advertisement As Next-Hop Of Prefix Routes
+        type: bool
+        required: false
+        default: False
+      anycast_bgw_advertise_pip:
+        description:
+        - Enable (True) or disable (False) advertising Anycast Border Gateway PIP as VTEP. Effective after Recalculate Config on parent MSD fabric
+        type: bool
+        required: false
+        default: False
       anycast_lb_id:
         description:
         - Underlay Anycast Loopback Id
@@ -54,12 +72,6 @@ options:
         type: str
         required: false
         default: 10.254.254.0/24
-      aaa_remote_ip_enabled:
-        description:
-        - Enable (True) or disable (False) AAA remote IP
-        type: bool
-        required: false
-        default: False
       bgp_as:
         description:
         - The fabric BGP Autonomous System number
@@ -225,9 +237,25 @@ class DcnmFabric:
                     default=False
                 )
             )
-            # TODO:6 active_migration doesn't seem to be represented in
+            # TODO:6 active_migration
+            # active_migration doesn't seem to be represented in
             # the NDFC EasyFabric GUI.  Add this param if we figure out
             # what it's used for and where in the GUI it's represented
+            params_spec.update(
+                advertise_pip_bgp=dict(
+                    required=False,
+                    type="bool",
+                    default=False
+                )
+            )
+            # TODO:6 agent_intf (add if needed)
+            params_spec.update(
+                anycast_bgw_advertise_pip=dict(
+                    required=False,
+                    type="bool",
+                    default=False
+                )
+            )
             params_spec.update(
                 anycast_lb_id=dict(
                     required=False,

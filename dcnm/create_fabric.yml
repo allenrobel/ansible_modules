@@ -7,10 +7,13 @@
             config:
             -   fabric_name: IR-Fabric
                 advertise_pip_bgp: True
-                bgp_as: 65535.65535
+                anycast_bgw_advertise_pip: True
                 anycast_rp_ip_range: 10.65.0.0/16
+                bgp_as: 65535.65535
                 replication_mode: Ingress
             -   fabric_name: MC-Fabric
+                advertise_pip_bgp: False
+                anycast_bgw_advertise_pip: False
                 bgp_as: 65535.0
             -   fabric_name: AS_Plain
                 bgp_as: 4294967295
