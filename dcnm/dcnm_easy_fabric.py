@@ -623,8 +623,6 @@ class DcnmFabric:
         for param in self._default_nv_pairs:
             if re.search(re_spec, param):
                 self.translatable_nv_pairs.add(param)
-        msg = f"translatable_nv_pairs: {self.translatable_nv_pairs}"
-        self.log_msg(msg=msg)
 
     def translate_to_ndfc_nv_pairs(self, params):
         """
