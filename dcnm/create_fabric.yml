@@ -6,6 +6,7 @@
             state: merged
             config:
             -   fabric_name: IR-Fabric
+                advertise_pip_bgp: True
                 bgp_as: 65535.65535
                 anycast_rp_ip_range: 10.65.0.0/16
                 replication_mode: Ingress
