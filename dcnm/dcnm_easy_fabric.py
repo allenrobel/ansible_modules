@@ -624,11 +624,11 @@ class DcnmFabric:
         # relaxed regex here.  We just want to exclude camelCase e.g.
         # "thisThing", lowercase dunder e.g. "this_thing", and lowercase
         # e.g. "thisthing".
-        re_uppercase_dunder = "^[A-Z0-9_]$"
+        re_uppercase_dunder = "^[A-Z0-9_]+$"
         self.translatable_nv_pairs = set()
         for param in self._default_nv_pairs:
             if re.search(re_uppercase_dunder, param):
-                self.translatable_nv_pairs.add(param)
+                self.translatable_nv_pairs.add(param.lower())
 
     def translate_to_ndfc_nv_pairs(self, params):
         """
@@ -637,6 +637,7 @@ class DcnmFabric:
         self.translated_nv_pairs
 
         """
+        self.build_translatable_nv_pairs()
         # TODO:4 We currently don't handle non-dunder uppercase and lowercase,
         #   e.g. THIS or that.  But (knock on wood), so far there are no
         #   cases like this (or THAT).
@@ -833,7 +834,6 @@ class DcnmFabric:
 
             self.build_fabric_params_default()
             self.build_default_nv_pairs()
-            self.build_translatable_nv_pairs()
             self.validate_dependencies(item)
             payload = self._fabric_params_default
             payload["fabricName"] = fabric
