@@ -581,6 +581,8 @@ class DcnmFabric:
         Initialize default NDFC top-level parameters
         See also: _init_nv_pairs*
         """
+        # TODO:3 We may need translation methods for these as well. See the
+        #   method for nvPair transation: translate_to_ndfc_nv_pairs
         self._fabric_params_default = {}
         self._fabric_params_default["deviceType"] = "n9k"
         self._fabric_params_default["fabricTechnology"] = "VXLANFabric"
@@ -618,10 +620,14 @@ class DcnmFabric:
         translation happens.
         """
         # self._default_nv_pairs is already built via create_fabric()
-        re_spec = "^[A-Z0-9]+_[A-Z0-9]+"
+        # Given we have a specific controlled input, we can use a more
+        # relaxed regex here.  We just want to exclude camelCase e.g.
+        # "thisThing", lowercase dunder e.g. "this_thing", and lowercase
+        # e.g. "thisthing".
+        re_uppercase_dunder = "^[A-Z0-9_]$"
         self.translatable_nv_pairs = set()
         for param in self._default_nv_pairs:
-            if re.search(re_spec, param):
+            if re.search(re_uppercase_dunder, param):
                 self.translatable_nv_pairs.add(param)
 
     def translate_to_ndfc_nv_pairs(self, params):
@@ -630,11 +636,10 @@ class DcnmFabric:
         expects in nvPairs and populate dict 
         self.translated_nv_pairs
 
-        TODO:
-        -   We currently don't handle non-dunder uppercase and lowercase,
-            e.g. THIS or that.  But (knock on wood), so far there are no
-            cases like this (or THAT).
         """
+        # TODO:4 We currently don't handle non-dunder uppercase and lowercase,
+        #   e.g. THIS or that.  But (knock on wood), so far there are no
+        #   cases like this (or THAT).
         self.log_msg(f"translate_to_ndfc_nv_pairs params {params}")
         self.translated_nv_pairs = {}
         # upper-case dunder keys
@@ -657,7 +662,7 @@ class DcnmFabric:
         # camelCase keys
         # These are currently manually mapped with a dictionary.
         #
-        # TODO: Use a regex so we don't have to manually translate these
+        # TODO:2 Use a regex so we don't have to manually translate these
         # The regex below sort of works, but doesn't handle camelCase
         # with multiple upper-case letters e.g. myCoolAI would fail and
         # become my_cool_a_i.  This single case could be fixed with e.g.
