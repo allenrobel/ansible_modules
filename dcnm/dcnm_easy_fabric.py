@@ -60,6 +60,12 @@ options:
         type: bool
         required: false
         default: False
+      anycast_gw_mac:
+        description:
+        - Shared MAC address for all leafs (xx:xx:xx:xx:xx:xx, xxxx.xxxx.xxxx, etc)
+        type: str
+        required: false
+        default: "2020.0000.00aa"
       anycast_lb_id:
         description:
         - Underlay Anycast Loopback Id
@@ -129,6 +135,27 @@ from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm impor
     get_fabric_inventory_details,
 )
 
+def translate_mac_address(mac_addr):
+    """
+    Accept mac address with any (or no) punctuation
+    and convert it into the dotted format that NDFC
+    expects.
+
+    Return mac address formatted for NDFC on success
+    Return False on failure.
+    """
+    mac_addr = re.sub(r'[\W\s_]',"",mac_addr)
+    if not re.search("^[A-Fa-f0-9]{12}$", mac_addr):
+        return False
+    return ''.join(
+        (
+            mac_addr[:4],
+            ".",
+            mac_addr[4:8],
+            ".",
+            mac_addr[8:]
+        )
+    )
 
 class DcnmFabric:
     def __init__(self, module):
@@ -257,6 +284,13 @@ class DcnmFabric:
                 )
             )
             params_spec.update(
+                anycast_gw_mac=dict(
+                    required=False,
+                    type="str",
+                    default="2020.0000.00aa"
+                )
+            )
+            params_spec.update(
                 anycast_lb_id=dict(
                     required=False,
                     type="int",
@@ -307,13 +341,23 @@ class DcnmFabric:
         if not self.config:
             msg = "config: element is mandatory for state merged"
             self.module.fail_json(msg=msg)
-        for param in self.config:
-            if "fabric_name" not in param:
+        cfg_index = 0
+        for cfg in self.config:
+            self.log_msg(msg=f"validate_input_for_merged_state: cfg {cfg}")
+            if "fabric_name" not in cfg:
                 msg = "fabric_name is mandatory"
                 break
-            if "bgp_as" not in param:
+            if "bgp_as" not in cfg:
                 msg = "bgp_as is mandatory"
                 break
+            if "anycast_gw_mac" in cfg:
+                result = translate_mac_address(cfg["anycast_gw_mac"])
+                if result is False:
+                    msg = f"invalid anycast_gw_mac {cfg['anycast_gw_mac']}"
+                    self.log_msg(msg=msg)
+                    break
+                self.config[cfg_index]["anycast_gw_mac"] = result
+            cfg_index += 1
         if msg:
             self.module.fail_json(msg=msg)
 

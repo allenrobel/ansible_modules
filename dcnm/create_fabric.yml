@@ -8,13 +8,16 @@
             -   fabric_name: IR-Fabric
                 advertise_pip_bgp: True
                 anycast_bgw_advertise_pip: True
+                anycast_gw_mac: 00:aa:bb:cc:dd:ee
                 anycast_rp_ip_range: 10.65.0.0/16
                 bgp_as: 65535.65535
                 replication_mode: Ingress
             -   fabric_name: MC-Fabric
+                anycast_gw_mac: 00ffeeddccbb
                 advertise_pip_bgp: False
                 anycast_bgw_advertise_pip: False
                 bgp_as: 65535.0
             -   fabric_name: AS_Plain
+                anycast_gw_mac: 00dd.ccbb.aa00
                 bgp_as: 4294967295
                 pm_enable: True
