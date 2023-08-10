@@ -215,16 +215,8 @@ class DcnmFabric:
         self.diff_create = diff_create
         self.log_msg(msg=f'get_diff_merge(): self.diff_create {self.diff_create}')
 
-    def validate_input(self):
-        """Parse the playbook values, validate to param specs."""
-
-        state = self.params["state"]
-
-        if state != "merged":
-            msg = f"Only merged state is supported. Got state {state}"
-            self.module.fail_json(msg=msg)
-
-        if state == "merged":
+    @staticmethod
+    def build_params_spec_for_merged_state():
             params_spec = {}
             params_spec.update(
                 aaa_remote_ip_enabled=dict(
@@ -276,33 +268,47 @@ class DcnmFabric:
                     choices=["Ingress", "Multicast"],
                 )
             )
+            return params_spec
 
-            msg = None
-            if not self.config:
-                if state == "merged":
-                    msg = f"config: element is mandatory for state {state}"
-                    self.module.fail_json(msg=msg)
-            self.log_msg(f"validate_input(): self.config {self.config}")
-            for param in self.config:
-                if "fabric_name" not in param:
-                    msg = "fabric_name is mandatory"
-                    break
-                if "bgp_as" not in param:
-                    msg = "bgp_as is mandatory"
-                    break
-            if msg:
-                self.module.fail_json(msg=msg)
+    def validate_input_for_merged_state(self):
+        params_spec = self.build_params_spec_for_merged_state()
+        msg = None
+        if not self.config:
+            msg = "config: element is mandatory for state merged"
+            self.module.fail_json(msg=msg)
+        for param in self.config:
+            if "fabric_name" not in param:
+                msg = "fabric_name is mandatory"
+                break
+            if "bgp_as" not in param:
+                msg = "bgp_as is mandatory"
+                break
+        if msg:
+            self.module.fail_json(msg=msg)
 
-            valid_params, invalid_params = validate_list_of_dicts(
-                self.config, params_spec, self.module
-            )
-            for param in valid_params:
-                self.validated.append(param)
+        valid_params, invalid_params = validate_list_of_dicts(
+            self.config, params_spec, self.module
+        )
+        for param in valid_params:
+            self.validated.append(param)
 
-            if invalid_params:
-                msg = f"Invalid parameters in playbook: "
-                msg += f"{','.join(invalid_params)}"
-                self.module.fail_json(msg=msg)
+        if invalid_params:
+            msg = f"Invalid parameters in playbook: "
+            msg += f"{','.join(invalid_params)}"
+            self.module.fail_json(msg=msg)
+
+    def validate_input(self):
+        """Parse the playbook values, validate the param specs."""
+
+        state = self.params["state"]
+
+        # TODO:2 remove this when we implement query state
+        if state != "merged":
+            msg = f"Only merged state is supported. Got state {state}"
+            self.module.fail_json(msg=msg)
+
+        if state == "merged":
+            self.validate_input_for_merged_state()
 
     def log_msg(self, msg):
         if self.fd is None:
