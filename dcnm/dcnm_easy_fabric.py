@@ -197,7 +197,6 @@ class DcnmFabric:
             msg = f"expected list type for self.config. got {type(self.config).__name__}"
             self.module.fail_json(msg=msg)
 
-        self.log_msg(f"__init__ self.config {self.config}")
         self.check_mode = False
         self.validated = []
         self.have_create = []
@@ -229,45 +228,36 @@ class DcnmFabric:
         return inv
 
     def get_have(self):
-        self.log_msg(msg=f'get_have(): entered. self.fabric_details {self.fabric_details}')
-
+        """
+        determine current fabric state on NDFC for all existing fabrics
+        """
         method = "GET"
         for fabric in self.fabric_details:
             path = f"/rest/control/fabrics/{fabric}"
             if self.nd:
                 path = self.nd_prefix + path
             fabric_info = dcnm_send(self.module, method, path)
-            self.log_msg(f'get_have(): fabric_info {fabric_info}')
             missing_fabric, not_ok = self.handle_response(fabric_info, "query_dcnm")
 
             if missing_fabric is False and not_ok is True:
-                msg = f"get_have(): returning: missing_fabric {missing_fabric}, not_ok {not_ok}"
-                self.log_msg(msg=msg)
                 return
-            msg = f"get_have(): Fabric {fabric} already present on DCNM"
+            msg = f"get_have(): Fabric {fabric} already present on NDFC"
             self.module.fail_json(msg=msg)
 
     def get_want(self):
-        self.log_msg(msg=f'get_want(): entered. self.validated {self.validated}')
+        """
+        Update self.want_create for all fabrics defined in the playbook
+        """
         want_create = []
 
-        # if not self.config:
-        #     return
-
-        for inv in self.validated:
-            self.log_msg(msg=f'inv {inv}')
-            want_create.append(self.update_create_params(inv))
-        self.log_msg(msg=f'get_want(): want_create {want_create}')
-
+        for fabric_config in self.validated:
+            want_create.append(self.update_create_params(fabric_config))
         if not want_create:
             return
-
         self.want_create = want_create
 
 
     def get_diff_merge(self):
-        self.log_msg(msg=f'get_diff_merge(): entered. self.want_create {self.want_create}')
-
         diff_create = []
 
         for want_c in self.want_create:
@@ -277,9 +267,7 @@ class DcnmFabric:
                     found = True
             if not found:
                 diff_create.append(want_c)
-
         self.diff_create = diff_create
-        self.log_msg(msg=f'get_diff_merge(): self.diff_create {self.diff_create}')
 
     @staticmethod
     def build_params_spec_for_merged_state():
@@ -385,7 +373,6 @@ class DcnmFabric:
         Fail if anything is not valid that we couldn't fix
         Return the validated cfg otherwise
         """
-        self.log_msg(msg=f"validate_input_for_merged_state: cfg {cfg}")
         if "fabric_name" not in cfg:
             msg = "fabric_name is mandatory"
             self.module.fail_json(msg=msg)
@@ -788,7 +775,6 @@ class DcnmFabric:
         # TODO:4 We currently don't handle non-dunder uppercase and lowercase,
         #   e.g. THIS or that.  But (knock on wood), so far there are no
         #   cases like this (or THAT).
-        self.log_msg(f"translate_to_ndfc_nv_pairs params {params}")
         self.translated_nv_pairs = {}
         # upper-case dunder keys
         for param in self.translatable_nv_pairs:
@@ -835,9 +821,6 @@ class DcnmFabric:
             if user_key not in params:
                 continue
             self.translated_nv_pairs[ndfc_key] = params[user_key]
-
-        self.log_msg(f"translate_to_ndfc_nv_pairs {self.translated_nv_pairs}")
-
 
     def build_mandatory_params(self):
         """
@@ -974,7 +957,6 @@ class DcnmFabric:
         if self.nd:
             path = self.nd_prefix + path
 
-        self.log_msg(f"create_fabrics() self.want_create {self.want_create}")
         for item in self.want_create:
             fabric = item["fabric_name"]
             bgp_as = item["bgp_as"]
@@ -988,15 +970,10 @@ class DcnmFabric:
             payload["nvPairs"] = self._default_nv_pairs
             self.translate_to_ndfc_nv_pairs(item)
             for key,value in self.translated_nv_pairs.items():
-                self.log_msg(f"create_fabrics(): key {key}, value {value}")
                 payload["nvPairs"][key] = value
 
-            self.log_msg(f"create_fabrics() dcnm_send() path {path}")
-            self.log_msg(f"create_fabrics() dcnm_send() data {json.dumps(payload)}")
             response = dcnm_send(self.module, method, path, data=json.dumps(payload))
-            self.log_msg(f"create_fabrics() response {response}")
             fail, self.result["changed"] = self.handle_response(response, "create")
-            self.log_msg(f"create_fabrics() fail {fail}, result {self.result['changed']}")
 
             if fail:
                 self.log_msg(f"create_fabrics() calling self.failure with response {response}")
@@ -1008,7 +985,7 @@ class DcnmFabric:
         changed = True
 
         if op == "query_dcnm":
-            # This if blocks handles responses to the query APIs against DCNM.
+            # This if block handles responses to the query APIs against DCNM.
             # Basically all GET operations.
             if res.get("ERROR") == "Not Found" and res["RETURN_CODE"] == 404:
                 return True, False
