@@ -13,7 +13,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Classes and methods for Ansible support of NDFC Data Center VXLAN EVPN Fabric.
+
+Ansible states "merged", "deleted", and "query" are implemented.
+"""
 from __future__ import absolute_import, division, print_function
+
+import copy
+import json
+import re
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm import (
+    dcnm_send, dcnm_version_supported, get_fabric_details,
+    get_fabric_inventory_details, validate_list_of_dicts)
 
 __metaclass__ = type
 __author__ = "Allen Robel"
@@ -108,7 +122,8 @@ options:
         description:
         - VRF Lite Inter-Fabric Connection Deployment Options.
         - If (0), VRF Lite configuration is Manual.
-        - If (1), VRF Lite IFCs are auto created between border devices of two Easy Fabrics, and between border devices in Easy Fabric and edge routers in External Fabric.
+        - If (1), VRF Lite IFCs are auto created between border devices of two Easy Fabrics
+        - If (1), VRF Lite IFCs are auto created between border devices in Easy Fabric and edge routers in External Fabric.
         - The IP address is taken from the 'VRF Lite Subnet IP Range' pool.
         type: int
         required: false
@@ -139,17 +154,7 @@ EXAMPLES = """
 
 """
 
-import copy
-import json
-import re
-from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm import (
-    dcnm_send,
-    validate_list_of_dicts,
-    dcnm_version_supported,
-    get_fabric_details,
-    get_fabric_inventory_details,
-)
+
 
 def translate_mac_address(mac_addr):
     """
@@ -160,20 +165,16 @@ def translate_mac_address(mac_addr):
     Return mac address formatted for NDFC on success
     Return False on failure.
     """
-    mac_addr = re.sub(r'[\W\s_]',"",mac_addr)
+    mac_addr = re.sub(r"[\W\s_]", "", mac_addr)
     if not re.search("^[A-Fa-f0-9]{12}$", mac_addr):
         return False
-    return ''.join(
-        (
-            mac_addr[:4],
-            ".",
-            mac_addr[4:8],
-            ".",
-            mac_addr[8:]
-        )
-    )
+    return "".join((mac_addr[:4], ".", mac_addr[4:8], ".", mac_addr[8:]))
+
 
 def translate_vrf_lite_autoconfig(value):
+    """
+    Translate playbook values to those expected by NDFC
+    """
     try:
         value = int(value)
     except ValueError:
@@ -184,17 +185,25 @@ def translate_vrf_lite_autoconfig(value):
         return "Back2Back&ToExternal"
     return False
 
+
 class DcnmFabric:
+    """
+    Ansible support for Data Center VXLAN EVPN (Easy_Fabric)
+    """
     def __init__(self, module):
         self.module = module
         self.params = module.params
-        self.fabric = 'my_fabric'
-        # TODO:1 set to False before committing to main branch
-        self.DEBUG = True
+        # TODO:1 set self.debug to False to disable self.log_msg()
+        self.debug = True
+        # Used for self.log_msg()
         self.fd = None
+        # File self.log_msg() logs to
+        self.logfile = "/tmp/dcnm_easy_fabric.log"
+
         self.config = module.params.get("config")
         if not isinstance(self.config, list):
-            msg = f"expected list type for self.config. got {type(self.config).__name__}"
+            msg = "expected list type for self.config. "
+            msg = f"got {type(self.config).__name__}"
             self.module.fail_json(msg=msg)
 
         self.check_mode = False
@@ -204,14 +213,31 @@ class DcnmFabric:
         self.diff_create = []
         self.diff_save = {}
         self.query = []
-        self.nd_prefix = "/appcenter/cisco/ndfc/api/v1/lan-fabric"
-
         self.result = dict(changed=False, diff=[], response=[])
+        self._default_fabric_params = {}
+        self._default_nv_pairs = {}
+        # See self.build_mandatory_params()
+        self._mandatory_params = {}
+        # nvPairs that are safe to translate from lowercase dunder
+        # (as used in the playbook) to uppercase dunder (as used
+        # in the NDFC payload).
+        self._translatable_nv_pairs = set()
+        # A dictionary that holds the set of nvPairs that have been
+        # translated for use in the NDFC payload.  These include only
+        # parameters that the user has changed.  Keyed on the NDFC-expected
+        # parameter name, value is the user's setting for the parameter.
+        # Populated in:
+        #  self.translate_to_ndfc_nv_pairs()
+        #  self.build_translatable_nv_pairs()
+        self._translated_nv_pairs = {}
 
+        self.nd_prefix = "/appcenter/cisco/ndfc/api/v1/lan-fabric"
         self.controller_version = dcnm_version_supported(self.module)
+        self.nd = self.controller_version >= 12
+
+        self.mandatory_keys = {"fabric_name", "bgp_as"}
         self.fabric_details = {}
         self.inventory_data = {}
-        self.mandatory_keys = {"fabric_name", "bgp_as"}
         for item in self.config:
             if not self.mandatory_keys.issubset(item):
                 msg = f"missing mandatory keys in {item}. "
@@ -222,10 +248,9 @@ class DcnmFabric:
             self.inventory_data[fabric] = get_fabric_inventory_details(
                 self.module, fabric
             )
-        self.nd = True if self.controller_version >= 12 else False
 
-    def update_create_params(self, inv):
-        return inv
+    # def update_create_params(self, inv):
+    #     return inv
 
     def get_have(self):
         """
@@ -251,11 +276,10 @@ class DcnmFabric:
         want_create = []
 
         for fabric_config in self.validated:
-            want_create.append(self.update_create_params(fabric_config))
+            want_create.append(fabric_config)
         if not want_create:
             return
         self.want_create = want_create
-
 
     def get_diff_merge(self):
         diff_create = []
@@ -271,98 +295,60 @@ class DcnmFabric:
 
     @staticmethod
     def build_params_spec_for_merged_state():
-            params_spec = {}
-            params_spec.update(
-                aaa_remote_ip_enabled=dict(
-                    required=False,
-                    type="bool",
-                    default=False
-                )
+        params_spec = {}
+        params_spec.update(
+            aaa_remote_ip_enabled=dict(required=False, type="bool", default=False)
+        )
+        # TODO:6 active_migration
+        # active_migration doesn't seem to be represented in
+        # the NDFC EasyFabric GUI.  Add this param if we figure out
+        # what it's used for and where in the GUI it's represented
+        params_spec.update(
+            advertise_pip_bgp=dict(required=False, type="bool", default=False)
+        )
+        # TODO:6 agent_intf (add if needed)
+        params_spec.update(
+            anycast_bgw_advertise_pip=dict(required=False, type="bool", default=False)
+        )
+        params_spec.update(
+            anycast_gw_mac=dict(required=False, type="str", default="2020.0000.00aa")
+        )
+        params_spec.update(
+            anycast_lb_id=dict(
+                required=False, type="int", range_min=0, range_max=1023, default=""
             )
-            # TODO:6 active_migration
-            # active_migration doesn't seem to be represented in
-            # the NDFC EasyFabric GUI.  Add this param if we figure out
-            # what it's used for and where in the GUI it's represented
-            params_spec.update(
-                advertise_pip_bgp=dict(
-                    required=False,
-                    type="bool",
-                    default=False
-                )
+        )
+        params_spec.update(
+            anycast_rp_ip_range=dict(
+                required=False, type="ipv4_subnet", default="10.254.254.0/24"
             )
-            # TODO:6 agent_intf (add if needed)
-            params_spec.update(
-                anycast_bgw_advertise_pip=dict(
-                    required=False,
-                    type="bool",
-                    default=False
-                )
+        )
+        params_spec.update(bgp_as=dict(required=True, type="str"))
+        params_spec.update(fabric_name=dict(required=True, type="str"))
+        params_spec.update(pm_enable=dict(required=False, type="bool", default=False))
+        params_spec.update(
+            replication_mode=dict(
+                required=False,
+                type="str",
+                default="Multicast",
+                choices=["Ingress", "Multicast"],
             )
-            params_spec.update(
-                anycast_gw_mac=dict(
-                    required=False,
-                    type="str",
-                    default="2020.0000.00aa"
-                )
+        )
+        params_spec.update(
+            vrf_lite_autoconfig=dict(
+                required=False,
+                type="str",
+                default="Manual",
+                choices=["Back2Back&ToExternal", "Manual"],
             )
-            params_spec.update(
-                anycast_lb_id=dict(
-                    required=False,
-                    type="int",
-                    range_min=0,
-                    range_max=1023,
-                    default=""
-                )
-            )
-            params_spec.update(
-                anycast_rp_ip_range=dict(
-                    required=False,
-                    type="ipv4_subnet",
-                    default="10.254.254.0/24"
-                )
-            )
-            params_spec.update(
-                bgp_as=dict(
-                    required=True,
-                    type="str"
-                )
-            )
-            params_spec.update(
-                fabric_name=dict(
-                    required=True,
-                    type="str"
-                )
-            )
-            params_spec.update(
-                pm_enable=dict(
-                    required=False,
-                    type="bool",
-                    default=False
-                )
-            )
-            params_spec.update(
-                replication_mode=dict(
-                    required=False,
-                    type="str",
-                    default="Multicast",
-                    choices=["Ingress", "Multicast"],
-                )
-            )
-            params_spec.update(
-                vrf_lite_autoconfig=dict(
-                    required=False,
-                    type="str",
-                    default="Manual",
-                    choices=["Back2Back&ToExternal", "Manual"],
-                )
-            )
-            return params_spec
+        )
+        return params_spec
 
     def verify_cfg_for_merged_state(self, cfg):
         """
         Verify the user's playbook parameters for an individual fabric
         configuration.  Whenever possible, throw the user a bone by
-        converting values to NDFC's expectations. For example, NDFC's 
+        converting values to NDFC's expectations. For example, NDFC's
         REST API accepts mac addresses in any format (does not return
         an error), since the NDFC GUI validates that it is in the expected
         format, but the fabric will be in an errored state if the mac address
@@ -416,7 +402,7 @@ class DcnmFabric:
             self.validated.append(param)
 
         if invalid_params:
-            msg = f"Invalid parameters in playbook: "
+            msg = "Invalid parameters in playbook: "
             msg += f"{','.join(invalid_params)}"
             self.module.fail_json(msg=msg)
 
@@ -437,14 +423,21 @@ class DcnmFabric:
         """
         used for debugging. disable this when committing to main
         """
-        if self.DEBUG is False:
+        if self.debug is False:
             return
         if self.fd is None:
-            self.fd = open("/tmp/dcnm_easy_fabric.log", "a+")
-        if self.fd is not None:
-            self.fd.write(msg)
-            self.fd.write("\n")
-            self.fd.flush()
+            try:
+                self.fd = open(f"{self.logfile}", "a+",
+                               encoding="UTF-8"
+                )
+            except IOError as err:
+                msg = f"error opening logfile {self.logfile}. "
+                msg += f"detail: {err}"
+                self.module.fail_json(msg=msg)
+
+        self.fd.write(msg)
+        self.fd.write("\n")
+        self.fd.flush()
 
     def build_default_nv_pairs(self):
         self._default_nv_pairs = {}
@@ -717,25 +710,25 @@ class DcnmFabric:
         """
         # TODO:3 We may need translation methods for these as well. See the
         #   method for nvPair transation: translate_to_ndfc_nv_pairs
-        self._fabric_params_default = {}
-        self._fabric_params_default["deviceType"] = "n9k"
-        self._fabric_params_default["fabricTechnology"] = "VXLANFabric"
-        self._fabric_params_default["fabricTechnologyFriendly"] = "VXLAN Fabric"
-        self._fabric_params_default["fabricType"] = "Switch_Fabric"
-        self._fabric_params_default["fabricTypeFriendly"] = "Switch Fabric"
-        self._fabric_params_default[
+        self._default_fabric_params = {}
+        self._default_fabric_params["deviceType"] = "n9k"
+        self._default_fabric_params["fabricTechnology"] = "VXLANFabric"
+        self._default_fabric_params["fabricTechnologyFriendly"] = "VXLAN Fabric"
+        self._default_fabric_params["fabricType"] = "Switch_Fabric"
+        self._default_fabric_params["fabricTypeFriendly"] = "Switch Fabric"
+        self._default_fabric_params[
             "networkExtensionTemplate"
         ] = "Default_Network_Extension_Universal"
         value = "Default_Network_Universal"
-        self._fabric_params_default["networkTemplate"] = value
-        self._fabric_params_default["provisionMode"] = "DCNMTopDown"
-        self._fabric_params_default["replicationMode"] = "Multicast"
-        self._fabric_params_default["siteId"] = ""
-        self._fabric_params_default["templateName"] = "Easy_Fabric"
-        self._fabric_params_default[
+        self._default_fabric_params["networkTemplate"] = value
+        self._default_fabric_params["provisionMode"] = "DCNMTopDown"
+        self._default_fabric_params["replicationMode"] = "Multicast"
+        self._default_fabric_params["siteId"] = ""
+        self._default_fabric_params["templateName"] = "Easy_Fabric"
+        self._default_fabric_params[
             "vrfExtensionTemplate"
         ] = "Default_VRF_Extension_Universal"
-        self._fabric_params_default["vrfTemplate"] = "Default_VRF_Universal"
+        self._default_fabric_params["vrfTemplate"] = "Default_VRF_Universal"
 
     def build_translatable_nv_pairs(self):
         """
@@ -759,40 +752,40 @@ class DcnmFabric:
         # "thisThing", lowercase dunder e.g. "this_thing", and lowercase
         # e.g. "thisthing".
         re_uppercase_dunder = "^[A-Z0-9_]+$"
-        self.translatable_nv_pairs = set()
+        self._translatable_nv_pairs = set()
         for param in self._default_nv_pairs:
             if re.search(re_uppercase_dunder, param):
-                self.translatable_nv_pairs.add(param.lower())
+                self._translatable_nv_pairs.add(param.lower())
 
     def translate_to_ndfc_nv_pairs(self, params):
         """
         translate keys in params dict into what NDFC
-        expects in nvPairs and populate dict 
-        self.translated_nv_pairs
+        expects in nvPairs and populate dict
+        self._translated_nv_pairs
 
         """
         self.build_translatable_nv_pairs()
         # TODO:4 We currently don't handle non-dunder uppercase and lowercase,
         #   e.g. THIS or that.  But (knock on wood), so far there are no
         #   cases like this (or THAT).
-        self.translated_nv_pairs = {}
+        self._translated_nv_pairs = {}
         # upper-case dunder keys
-        for param in self.translatable_nv_pairs:
+        for param in self._translatable_nv_pairs:
             if param not in params:
                 continue
-            self.translated_nv_pairs[param.upper()] = params[param]
+            self._translated_nv_pairs[param.upper()] = params[param]
         # special cases
         # dunder keys, these need no modification
         dunder_keys = {
             "default_network",
             "default_vrf",
             "network_extension_template",
-            "vrf_extension_template"
+            "vrf_extension_template",
         }
         for key in dunder_keys:
             if key not in params:
                 continue
-            self.translated_nv_pairs[key] = params[key]
+            self._translated_nv_pairs[key] = params[key]
         # camelCase keys
         # These are currently manually mapped with a dictionary.
         #
@@ -810,17 +803,17 @@ class DcnmFabric:
         #     dunder_key = re.sub(pattern, "_", param).lower()
         #     if dunder_key not in params:
         #         continue
-        # self.translated_nv_pairs[camel_key] = params[dunder_key]
-        # 
+        # self._translated_nv_pairs[camel_key] = params[dunder_key]
+        #
         camel_keys = {
             "enableRealTimeBackup": "enable_real_time_backup",
             "enableScheduledBackup": "enable_scheduled_backup",
-            "scheduledTime": "scheduled_time"
+            "scheduledTime": "scheduled_time",
         }
-        for ndfc_key,user_key in camel_keys.items():
+        for ndfc_key, user_key in camel_keys.items():
             if user_key not in params:
                 continue
-            self.translated_nv_pairs[ndfc_key] = params[user_key]
+            self._translated_nv_pairs[ndfc_key] = params[user_key]
 
     def build_mandatory_params(self):
         """
@@ -837,7 +830,7 @@ class DcnmFabric:
         -   v6_subnet_range
         -   v6_subnet_target_mask
 
-        self.mandatory_params is a dictionary, keyed on parameter.
+        self._mandatory_params is a dictionary, keyed on parameter.
         The value is a dictionary with the following keys:
 
         value:  The parameter value that makes the dependent parameters
@@ -848,11 +841,11 @@ class DcnmFabric:
 
         NOTE: Individual mandatory parameter values are validated elsewhere
 
-        Hence, we have the following structure for the 
-        self.mandatory_params dictionary, to handle the case where
+        Hence, we have the following structure for the
+        self._mandatory_params dictionary, to handle the case where
         underlay_is_v6 is set to True:
 
-        self.mandatory_params = {
+        self._mandatory_params = {
             "underlay_is_v6": {
                 "value": True,
                 "mandatory": {
@@ -876,7 +869,7 @@ class DcnmFabric:
         value of anycast_lb_id is.  We only care that underlay_is_v6 is
         set.  In this case, we could add the following:
 
-        self.mandatory_params.update = {
+        self._mandatory_params.update = {
             "anycast_lb_id": {
                 "value": "any",
                 "mandatory": {
@@ -886,18 +879,11 @@ class DcnmFabric:
         }
 
         """
-        self.mandatory_params = {}
-        self.mandatory_params.update(
-            {
-                "anycast_lb_id": {
-                    "value": "any",
-                    "mandatory": {
-                        "underlay_is_v6"
-                    }
-                }
-            }
+        self._mandatory_params = {}
+        self._mandatory_params.update(
+            {"anycast_lb_id": {"value": "any", "mandatory": {"underlay_is_v6"}}}
         )
-        self.mandatory_params.update(
+        self._mandatory_params.update(
             {
                 "underlay_is_v6": {
                     "value": True,
@@ -907,27 +893,26 @@ class DcnmFabric:
                         "loopback1_ipv6_range",
                         "router_id_range",
                         "v6_subnet_range",
-                        "v6_subnet_target_mask"
-                    }
+                        "v6_subnet_target_mask",
+                    },
                 }
             }
         )
-
 
     def validate_dependencies(self, params):
         self.build_mandatory_params()
         for param in params:
             # param doesn't have any dependent parameters
-            if param not in self.mandatory_params:
+            if param not in self._mandatory_params:
                 continue
             needs_validation = False
-            if self.mandatory_params[param]["value"] == "any":
+            if self._mandatory_params[param]["value"] == "any":
                 needs_validation = True
-            if params[param] == self.mandatory_params[param]["value"]:
+            if params[param] == self._mandatory_params[param]["value"]:
                 needs_validation = True
             if not needs_validation:
                 continue
-            for mandatory_param in self.mandatory_params[param]["mandatory"]:
+            for mandatory_param in self._mandatory_params[param]["mandatory"]:
                 failed_dependencies = set()
                 if mandatory_param not in params:
                     # The user hasn't set this mandatory parameter, but if it
@@ -946,14 +931,18 @@ class DcnmFabric:
                     continue
             if failed_dependencies:
                 msg = f"When {param} is set to "
-                msg += f"{self.mandatory_params[param]['value']}, the "
+                msg += f"{self._mandatory_params[param]['value']}, the "
                 msg += "following are mandatory "
                 msg += f"{','.join(sorted(failed_dependencies))}"
                 self.module.fail_json(msg=msg)
 
     def create_fabrics(self):
+        """
+        Build and send the payload to create the
+        fabrics specified in the playbook.
+        """
         method = "POST"
-        path = f"/rest/control/fabrics"
+        path = "/rest/control/fabrics"
         if self.nd:
             path = self.nd_prefix + path
 
@@ -964,23 +953,24 @@ class DcnmFabric:
             self.build_fabric_params_default()
             self.build_default_nv_pairs()
             self.validate_dependencies(item)
-            payload = self._fabric_params_default
+            payload = self._default_fabric_params
             payload["fabricName"] = fabric
             payload["asn"] = bgp_as
             payload["nvPairs"] = self._default_nv_pairs
             self.translate_to_ndfc_nv_pairs(item)
-            for key,value in self.translated_nv_pairs.items():
+            for key, value in self._translated_nv_pairs.items():
                 payload["nvPairs"][key] = value
 
             response = dcnm_send(self.module, method, path, data=json.dumps(payload))
             fail, self.result["changed"] = self.handle_response(response, "create")
 
             if fail:
-                self.log_msg(f"create_fabrics() calling self.failure with response {response}")
+                self.log_msg(
+                    f"create_fabrics() calling self.failure with response {response}"
+                )
                 self.failure(response)
 
     def handle_response(self, res, op):
-
         fail = False
         changed = True
 
@@ -1005,7 +995,6 @@ class DcnmFabric:
         return fail, changed
 
     def failure(self, resp):
-
         res = copy.deepcopy(resp)
 
         if not resp.get("DATA"):
@@ -1047,7 +1036,6 @@ def main():
 
     if dcnm_fabric.diff_create:
         dcnm_fabric.create_fabrics()
-
 
     module.exit_json(**dcnm_fabric.result)
 
