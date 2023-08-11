@@ -162,6 +162,8 @@ class DcnmFabric:
         self.module = module
         self.params = module.params
         self.fabric = 'my_fabric'
+        # TODO:1 set to False before committing to main branch
+        self.DEBUG = True
         self.fd = None
         self.config = module.params.get("config")
         if not isinstance(self.config, list):
@@ -407,6 +409,11 @@ class DcnmFabric:
             self.validate_input_for_merged_state()
 
     def log_msg(self, msg):
+        """
+        used for debugging. disable this when committing to main
+        """
+        if self.DEBUG is False:
+            return
         if self.fd is None:
             self.fd = open("/tmp/dcnm_easy_fabric.log", "a+")
         if self.fd is not None:
