@@ -282,6 +282,12 @@ class DcnmFabric:
         self.want_create = want_create
 
     def get_diff_merge(self):
+        """
+        Populates self.diff_create list() with items from our want list
+        that are not in our have list.  These items will be sent to NDFC.
+
+        Called from main().
+        """
         diff_create = []
 
         for want_c in self.want_create:
@@ -295,6 +301,13 @@ class DcnmFabric:
 
     @staticmethod
     def build_params_spec_for_merged_state():
+        """
+        Build the specs for the parameters expected when state == merged.
+
+        Called from: validate_input_for_merged_state()
+        Return: params_spec, a dictionary containing the set of
+                parameter specifications.
+        """
         params_spec = {}
         params_spec.update(
             aaa_remote_ip_enabled=dict(required=False, type="bool", default=False)
@@ -440,6 +453,12 @@ class DcnmFabric:
         self.fd.flush()
 
     def build_default_nv_pairs(self):
+        """
+        Build a dict() of default fabric nvPairs that will be sent to NDFC.
+        The values for these items are what NDFC currently (as of 12.1.2e)
+        uses for defaults.  Items that are supported by this module may be
+        modified by the user's playbook.
+        """
         self._default_nv_pairs = {}
         self._default_nv_pairs["AAA_REMOTE_IP_ENABLED"] = False
         self._default_nv_pairs["AAA_SERVER_CONF"] = ""
@@ -706,7 +725,7 @@ class DcnmFabric:
     def build_fabric_params_default(self):
         """
         Initialize default NDFC top-level parameters
-        See also: _init_nv_pairs*
+        See also: self.build_default_nv_pairs()
         """
         # TODO:3 We may need translation methods for these as well. See the
         #   method for nvPair transation: translate_to_ndfc_nv_pairs
@@ -900,6 +919,10 @@ class DcnmFabric:
         )
 
     def validate_dependencies(self, params):
+        """
+        Validate cross-parameter dependencies.
+        See docstring for self.build_mandatory_params()
+        """
         self.build_mandatory_params()
         for param in params:
             # param doesn't have any dependent parameters
@@ -940,6 +963,8 @@ class DcnmFabric:
         """
         Build and send the payload to create the
         fabrics specified in the playbook.
+
+        Called from main()
         """
         method = "POST"
         path = "/rest/control/fabrics"
@@ -971,6 +996,9 @@ class DcnmFabric:
                 self.failure(response)
 
     def handle_response(self, res, op):
+        """
+        Handle DELETE, GET, POST, PUT responses from NDFC.
+        """
         fail = False
         changed = True
 
@@ -983,7 +1011,8 @@ class DcnmFabric:
                 return False, True
             return False, False
 
-        # Responses to all other operations POST and PUT are handled here.
+        # Responses to all other operations (DELETE, POST, PUT)
+        # are handled here.
         if res.get("MESSAGE") != "OK":
             fail = True
             changed = False
@@ -995,6 +1024,22 @@ class DcnmFabric:
         return fail, changed
 
     def failure(self, resp):
+        """
+        This came from dcnm_inventory.py, but doesn't seem to be correct
+        for the case where resp["DATA"] does not exist?
+
+        If resp["DATA"] does not exist, the contents of the
+        if block don't seem to actually do anything:
+            - data will be None
+            - Hence, data.get("stackTrace") will also be None
+            - Hence, data.update() and res.update() are never executed
+
+        So, the only two lines that will actually ever be executed are
+        the happy path:
+
+        res = copy.deepcopy(resp)
+        self.module.fail_json(msg=res)
+        """
         res = copy.deepcopy(resp)
 
         if not resp.get("DATA"):
