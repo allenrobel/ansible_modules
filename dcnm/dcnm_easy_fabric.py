@@ -56,7 +56,8 @@ options:
         default: False
       anycast_bgw_advertise_pip:
         description:
-        - Enable (True) or disable (False) advertising Anycast Border Gateway PIP as VTEP. Effective after Recalculate Config on parent MSD fabric
+        - Enable (True) or disable (False) advertising Anycast Border Gateway PIP as VTEP.
+        - Effective after Recalculate Config on parent MSD fabric.
         type: bool
         required: false
         default: False
@@ -99,8 +100,23 @@ options:
         - Replication Mode for BUM Traffic
         type: str
         required: False
-        choices: ["Ingress", "Multicast"]
-        default: "Multicast"
+        choices:
+        - Ingress
+        - Multicast
+        default: Multicast
+      vrf_lite_autoconfig:
+        description:
+        - VRF Lite Inter-Fabric Connection Deployment Options.
+        - If (0), VRF Lite configuration is Manual.
+        - If (1), VRF Lite IFCs are auto created between border devices of two Easy Fabrics, and between border devices in Easy Fabric and edge routers in External Fabric.
+        - The IP address is taken from the 'VRF Lite Subnet IP Range' pool.
+        type: int
+        required: false
+        default: 0
+        choices:
+        - 0
+        - 1
+
 """
 
 EXAMPLES = """
@@ -157,6 +173,17 @@ def translate_mac_address(mac_addr):
         )
     )
 
+def translate_vrf_lite_autoconfig(value):
+    try:
+        value = int(value)
+    except ValueError:
+        return False
+    if value == 0:
+        return "Manual"
+    if value == 1:
+        return "Back2Back&ToExternal"
+    return False
+
 class DcnmFabric:
     def __init__(self, module):
         self.module = module
@@ -196,8 +223,6 @@ class DcnmFabric:
             self.inventory_data[fabric] = get_fabric_inventory_details(
                 self.module, fabric
             )
-        self.log_msg(f"fabric_details: {self.fabric_details}")
-        self.log_msg(f"inventory_data: {self.inventory_data}")
         self.nd = True if self.controller_version >= 12 else False
 
     def update_create_params(self, inv):
@@ -335,6 +360,14 @@ class DcnmFabric:
                     choices=["Ingress", "Multicast"],
                 )
             )
+            params_spec.update(
+                vrf_lite_autoconfig=dict(
+                    required=False,
+                    type="str",
+                    default="Manual",
+                    choices=["Back2Back&ToExternal", "Manual"],
+                )
+            )
             return params_spec
 
     def verify_cfg_for_merged_state(self, cfg):
@@ -365,6 +398,13 @@ class DcnmFabric:
                 msg = f"invalid anycast_gw_mac {cfg['anycast_gw_mac']}"
                 self.module.fail_json(msg=msg)
             cfg["anycast_gw_mac"] = result
+        if "vrf_lite_autoconfig" in cfg:
+            result = translate_vrf_lite_autoconfig(cfg["vrf_lite_autoconfig"])
+            if result is False:
+                msg = "invalid vrf_lite_autoconfig "
+                msg += f"{cfg['vrf_lite_autoconfig']}. Expected one of 0,1"
+                self.module.fail_json(msg=msg)
+            cfg["vrf_lite_autoconfig"] = result
         return cfg
 
     def validate_input_for_merged_state(self):
@@ -381,8 +421,6 @@ class DcnmFabric:
         for cfg in self.config:
             self.config[cfg_index] = self.verify_cfg_for_merged_state(cfg)
             cfg_index += 1
-        if msg:
-            self.module.fail_json(msg=msg)
 
         valid_params, invalid_params = validate_list_of_dicts(
             self.config, params_spec, self.module
