@@ -227,8 +227,8 @@ class DcnmFabric:
         # parameters that the user has changed.  Keyed on the NDFC-expected
         # parameter name, value is the user's setting for the parameter.
         # Populated in:
-        #  self.translate_to_ndfc_nv_pairs()
-        #  self.build_translatable_nv_pairs()
+        #  self._translate_to_ndfc_nv_pairs()
+        #  self._build_translatable_nv_pairs()
         self._translated_nv_pairs = {}
 
         self.nd_prefix = "/appcenter/cisco/ndfc/api/v1/lan-fabric"
@@ -452,7 +452,7 @@ class DcnmFabric:
         self.fd.write("\n")
         self.fd.flush()
 
-    def build_default_nv_pairs(self):
+    def _build_default_nv_pairs(self):
         """
         Build a dict() of default fabric nvPairs that will be sent to NDFC.
         The values for these items are what NDFC currently (as of 12.1.2e)
@@ -722,13 +722,13 @@ class DcnmFabric:
             "vrf_extension_template"
         ] = "Default_VRF_Extension_Universal"
 
-    def build_fabric_params_default(self):
+    def _build_default_fabric_params(self):
         """
         Initialize default NDFC top-level parameters
-        See also: self.build_default_nv_pairs()
+        See also: self._build_default_nv_pairs()
         """
         # TODO:3 We may need translation methods for these as well. See the
-        #   method for nvPair transation: translate_to_ndfc_nv_pairs
+        #   method for nvPair transation: _translate_to_ndfc_nv_pairs
         self._default_fabric_params = {}
         self._default_fabric_params["deviceType"] = "n9k"
         self._default_fabric_params["fabricTechnology"] = "VXLANFabric"
@@ -749,7 +749,7 @@ class DcnmFabric:
         ] = "Default_VRF_Extension_Universal"
         self._default_fabric_params["vrfTemplate"] = "Default_VRF_Universal"
 
-    def build_translatable_nv_pairs(self):
+    def _build_translatable_nv_pairs(self):
         """
         All parameters in the playbook are lowercase dunder, while
         NDFC nvPairs contains a mish-mash of styles, for example:
@@ -762,7 +762,7 @@ class DcnmFabric:
         can safely be translated to uppercase dunder style that NDFC expects
         in the payload.
 
-        See also: self.translate_to_ndfc_nv_pairs, where the actual
+        See also: self._translate_to_ndfc_nv_pairs, where the actual
         translation happens.
         """
         # self._default_nv_pairs is already built via create_fabric()
@@ -776,14 +776,14 @@ class DcnmFabric:
             if re.search(re_uppercase_dunder, param):
                 self._translatable_nv_pairs.add(param.lower())
 
-    def translate_to_ndfc_nv_pairs(self, params):
+    def _translate_to_ndfc_nv_pairs(self, params):
         """
         translate keys in params dict into what NDFC
         expects in nvPairs and populate dict
         self._translated_nv_pairs
 
         """
-        self.build_translatable_nv_pairs()
+        self._build_translatable_nv_pairs()
         # TODO:4 We currently don't handle non-dunder uppercase and lowercase,
         #   e.g. THIS or that.  But (knock on wood), so far there are no
         #   cases like this (or THAT).
@@ -918,7 +918,7 @@ class DcnmFabric:
             }
         )
 
-    def validate_dependencies(self, params):
+    def _validate_dependencies(self, params):
         """
         Validate cross-parameter dependencies.
         See docstring for self.build_mandatory_params()
@@ -975,14 +975,14 @@ class DcnmFabric:
             fabric = item["fabric_name"]
             bgp_as = item["bgp_as"]
 
-            self.build_fabric_params_default()
-            self.build_default_nv_pairs()
-            self.validate_dependencies(item)
+            self._build_default_fabric_params()
+            self._build_default_nv_pairs()
+            self._validate_dependencies(item)
             payload = self._default_fabric_params
             payload["fabricName"] = fabric
             payload["asn"] = bgp_as
             payload["nvPairs"] = self._default_nv_pairs
-            self.translate_to_ndfc_nv_pairs(item)
+            self._translate_to_ndfc_nv_pairs(item)
             for key, value in self._translated_nv_pairs.items():
                 payload["nvPairs"][key] = value
 
