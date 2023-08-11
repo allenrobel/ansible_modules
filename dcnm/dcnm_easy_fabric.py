@@ -335,28 +335,49 @@ class DcnmFabric:
             )
             return params_spec
 
+    def verify_cfg_for_merged_state(self, cfg):
+        """
+        Verify the user's playbook parameters for an individual fabric
+        configuration.  Whenever possible, throw the user a bone by
+        converting values to NDFC's expectations. For example, NDFC's 
+        REST API accepts mac addresses in any format (does not return
+        an error), since the NDFC GUI validates that it is in the expected
+        format, but the fabric will be in an errored state if the mac address
+        sent via REST is any format other than dotted-quad format
+        (xxxx.xxxx.xxxx). So, we convert all mac address formats to
+        dotted-quad before passing them to NDFC.
+
+        Fail if anything is not valid that we couldn't fix
+        Return the validated cfg otherwise
+        """
+        self.log_msg(msg=f"validate_input_for_merged_state: cfg {cfg}")
+        if "fabric_name" not in cfg:
+            msg = "fabric_name is mandatory"
+            self.module.fail_json(msg=msg)
+        if "bgp_as" not in cfg:
+            msg = "bgp_as is mandatory"
+            self.module.fail_json(msg=msg)
+        if "anycast_gw_mac" in cfg:
+            result = translate_mac_address(cfg["anycast_gw_mac"])
+            if result is False:
+                msg = f"invalid anycast_gw_mac {cfg['anycast_gw_mac']}"
+                self.module.fail_json(msg=msg)
+            cfg["anycast_gw_mac"] = result
+        return cfg
+
     def validate_input_for_merged_state(self):
+        """
+        Valid self.config contains appropriate values for merged state
+        """
         params_spec = self.build_params_spec_for_merged_state()
         msg = None
         if not self.config:
             msg = "config: element is mandatory for state merged"
             self.module.fail_json(msg=msg)
+
         cfg_index = 0
         for cfg in self.config:
-            self.log_msg(msg=f"validate_input_for_merged_state: cfg {cfg}")
-            if "fabric_name" not in cfg:
-                msg = "fabric_name is mandatory"
-                break
-            if "bgp_as" not in cfg:
-                msg = "bgp_as is mandatory"
-                break
-            if "anycast_gw_mac" in cfg:
-                result = translate_mac_address(cfg["anycast_gw_mac"])
-                if result is False:
-                    msg = f"invalid anycast_gw_mac {cfg['anycast_gw_mac']}"
-                    self.log_msg(msg=msg)
-                    break
-                self.config[cfg_index]["anycast_gw_mac"] = result
+            self.config[cfg_index] = self.verify_cfg_for_merged_state(cfg)
             cfg_index += 1
         if msg:
             self.module.fail_json(msg=msg)
