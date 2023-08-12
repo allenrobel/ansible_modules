@@ -144,6 +144,13 @@ options:
         - NDFC GUI tab, General Parameters
         type: str
         required: true
+      default_vrf_redis_bgp_rmap:
+        description:
+        - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
+        - NDFC GUI label, Redistribute BGP Route-map Name
+        - NDFC GUI tab, Resources
+        type: str
+        required: false, unless auto_vrflite_ifc_default_vrf is set to True
       fabric_name:
         description:
         - The name of the fabric
@@ -415,6 +422,7 @@ class DcnmFabric:
             )
         )
         params_spec.update(bgp_as=dict(required=True, type="str"))
+        params_spec.update(default_vrf_redis_bgp_rmap=dict(required=False, type="str", default=""))
         params_spec.update(fabric_name=dict(required=True, type="str"))
         params_spec.update(pm_enable=dict(required=False, type="bool", default=False))
         params_spec.update(
@@ -1011,7 +1019,7 @@ class DcnmFabric:
                 "auto_symmetric_default_vrf": {
                     "value": True,
                     "mandatory": {
-                        "vrf_lite_autoconfig": 1,
+                        "vrf_lite_autoconfig": "Back2Back&ToExternal",
                         "auto_vrflite_ifc_default_vrf": True
                     },
                 }
@@ -1022,7 +1030,7 @@ class DcnmFabric:
                 "auto_symmetric_vrf_lite": {
                     "value": True,
                     "mandatory": {
-                        "vrf_lite_autoconfig": 1
+                        "vrf_lite_autoconfig": "Back2Back&ToExternal"
                     },
                 }
             }
@@ -1032,7 +1040,8 @@ class DcnmFabric:
                 "auto_vrflite_ifc_default_vrf": {
                     "value": True,
                     "mandatory": {
-                        "vrf_lite_autoconfig": 1
+                        "vrf_lite_autoconfig": "Back2Back&ToExternal",
+                        "default_vrf_redis_bgp_rmap": None
                     },
                 }
             }
@@ -1058,43 +1067,42 @@ class DcnmFabric:
         if not requires_validation:
             return
 
+        failed_dependencies = dict()
         for user_param in requires_validation:
             # mandatory_params associated with user_param
             mandatory_params = self._mandatory_params[user_param]["mandatory"]
             for check_param in mandatory_params:
-                failed_dependencies = dict()
                 check_value = mandatory_params[check_param]
                 if check_param not in user_params and check_value is not None:
-                    # The user hasn't set this mandatory parameter, but we
-                    # do care what the value is (since it's not None).
-                    # Check if its default value is equal to the required
-                    # value and, if so, skip it.
+                    # The playbook doesn't contain this mandatory parameter.
+                    # We care what the value is (since it's not None).
+                    # If the mandatory parameter's default value is not equal
+                    # to the required value, add it to the failed dependencies.
                     param_up = check_param.upper()
                     if param_up in self._default_nv_pairs:
-                        if self._default_nv_pairs[param_up] == check_value:
+                        if self._default_nv_pairs[param_up] != check_value:
+                            failed_dependencies[check_param] = check_value
                             continue
+                if user_params[check_param] != check_value and check_value is not None:
+                    # The playbook does contain this mandatory parameter, but
+                    # the value in the playbook does not match the required value
+                    # and we care about what the required value is.
                     failed_dependencies[check_param] = check_value
                     continue
-                if user_params[check_param] is None:
-                    failed_dependencies[check_param] = check_value
-                    continue
-                if user_params[check_param] == "":
-                    failed_dependencies[check_param] = check_value
-                    continue
-            if failed_dependencies:
-                if self._mandatory_params[user_param]['value'] == "any":
-                    msg = f"When {user_param} is set to any value, "
+        if failed_dependencies:
+            if self._mandatory_params[user_param]['value'] == "any":
+                msg = f"When {user_param} is set to any value, "
+            else:
+                msg = f"When {user_param} is set to "
+                msg += f"{self._mandatory_params[user_param]['value']}. "
+            msg += "the following parameters are mandatory: "
+            for item in failed_dependencies:
+                msg += f"parameter {item} "
+                if failed_dependencies[item] is None:
+                    msg += "value <any value>"
                 else:
-                    msg = f"When {user_param} is set to "
-                    msg += f"{self._mandatory_params[user_param]['value']}. "
-                msg += "the following parameters are mandatory: "
-                for item in failed_dependencies:
-                    msg += f"parameter {item} "
-                    if failed_dependencies[item] is None:
-                        msg += "value <any value>"
-                    else:
-                        msg += f"value {failed_dependencies[item]}"
-                self.module.fail_json(msg=msg)
+                    msg += f"value {failed_dependencies[item]}"
+            self.module.fail_json(msg=msg)
 
     def create_fabrics(self):
         """

@@ -16,6 +16,7 @@
                 auto_symmetric_vrf_lite: True
                 auto_vrflite_ifc_default_vrf: True
                 auto_symmetric_default_vrf: True
+                default_vrf_redis_bgp_rmap: extcon-rmap-filter
             -   fabric_name: MC-Fabric
                 anycast_gw_mac: 00ffeeddccbb
                 advertise_pip_bgp: False
