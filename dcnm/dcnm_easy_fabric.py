@@ -59,12 +59,16 @@ options:
       aaa_remote_ip_enabled:
         description:
         - Enable (True) or disable (False) AAA remote IP
+        - NDFC GUI label, Enable AAA IP Authorization
+        - NDFC GUI tab, Advanced
         type: bool
         required: false
         default: False
       advertise_pip_bgp:
         description:
         - Enable (True) or disable (False) usage of Primary VTEP IP Advertisement As Next-Hop Of Prefix Routes
+        - NDFC GUI label, vPC advertise-pip
+        - NDFC GUI tab, VPC
         type: bool
         required: false
         default: False
@@ -72,30 +76,72 @@ options:
         description:
         - Enable (True) or disable (False) advertising Anycast Border Gateway PIP as VTEP.
         - Effective after Recalculate Config on parent MSD fabric.
+        - NDFC GUI label, Anycast Border Gateway advertise-pip
+        - NDFC GUI tab, Advanced
         type: bool
         required: false
         default: False
       anycast_gw_mac:
         description:
         - Shared MAC address for all leafs (xx:xx:xx:xx:xx:xx, xxxx.xxxx.xxxx, etc)
+        - NDFC GUI label, Anycast Gateway MAC
+        - NDFC GUI tab, General Parameters
         type: str
         required: false
         default: "2020.0000.00aa"
       anycast_lb_id:
         description:
         - Underlay Anycast Loopback Id
+        - NDFC GUI label, Underlay Anycast Loopback Id
+        - NDFC GUI tab, Protocols
         type: int
         required: false
         default: ""
       anycast_rp_ip_range:
         description:
         - Anycast or Phantom RP IP Address Range
+        - NDFC GUI label, Underlay RP Loopback IP Range
+        - NDFC GUI tab, Resources
         type: str
         required: false
         default: 10.254.254.0/24
+      auto_symmetric_default_vrf:
+        description:
+        - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on managed neighbor devices.
+        - If True, auto created VRF Lite IFC links will have 'Auto Deploy Default VRF for Peer' enabled.
+        - vrf_lite_autoconfig must be set to 1
+        - auto_symmetric_vrf_lite must be set to True
+        - auto_vrflite_ifc_default_vrf must be set to True
+        - NDFC GUI label: Auto Deploy Default VRF for Peer
+        - NDFC GUI tab: Resources
+        type: bool
+        required: false
+        default: False
+      auto_symmetric_vrf_lite:
+        description:
+        - Enable (True) or disable (False) auto generation of Whether to auto generate VRF LITE sub-interface and BGP peering configuration on managed neighbor devices.
+        - If True, auto created VRF Lite IFC links will have 'Auto Deploy for Peer' enabled.
+        - NDFC GUI label, Auto Deploy for Peer
+        - NDFC GUI tab, Resources
+        - vrf_lite_autoconfig must be set to 1
+        type: bool
+        required: false
+        default: False
+      auto_vrflite_ifc_default_vrf:
+        description:
+        - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on VRF LITE IFC auto deployment.
+        - If True, auto created VRF Lite IFC links will have 'Auto Deploy Default VRF' enabled.
+        - NDFC GUI label, Auto Deploy Default VRF
+        - NDFC GUI tab, Resources
+        - vrf_lite_autoconfig must be set to 1
+        type: bool
+        required: false
+        default: False
       bgp_as:
         description:
         - The fabric BGP Autonomous System number
+        - NDFC GUI label, BGP ASN
+        - NDFC GUI tab, General Parameters
         type: str
         required: true
       fabric_name:
@@ -106,12 +152,16 @@ options:
       pm_enable:
         description:
         - Enable (True) or disable (False) fabric performance monitoring
+        - NDFC GUI label, Enable Performance Monitoring
+        - NDFC GUI tab, General Parameters
         type: bool
         required: false
         default: False
       replication_mode:
         description:
         - Replication Mode for BUM Traffic
+        - NDFC GUI label, Replication Mode
+        - NDFC GUI tab, Replication
         type: str
         required: False
         choices:
@@ -125,6 +175,8 @@ options:
         - If (1), VRF Lite IFCs are auto created between border devices of two Easy Fabrics
         - If (1), VRF Lite IFCs are auto created between border devices in Easy Fabric and edge routers in External Fabric.
         - The IP address is taken from the 'VRF Lite Subnet IP Range' pool.
+        - NDFC GUI label, VRF Lite Deployment
+        - NDFC GUI tab, Resources
         type: int
         required: false
         default: 0
@@ -275,7 +327,12 @@ class DcnmFabric:
         """
         want_create = []
 
-        for fabric_config in self.validated:
+        # we don't want to use self.validated here since
+        # validate_list_of_dicts() adds items the user
+        # did not set to self.validated
+        # If we got this far, then the items in self.config
+        # have been validated to conform to their param spec.
+        for fabric_config in self.config:
             want_create.append(fabric_config)
         if not want_create:
             return
@@ -334,6 +391,27 @@ class DcnmFabric:
         params_spec.update(
             anycast_rp_ip_range=dict(
                 required=False, type="ipv4_subnet", default="10.254.254.0/24"
+            )
+        )
+        params_spec.update(
+            auto_symmetric_default_vrf=dict(
+                required=False,
+                type="bool",
+                default=False
+            )
+        )
+        params_spec.update(
+            auto_symmetric_vrf_lite=dict(
+                required=False,
+                type="bool",
+                default=False
+            )
+        )
+        params_spec.update(
+            auto_vrflite_ifc_default_vrf=dict(
+                required=False,
+                type="bool",
+                default=False
             )
         )
         params_spec.update(bgp_as=dict(required=True, type="str"))
@@ -856,24 +934,28 @@ class DcnmFabric:
                 mandatory.  Using underlay_is_v6 as an example, it must
                 have a value of True, for the six dependent parameters to
                 be considered mandatory.
-        mandatory: a python set() containing mandatory parameters.
+        mandatory:  a python dict() containing mandatory parameters and what
+                    value (if any) they must have.  Indicate that the value
+                    should not be considered by setting it to None.
 
-        NOTE: Individual mandatory parameter values are validated elsewhere
+        NOTE: Generalized parameter value validation is handled elsewhere
 
         Hence, we have the following structure for the
         self._mandatory_params dictionary, to handle the case where
-        underlay_is_v6 is set to True:
+        underlay_is_v6 is set to True.  Below, we don't case what the
+        value for any of the mandatory parameters is.  We only care that
+        they are set.
 
         self._mandatory_params = {
             "underlay_is_v6": {
                 "value": True,
                 "mandatory": {
-                    "anycast_lb_id",
-                    "loopback0_ipv6_range",
-                    "loopback1_ipv6_range",
-                    "router_id_range",
-                    "v6_subnet_range",
-                    "v6_subnet_target_mask"
+                    "anycast_lb_id": None
+                    "loopback0_ipv6_range": None
+                    "loopback1_ipv6_range": None
+                    "router_id_range": None
+                    "v6_subnet_range": None
+                    "v6_subnet_target_mask": None
                 }
             }
         }
@@ -883,16 +965,16 @@ class DcnmFabric:
 
         Set "value:" above to "any" if the dependent parameters are mandatory
         regardless of the parameter's value.  For example, if we wanted to
-        verify that underlay_is_v6 is set in the case that anycast_lb_id is
-        set (which can be a value between 1-1023) we don't care what the
-        value of anycast_lb_id is.  We only care that underlay_is_v6 is
-        set.  In this case, we could add the following:
+        verify that underlay_is_v6 is set to True in the case that
+        anycast_lb_id is set (which can be a value between 1-1023) we
+        don't care what the value of anycast_lb_id is.  We only care that
+        underlay_is_v6 is set to True.  In this case, we could add the following:
 
         self._mandatory_params.update = {
             "anycast_lb_id": {
                 "value": "any",
                 "mandatory": {
-                    "underlay_is_v6"
+                    "underlay_is_v6": True
                 }
             }
         }
@@ -900,63 +982,118 @@ class DcnmFabric:
         """
         self._mandatory_params = {}
         self._mandatory_params.update(
-            {"anycast_lb_id": {"value": "any", "mandatory": {"underlay_is_v6"}}}
+            {
+                "anycast_lb_id": {
+                    "value": "any",
+                    "mandatory": {
+                        "underlay_is_v6": True
+                    }
+                }
+            }
         )
         self._mandatory_params.update(
             {
                 "underlay_is_v6": {
                     "value": True,
                     "mandatory": {
-                        "anycast_lb_id",
-                        "loopback0_ipv6_range",
-                        "loopback1_ipv6_range",
-                        "router_id_range",
-                        "v6_subnet_range",
-                        "v6_subnet_target_mask",
+                        "anycast_lb_id": None,
+                        "loopback0_ipv6_range": None,
+                        "loopback1_ipv6_range": None,
+                        "router_id_range": None,
+                        "v6_subnet_range": None,
+                        "v6_subnet_target_mask": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "auto_symmetric_default_vrf": {
+                    "value": True,
+                    "mandatory": {
+                        "vrf_lite_autoconfig": 1,
+                        "auto_vrflite_ifc_default_vrf": True
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "auto_symmetric_vrf_lite": {
+                    "value": True,
+                    "mandatory": {
+                        "vrf_lite_autoconfig": 1
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "auto_vrflite_ifc_default_vrf": {
+                    "value": True,
+                    "mandatory": {
+                        "vrf_lite_autoconfig": 1
                     },
                 }
             }
         )
 
-    def _validate_dependencies(self, params):
+    def _validate_dependencies(self, user_params):
         """
         Validate cross-parameter dependencies.
         See docstring for self.build_mandatory_params()
         """
         self.build_mandatory_params()
-        for param in params:
+        requires_validation = set()
+        for user_param in user_params:
             # param doesn't have any dependent parameters
-            if param not in self._mandatory_params:
+            if user_param not in self._mandatory_params:
                 continue
-            needs_validation = False
-            if self._mandatory_params[param]["value"] == "any":
-                needs_validation = True
-            if params[param] == self._mandatory_params[param]["value"]:
-                needs_validation = True
-            if not needs_validation:
-                continue
-            for mandatory_param in self._mandatory_params[param]["mandatory"]:
-                failed_dependencies = set()
-                if mandatory_param not in params:
-                    # The user hasn't set this mandatory parameter, but if it
-                    # has a non-null default value, it's OK and we can skip it
-                    param_up = mandatory_param.upper()
+            # need to run validation for any value of user_param
+            if self._mandatory_params[user_param]["value"] == "any":
+                requires_validation.add(user_param)
+            # need to run validation because user_param is a specific value
+            if user_params[user_param] == self._mandatory_params[user_param]["value"]:
+                requires_validation.add(user_param)
+        if not requires_validation:
+            return
+
+        for user_param in requires_validation:
+            # mandatory_params associated with user_param
+            mandatory_params = self._mandatory_params[user_param]["mandatory"]
+            for check_param in mandatory_params:
+                failed_dependencies = dict()
+                check_value = mandatory_params[check_param]
+                if check_param not in user_params and check_value is not None:
+                    # The user hasn't set this mandatory parameter, but we
+                    # do care what the value is (since it's not None).
+                    # Check if its default value is equal to the required
+                    # value and, if so, skip it.
+                    param_up = check_param.upper()
                     if param_up in self._default_nv_pairs:
-                        if self._default_nv_pairs[param_up] != "":
+                        if self._default_nv_pairs[param_up] == check_value:
                             continue
-                    failed_dependencies.add(mandatory_param)
+                    failed_dependencies[check_param] = check_value
                     continue
-                if params[mandatory_param] is None:
-                    failed_dependencies.add(mandatory_param)
+                if user_params[check_param] is None:
+                    failed_dependencies[check_param] = check_value
                     continue
-                if params[mandatory_param] == "":
-                    failed_dependencies.add(mandatory_param)
+                if user_params[check_param] == "":
+                    failed_dependencies[check_param] = check_value
                     continue
             if failed_dependencies:
-                msg = f"When {param} is set to "
-                msg += f"{self._mandatory_params[param]['value']}, the "
-                msg += "following are mandatory "
-                msg += f"{','.join(sorted(failed_dependencies))}"
+                if self._mandatory_params[user_param]['value'] == "any":
+                    msg = f"When {user_param} is set to any value, "
+                else:
+                    msg = f"When {user_param} is set to "
+                    msg += f"{self._mandatory_params[user_param]['value']}. "
+                msg += "the following parameters are mandatory: "
+                for item in failed_dependencies:
+                    msg += f"parameter {item} "
+                    if failed_dependencies[item] is None:
+                        msg += "value <any value>"
+                    else:
+                        msg += f"value {failed_dependencies[item]}"
                 self.module.fail_json(msg=msg)
 
     def create_fabrics(self):
@@ -972,6 +1109,7 @@ class DcnmFabric:
             path = self.nd_prefix + path
 
         for item in self.want_create:
+
             fabric = item["fabric_name"]
             bgp_as = item["bgp_as"]
 
