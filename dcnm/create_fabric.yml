@@ -12,7 +12,10 @@
                 anycast_rp_ip_range: 10.65.0.0/16
                 bgp_as: 65535.65535
                 replication_mode: Ingress
-                vrf_lite_autoconfig: "0"
+                vrf_lite_autoconfig: 1
+                auto_symmetric_vrf_lite: True
+                auto_vrflite_ifc_default_vrf: True
+                auto_symmetric_default_vrf: True
             -   fabric_name: MC-Fabric
                 anycast_gw_mac: 00ffeeddccbb
                 advertise_pip_bgp: False
