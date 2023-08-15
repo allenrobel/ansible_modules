@@ -679,21 +679,6 @@ class VerifyFabricParams:
         )
         self._mandatory_params.update(
             {
-                "underlay_is_v6": {
-                    "value": True,
-                    "mandatory": {
-                        "anycast_lb_id": None,
-                        "loopback0_ipv6_range": None,
-                        "loopback1_ipv6_range": None,
-                        "router_id_range": None,
-                        "v6_subnet_range": None,
-                        "v6_subnet_target_mask": None,
-                    },
-                }
-            }
-        )
-        self._mandatory_params.update(
-            {
                 "auto_symmetric_default_vrf": {
                     "value": True,
                     "mandatory": {
@@ -718,6 +703,95 @@ class VerifyFabricParams:
                     "mandatory": {
                         "vrf_lite_autoconfig": "Back2Back&ToExternal",
                         "default_vrf_redis_bgp_rmap": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "bfd_auth_enable": {
+                    "value": True,
+                    "mandatory": {
+                        "bfd_enable": True,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "bfd_auth_key": {
+                    "value": "__any__",
+                    "mandatory": {
+                        "bfd_enable": True,
+                        "bfd_auth_enable": True,
+                        "bfd_auth_key_id": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "bfd_auth_key_id": {
+                    "value": "__any__",
+                    "mandatory": {
+                        "bfd_enable": True,
+                        "bfd_auth_enable": True,
+                        "bfd_auth_key": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "bfd_ibgp_enable": {
+                    "value": True,
+                    "mandatory": {
+                        "bfd_enable": True,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "bfd_isis_enable": {
+                    "value": True,
+                    "mandatory": {
+                        "bfd_enable": True,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "bfd_ospf_enable": {
+                    "value": True,
+                    "mandatory": {
+                        "bfd_enable": True,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "bfd_pim_enable": {
+                    "value": True,
+                    "mandatory": {
+                        "bfd_enable": True,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "underlay_is_v6": {
+                    "value": True,
+                    "mandatory": {
+                        "anycast_lb_id": None,
+                        "loopback0_ipv6_range": None,
+                        "loopback1_ipv6_range": None,
+                        "router_id_range": None,
+                        "v6_subnet_range": None,
+                        "v6_subnet_target_mask": None,
                     },
                 }
             }
@@ -781,23 +855,43 @@ class VerifyFabricParams:
             mandatory_params = self._mandatory_params[user_param]["mandatory"]
             for check_param in mandatory_params:
                 check_value = mandatory_params[check_param]
-                if check_param not in self.config and check_value is not None:
-                    # The playbook doesn't contain this mandatory parameter.
-                    # We care what the value is (since it's not None).
-                    # If the mandatory parameter's default value is not equal
-                    # to the required value, add it to the failed dependencies.
-                    param_up = check_param.upper()
-                    if param_up in self._default_nv_pairs:
-                        if self._default_nv_pairs[param_up] != check_value:
-                            self._failed_dependencies[check_param] = check_value
-                            continue
-                if self.config[check_param] != check_value and check_value is not None:
-                    # The playbook does contain this mandatory parameter, but
-                    # the value in the playbook does not match the required value
-                    # and we care about what the required value is.
+                if check_param not in self.config and check_value is None:
+                    # The playbook doesn't contain this mandatory parameter,
+                    # and we need not consider its value (e.g. there is
+                    # no default) for it.  Hence, add it to failed
+                    # dependencies without checking the default value.
                     self._failed_dependencies[check_param] = check_value
                     continue
-
+                if check_param not in self.config and check_value is not None:
+                    # The playbook doesn't contain this mandatory parameter,
+                    # but its default value might be sufficient if it matches
+                    # the required value. Add it to the failed dependencies
+                    # only if the default value doesn't match the required
+                    # value.
+                    param_up = check_param.upper()
+                    if param_up not in self._default_nv_pairs:
+                        # If we're here, then there's likely a new parameter
+                        # in some future NDFC release that we forgot to add
+                        # to self._default_nv_pairs.
+                        #
+                        # Clear self_failed_dependencies to skip
+                        # self._handle_failed_dependencies() and set result to
+                        # False.
+                        self._failed_dependencies = {}
+                        msg = f"This should never happen. {param_up} not "
+                        msg += "found in default_nv_pairs.  Please open an "
+                        msg += "issue."
+                        self.msg = msg
+                        self.result = False
+                        return
+                    if self._default_nv_pairs[param_up] != check_value:
+                        self._failed_dependencies[check_param] = check_value
+                        continue
+                if self.config[check_param] != check_value and check_value is not None:
+                    # The playbook does contain this mandatory parameter, but
+                    # the value in the playbook doesn't match the required value
+                    self._failed_dependencies[check_param] = check_value
+                    continue
     def _handle_failed_dependencies(self):
         """
         If there are failed dependencies:
@@ -809,7 +903,7 @@ class VerifyFabricParams:
             return
         self._build_parameter_aliases()
         for user_param in self._requires_validation:
-            if self._mandatory_params[user_param]["value"] == "any":
+            if self._mandatory_params[user_param]["value"] == "__any__":
                 msg = f"When {user_param} is set, "
             else:
                 msg = f"When {user_param} is set to "
@@ -817,9 +911,9 @@ class VerifyFabricParams:
             msg += "the following parameters are mandatory: "
 
             for key, value in self._failed_dependencies.items():
-                msg += f"parameter {key} "
+                msg += f"[{key}, "
                 if value is None:
-                    msg += "value <any value>"
+                    msg += "value <any>] "
                 else:
                     # If the value expected in the playbook is different
                     # from the value sent to NDFC, use the value expected in
@@ -829,7 +923,7 @@ class VerifyFabricParams:
                         msg_value = value
                     else:
                         msg_value = alias
-                    msg += f"value {msg_value}"
+                    msg += f"value {msg_value}] "
             self._append_msg(msg)
             self.result = False
 

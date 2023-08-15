@@ -47,155 +47,223 @@ description:
     - "Create VXLAN/EVPN Fabrics."
 author: Allen Robel
 options:
-  state:
-    description:
-    - The state of DCNM after module completion.
-    - I(merged) and I(query) are the only states supported.
-    type: str
-    choices:
-      - merged
-      - query
-    default: merged
-  config:
-    description:
-    - A dictionary of fabric configurations
-    type: list
-    elements: dict
-    suboptions:
-      aaa_remote_ip_enabled:
+    state:
         description:
-        - Enable (True) or disable (False) AAA remote IP
-        - NDFC GUI label, Enable AAA IP Authorization
-        - NDFC GUI tab, Advanced
-        type: bool
-        required: false
-        default: False
-      advertise_pip_bgp:
-        description:
-        - Enable (True) or disable (False) usage of Primary VTEP IP Advertisement As Next-Hop Of Prefix Routes
-        - NDFC GUI label, vPC advertise-pip
-        - NDFC GUI tab, VPC
-        type: bool
-        required: false
-        default: False
-      anycast_bgw_advertise_pip:
-        description:
-        - Enable (True) or disable (False) advertising Anycast Border Gateway PIP as VTEP.
-        - Effective after Recalculate Config on parent MSD fabric.
-        - NDFC GUI label, Anycast Border Gateway advertise-pip
-        - NDFC GUI tab, Advanced
-        type: bool
-        required: false
-        default: False
-      anycast_gw_mac:
-        description:
-        - Shared MAC address for all leafs (xx:xx:xx:xx:xx:xx, xxxx.xxxx.xxxx, etc)
-        - NDFC GUI label, Anycast Gateway MAC
-        - NDFC GUI tab, General Parameters
+        - The state of DCNM after module completion.
+        - I(merged) and I(query) are the only states supported.
         type: str
-        required: false
-        default: "2020.0000.00aa"
-      anycast_lb_id:
-        description:
-        - Underlay Anycast Loopback Id
-        - NDFC GUI label, Underlay Anycast Loopback Id
-        - NDFC GUI tab, Protocols
-        type: int
-        required: false
-        default: ""
-      anycast_rp_ip_range:
-        description:
-        - Anycast or Phantom RP IP Address Range
-        - NDFC GUI label, Underlay RP Loopback IP Range
-        - NDFC GUI tab, Resources
-        type: str
-        required: false
-        default: 10.254.254.0/24
-      auto_symmetric_default_vrf:
-        description:
-        - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on managed neighbor devices.
-        - If True, auto created VRF Lite IFC links will have 'Auto Deploy Default VRF for Peer' enabled.
-        - vrf_lite_autoconfig must be set to 1
-        - auto_symmetric_vrf_lite must be set to True
-        - auto_vrflite_ifc_default_vrf must be set to True
-        - NDFC GUI label: Auto Deploy Default VRF for Peer
-        - NDFC GUI tab: Resources
-        type: bool
-        required: false
-        default: False
-      auto_symmetric_vrf_lite:
-        description:
-        - Enable (True) or disable (False) auto generation of Whether to auto generate VRF LITE sub-interface and BGP peering configuration on managed neighbor devices.
-        - If True, auto created VRF Lite IFC links will have 'Auto Deploy for Peer' enabled.
-        - NDFC GUI label, Auto Deploy for Peer
-        - NDFC GUI tab, Resources
-        - vrf_lite_autoconfig must be set to 1
-        type: bool
-        required: false
-        default: False
-      auto_vrflite_ifc_default_vrf:
-        description:
-        - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on VRF LITE IFC auto deployment.
-        - If True, auto created VRF Lite IFC links will have 'Auto Deploy Default VRF' enabled.
-        - NDFC GUI label, Auto Deploy Default VRF
-        - NDFC GUI tab, Resources
-        - vrf_lite_autoconfig must be set to 1
-        type: bool
-        required: false
-        default: False
-      bgp_as:
-        description:
-        - The fabric BGP Autonomous System number
-        - NDFC GUI label, BGP ASN
-        - NDFC GUI tab, General Parameters
-        type: str
-        required: true
-      default_vrf_redis_bgp_rmap:
-        description:
-        - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
-        - NDFC GUI label, Redistribute BGP Route-map Name
-        - NDFC GUI tab, Resources
-        type: str
-        required: false, unless auto_vrflite_ifc_default_vrf is set to True
-      fabric_name:
-        description:
-        - The name of the fabric
-        type: str
-        required: true
-      pm_enable:
-        description:
-        - Enable (True) or disable (False) fabric performance monitoring
-        - NDFC GUI label, Enable Performance Monitoring
-        - NDFC GUI tab, General Parameters
-        type: bool
-        required: false
-        default: False
-      replication_mode:
-        description:
-        - Replication Mode for BUM Traffic
-        - NDFC GUI label, Replication Mode
-        - NDFC GUI tab, Replication
-        type: str
-        required: False
         choices:
-        - Ingress
-        - Multicast
-        default: Multicast
-      vrf_lite_autoconfig:
+        - merged
+        - query
+        default: merged
+    config:
         description:
-        - VRF Lite Inter-Fabric Connection Deployment Options.
-        - If (0), VRF Lite configuration is Manual.
-        - If (1), VRF Lite IFCs are auto created between border devices of two Easy Fabrics
-        - If (1), VRF Lite IFCs are auto created between border devices in Easy Fabric and edge routers in External Fabric.
-        - The IP address is taken from the 'VRF Lite Subnet IP Range' pool.
-        - NDFC GUI label, VRF Lite Deployment
-        - NDFC GUI tab, Resources
-        type: int
-        required: false
-        default: 0
-        choices:
-        - 0
-        - 1
+        - A dictionary of fabric configurations
+        type: list
+        elements: dict
+        suboptions:
+        aaa_remote_ip_enabled:
+            description:
+            - Enable (True) or disable (False) AAA remote IP
+            - NDFC label, Enable AAA IP Authorization
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: False
+        advertise_pip_bgp:
+            description:
+            - Enable (True) or disable (False) usage of Primary VTEP IP Advertisement As Next-Hop Of Prefix Routes
+            - NDFC label, vPC advertise-pip
+            - NDFC tab, VPC
+            type: bool
+            required: false
+            default: False
+        anycast_bgw_advertise_pip:
+            description:
+            - Enable (True) or disable (False) advertising Anycast Border Gateway PIP as VTEP.
+            - Effective after Recalculate Config on parent MSD fabric.
+            - NDFC label, Anycast Border Gateway advertise-pip
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: False
+        anycast_gw_mac:
+            description:
+            - Shared MAC address for all leafs (xx:xx:xx:xx:xx:xx, xxxx.xxxx.xxxx, etc)
+            - NDFC label, Anycast Gateway MAC
+            - NDFC tab, General Parameters
+            type: str
+            required: false
+            default: "2020.0000.00aa"
+        anycast_lb_id:
+            description:
+            - Underlay Anycast Loopback Id
+            - NDFC label, Underlay Anycast Loopback Id
+            - NDFC tab, Protocols
+            type: int
+            required: false
+            default: ""
+        anycast_rp_ip_range:
+            description:
+            - Anycast or Phantom RP IP Address Range
+            - NDFC label, Underlay RP Loopback IP Range
+            - NDFC tab, Resources
+            type: str
+            required: false
+            default: 10.254.254.0/24
+        auto_symmetric_default_vrf:
+            description:
+            - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on managed neighbor devices.
+            - If True, auto created VRF Lite IFC links will have 'Auto Deploy Default VRF for Peer' enabled.
+            - vrf_lite_autoconfig must be set to 1
+            - auto_symmetric_vrf_lite must be set to True
+            - auto_vrflite_ifc_default_vrf must be set to True
+            - NDFC label: Auto Deploy Default VRF for Peer
+            - NDFC tab: Resources
+            type: bool
+            required: false
+            default: False
+        auto_symmetric_vrf_lite:
+            description:
+            - Enable (True) or disable (False) auto generation of Whether to auto generate VRF LITE sub-interface and BGP peering configuration on managed neighbor devices.
+            - If True, auto created VRF Lite IFC links will have 'Auto Deploy for Peer' enabled.
+            - NDFC label, Auto Deploy for Peer
+            - NDFC tab, Resources
+            - vrf_lite_autoconfig must be set to 1
+            type: bool
+            required: false
+            default: False
+        auto_vrflite_ifc_default_vrf:
+            description:
+            - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on VRF LITE IFC auto deployment.
+            - If True, auto created VRF Lite IFC links will have 'Auto Deploy Default VRF' enabled.
+            - NDFC label, Auto Deploy Default VRF
+            - NDFC tab, Resources
+            - vrf_lite_autoconfig must be set to 1
+            type: bool
+            required: false
+            default: False
+        bfd_auth_enable:
+            description:
+            - Enable (True) or disable (False) BGP Authentication
+            - Valid for P2P Interfaces only
+            - NDFC label, Enable BFD Authentication
+            - NDFC tab, Protocols
+            type: bool
+            required: false
+            default: False
+        bfd_auth_key:
+            description:
+            - Encrypted SHA1 secret value
+            - NDFC label, BFD Authentication Key
+            - NDFC tab, Protocols
+            type: str
+            required: false
+        bfd_auth_key_id:
+            description:
+            - Encrypted SHA1 secret value
+            - NDFC label, BFD Authentication Key ID
+            - NDFC tab, Protocols
+            type: str
+            required: false
+        bfd_enable:
+            description:
+            - Enable (True) or disable (False) BFD
+            - Valid for IPv4 Underlay only
+            - NDFC label, Enable BFD
+            - NDFC tab, Protocols
+            type: bool
+            required: false
+            default: False
+        bfd_ibgp_enable:
+            description:
+            - Enable (True) or disable (False) BFD for iBGP
+            - Valid for IPv4 Underlay only
+            - NDFC label, Enable BFD For iBGP
+            - NDFC tab, Protocols
+            type: bool
+            required: false
+            default: False
+        bfd_isis_enable:
+            description:
+            - Enable (True) or disable (False) BFD for ISIS
+            - Valid for IPv4 Underlay only
+            - NDFC label, Enable BFD For ISIS
+            - NDFC tab, Protocols
+            type: bool
+            required: false
+            default: False
+        bfd_ospf_enable:
+            description:
+            - Enable (True) or disable (False) BFD for OSPF
+            - Valid for IPv4 Underlay only
+            - NDFC label, Enable BFD For OSPF
+            - NDFC tab, Protocols
+            type: bool
+            required: false
+            default: False
+        bfd_pim_enable:
+            description:
+            - Enable (True) or disable (False) BFD for PIM
+            - Valid for IPv4 Underlay only
+            - NDFC label, Enable BFD For PIM
+            - NDFC tab, Protocols
+            type: bool
+            required: false
+            default: False
+        bgp_as:
+            description:
+            - The fabric BGP Autonomous System number
+            - NDFC label, BGP ASN
+            - NDFC tab, General Parameters
+            type: str
+            required: true
+        default_vrf_redis_bgp_rmap:
+            description:
+            - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
+            - NDFC label, Redistribute BGP Route-map Name
+            - NDFC tab, Resources
+            type: str
+            required: false, unless auto_vrflite_ifc_default_vrf is set to True
+        fabric_name:
+            description:
+            - The name of the fabric
+            type: str
+            required: true
+        pm_enable:
+            description:
+            - Enable (True) or disable (False) fabric performance monitoring
+            - NDFC label, Enable Performance Monitoring
+            - NDFC tab, General Parameters
+            type: bool
+            required: false
+            default: False
+        replication_mode:
+            description:
+            - Replication Mode for BUM Traffic
+            - NDFC label, Replication Mode
+            - NDFC tab, Replication
+            type: str
+            required: False
+            choices:
+            - Ingress
+            - Multicast
+            default: Multicast
+        vrf_lite_autoconfig:
+            description:
+            - VRF Lite Inter-Fabric Connection Deployment Options.
+            - If (0), VRF Lite configuration is Manual.
+            - If (1), VRF Lite IFCs are auto created between border devices of two Easy Fabrics
+            - If (1), VRF Lite IFCs are auto created between border devices in Easy Fabric and edge routers in External Fabric.
+            - The IP address is taken from the 'VRF Lite Subnet IP Range' pool.
+            - NDFC label, VRF Lite Deployment
+            - NDFC tab, Resources
+            type: int
+            required: false
+            default: 0
+            choices:
+            - 0
+            - 1
 
 """
 
@@ -391,6 +459,14 @@ class DcnmFabric:
                 required=False, type="bool", default=False
             )
         )
+        params_spec.update(bfd_auth_enable=dict(required=False, type="bool", default=False))
+        params_spec.update(bfd_auth_key=dict(required=False, type="str"))
+        params_spec.update(bfd_auth_key_id=dict(required=False, type="str"))
+        params_spec.update(bfd_enable=dict(required=False, type="bool", default=False))
+        params_spec.update(bfd_ibgp_enable=dict(required=False, type="bool", default=False))
+        params_spec.update(bfd_isis_enable=dict(required=False, type="bool", default=False))
+        params_spec.update(bfd_ospf_enable=dict(required=False, type="bool", default=False))
+        params_spec.update(bfd_pim_enable=dict(required=False, type="bool", default=False))
         params_spec.update(bgp_as=dict(required=True, type="str"))
         params_spec.update(
             default_vrf_redis_bgp_rmap=dict(required=False, type="str", default="")
