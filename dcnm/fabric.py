@@ -27,7 +27,7 @@ from ansible_collections.cisco.dcnm.plugins.module_utils.fabric.fabric import (
 config = {}
 config["fabric_name"] = "foo"
 config["bgp_as"] = "65000.869"
-# If auto_symmetric_vrf_lite == True, several other parameters 
+# If auto_symmetric_vrf_lite == True, several other parameters
 # become mandatory. The user has not explicitely set these other
 # parameters.  Hence, verify.result would be False (i.e. an error)
 # If auto_symmetric_vrf_lite ==  False, no other parameters are required
@@ -44,6 +44,7 @@ if verify.result == False:
 print(f"result {verify.result}, {verify.msg}, payload {verify.payload}")
 """
 import re
+
 
 def translate_mac_address(mac_addr):
     """
@@ -78,6 +79,7 @@ class VerifyFabricParams:
     """
     Parameter validation for NDFC Easy_Fabric (Data Center VXLAN EVPN)
     """
+
     def __init__(self):
         self._initialize_properties()
 
@@ -85,8 +87,14 @@ class VerifyFabricParams:
         self.payload = {}
         self._default_fabric_params = {}
         self._default_nv_pairs = {}
+        # See self._build_parameter_aliases
+        self._parameter_aliases = {}
         # See self._build_mandatory_params()
         self._mandatory_params = {}
+        # See self._validate_dependencies()
+        self._requires_validation = set()
+        # See self._build_failed_dependencies()
+        self._failed_dependencies = {}
         # nvPairs that are safe to translate from lowercase dunder
         # (as used in the playbook) to uppercase dunder (as used
         # in the NDFC payload).
@@ -125,16 +133,12 @@ class VerifyFabricParams:
         Caller: self.config (@property setter)
 
         On success:
-            from self.config, populate:
-                self.fabric_name
-                self.bgp_as
-            return True 
+            return True
         On failure:
             set self.result to False
             set self.msg to an approprate error message
             return False
         """
-        #print(f"in _validate_config with config {config}")
         if not isinstance(config, dict):
             msg = "error: config must be a dictionary"
             self.result = False
@@ -146,20 +150,15 @@ class VerifyFabricParams:
             self.result = False
             self._append_msg(msg)
             return False
-        self.fabric_name = config["fabric_name"]
-        self.bgp_as = config["bgp_as"]
         return True
-
 
     def validate_config(self):
         """
         Caller: public method, called by the user
         Validate the items in self.config are appropriate for self.state
         """
-
-        #print("in validate_config")
         if self.state is None:
-            msg = f"call instance.state before calling instance.validate_config"
+            msg = "call instance.state before calling instance.validate_config"
             self._append_msg(msg)
             self.result = False
             return
@@ -220,12 +219,11 @@ class VerifyFabricParams:
                 return
             self.config["vrf_lite_autoconfig"] = result
 
-        #validate self.config for cross-parameter dependencies
+        # validate self.config for cross-parameter dependencies
         self._validate_dependencies()
-        if self.result == False:
+        if self.result is False:
             return
         self._build_payload()
-
 
     def _build_default_nv_pairs(self):
         """
@@ -675,9 +673,7 @@ class VerifyFabricParams:
             {
                 "anycast_lb_id": {
                     "value": "__any__",
-                    "mandatory": {
-                        "underlay_is_v6": True
-                    }
+                    "mandatory": {"underlay_is_v6": True},
                 }
             }
         )
@@ -702,7 +698,7 @@ class VerifyFabricParams:
                     "value": True,
                     "mandatory": {
                         "vrf_lite_autoconfig": "Back2Back&ToExternal",
-                        "auto_vrflite_ifc_default_vrf": True
+                        "auto_vrflite_ifc_default_vrf": True,
                     },
                 }
             }
@@ -711,9 +707,7 @@ class VerifyFabricParams:
             {
                 "auto_symmetric_vrf_lite": {
                     "value": True,
-                    "mandatory": {
-                        "vrf_lite_autoconfig": "Back2Back&ToExternal"
-                    },
+                    "mandatory": {"vrf_lite_autoconfig": "Back2Back&ToExternal"},
                 }
             }
         )
@@ -723,15 +717,125 @@ class VerifyFabricParams:
                     "value": True,
                     "mandatory": {
                         "vrf_lite_autoconfig": "Back2Back&ToExternal",
-                        "default_vrf_redis_bgp_rmap": None
+                        "default_vrf_redis_bgp_rmap": None,
                     },
                 }
             }
         )
 
+    def _validate_dependencies(self):
+        """
+        Validate cross-parameter dependencies.
+
+        Caller: self._validate_config_for_merged_state()
+
+        Generate a set() of parameters that require validation:
+        - self._requires_validation
+
+        If the set is empty, there's nothing to validate, so return.
+        Else, call:
+        - self._build_failed_dependencies()
+        - self._handle_failed_dependencies()
+        """
+        self._build_mandatory_params()
+        self._requires_validation = set()
+        for user_param in self.config:
+            # param doesn't have any dependent parameters
+            if user_param not in self._mandatory_params:
+                continue
+            # need to run validation for user_param with value "__any__"
+            if self._mandatory_params[user_param]["value"] == "__any__":
+                self._requires_validation.add(user_param)
+            # need to run validation because user_param is a specific value
+            if self.config[user_param] == self._mandatory_params[user_param]["value"]:
+                self._requires_validation.add(user_param)
+        if not self._requires_validation:
+            return
+        self._build_failed_dependencies()
+        self._handle_failed_dependencies()
+
+    def _build_failed_dependencies(self):
+        """
+        If the user has set one or more parameters that, in turn, cause
+        other parameters to become mandatory, build a dictionary of these
+        dependencies and what value is expected for each.
+
+        Example self._failed_dependencies.
+
+        {
+            'vrf_lite_autoconfig': 'Back2Back&ToExternal'
+        }
+
+        In this case, the user set auto_symmetric_vrf_lite to True,
+        which makes vrf_lite_autoconfig mandatory. Too, vrf_lite_autoconfig
+        MUST have a value of Back2Back&ToExternal. Though, in the playbook,
+        the user sets vrf_lite_autoconfig to 1, since 1 is an alias for
+        Back2Back&ToExternal.  See self._handle_failed_dependencies()
+        for how we handle aliased parameters.
+        """
+        if not self._requires_validation:
+            return
+        self._failed_dependencies = {}
+        for user_param in self._requires_validation:
+            # mandatory_params associated with user_param
+            mandatory_params = self._mandatory_params[user_param]["mandatory"]
+            for check_param in mandatory_params:
+                check_value = mandatory_params[check_param]
+                if check_param not in self.config and check_value is not None:
+                    # The playbook doesn't contain this mandatory parameter.
+                    # We care what the value is (since it's not None).
+                    # If the mandatory parameter's default value is not equal
+                    # to the required value, add it to the failed dependencies.
+                    param_up = check_param.upper()
+                    if param_up in self._default_nv_pairs:
+                        if self._default_nv_pairs[param_up] != check_value:
+                            self._failed_dependencies[check_param] = check_value
+                            continue
+                if self.config[check_param] != check_value and check_value is not None:
+                    # The playbook does contain this mandatory parameter, but
+                    # the value in the playbook does not match the required value
+                    # and we care about what the required value is.
+                    self._failed_dependencies[check_param] = check_value
+                    continue
+
+    def _handle_failed_dependencies(self):
+        """
+        If there are failed dependencies:
+        1.  Set self.result to False
+        2.  Build a useful message for the user that lists
+            the additional parameters that NDFC expects
+        """
+        if not self._failed_dependencies:
+            return
+        self._build_parameter_aliases()
+        for user_param in self._requires_validation:
+            if self._mandatory_params[user_param]["value"] == "any":
+                msg = f"When {user_param} is set, "
+            else:
+                msg = f"When {user_param} is set to "
+                msg += f"{self._mandatory_params[user_param]['value']}, "
+            msg += "the following parameters are mandatory: "
+
+            for key, value in self._failed_dependencies.items():
+                msg += f"parameter {key} "
+                if value is None:
+                    msg += "value <any value>"
+                else:
+                    # If the value expected in the playbook is different
+                    # from the value sent to NDFC, use the value expected in
+                    # the playbook so as not to confuse the user.
+                    alias = self._get_parameter_alias(key, value)
+                    if alias is None:
+                        msg_value = value
+                    else:
+                        msg_value = alias
+                    msg += f"value {msg_value}"
+            self._append_msg(msg)
+            self.result = False
+
     def _build_parameter_aliases(self):
         """
-        Caller self._validate_dependencies()
+        Caller self._handle_failed_dependencies()
 
         For some parameters, like vrf_lite_autoconfig, we don't
         want the user to have to remember the spelling for
@@ -739,17 +843,17 @@ class VerifyFabricParams:
         the value NDFC expects (Back2Back&ToExternal) to something
         easier.  In this case, 1.
 
-        See also: _get_parameter_alias()
+        See also: accessor method self._get_parameter_alias()
         """
         self._parameter_aliases = {}
         self._parameter_aliases["vrf_lite_autoconfig"] = {
             "Back2Back&ToExternal": 1,
-            "Manual": 0
+            "Manual": 0,
         }
 
     def _get_parameter_alias(self, param, value):
         """
-        Caller: self._validate_dependencies()
+        Caller: self._handle_failed_dependencies()
 
         Accessor method for self._parameter_aliases
 
@@ -770,101 +874,28 @@ class VerifyFabricParams:
             return None
         return self._parameter_aliases[param][value]
 
-    def _validate_dependencies(self):
-        """
-        Validate cross-parameter dependencies.
-
-        Caller: self._validate_config_for_merged_state()
-
-        On failure to validate cross-parameter dependencies:
-           set self.result to False
-           set self.msg to an appropriate error message
-
-        See also: docstring for self._build_mandatory_params()
-        """
-        self._build_mandatory_params()
-        self._build_parameter_aliases()
-        requires_validation = set()
-        for user_param in self.config:
-            # param doesn't have any dependent parameters
-            if user_param not in self._mandatory_params:
-                continue
-            # need to run validation for user_param with value "__any__"
-            if self._mandatory_params[user_param]["value"] == "__any__":
-                requires_validation.add(user_param)
-            # need to run validation because user_param is a specific value
-            if self.config[user_param] == self._mandatory_params[user_param]["value"]:
-                requires_validation.add(user_param)
-        if not requires_validation:
-            return
-
-        failed_dependencies = dict()
-        for user_param in requires_validation:
-            # mandatory_params associated with user_param
-            mandatory_params = self._mandatory_params[user_param]["mandatory"]
-            for check_param in mandatory_params:
-                check_value = mandatory_params[check_param]
-                if check_param not in self.config and check_value is not None:
-                    # The playbook doesn't contain this mandatory parameter.
-                    # We care what the value is (since it's not None).
-                    # If the mandatory parameter's default value is not equal
-                    # to the required value, add it to the failed dependencies.
-                    param_up = check_param.upper()
-                    if param_up in self._default_nv_pairs:
-                        if self._default_nv_pairs[param_up] != check_value:
-                            failed_dependencies[check_param] = check_value
-                            continue
-                if self.config[check_param] != check_value and check_value is not None:
-                    # The playbook does contain this mandatory parameter, but
-                    # the value in the playbook does not match the required value
-                    # and we care about what the required value is.
-                    failed_dependencies[check_param] = check_value
-                    continue
-
-        if failed_dependencies:
-            # Build a useful message for the user and set self.result to False
-            if self._mandatory_params[user_param]['value'] == "any":
-                msg = f"When {user_param} is set, "
-            else:
-                msg = f"When {user_param} is set to "
-                msg += f"{self._mandatory_params[user_param]['value']}, "
-            msg += "the following parameters are mandatory: "
-
-            for item in failed_dependencies:
-                msg += f"parameter {item} "
-                if failed_dependencies[item] is None:
-                    msg += "value <any value>"
-                else:
-                    # If the value expected in the playbook is different
-                    # from the value sent to NDFC, use the value expected in
-                    # the playbook so as not to confuse the user.
-                    alias = self._get_parameter_alias(item, failed_dependencies[item])
-                    if alias is None:
-                        value = failed_dependencies[item]
-                    else:
-                        value = alias
-                    msg += f"value {value}"
-            self._append_msg(msg)
-            self.result = False
-
     def _build_payload(self):
         """
         Build the payload to create the fabric specified self.config
-        Caller: _validate_dependencies
+        Caller: self._validate_merged_state_config()
         """
-        #print(f"in _build_payload with self.config {self.config}")
         self.payload = self._default_fabric_params
-        self.payload["fabricName"] = self.fabric_name
+        self.payload["fabricName"] = self.config["fabric_name"]
         self.payload["asn"] = self.config["bgp_as"]
         self.payload["nvPairs"] = self._default_nv_pairs
         self._translate_to_ndfc_nv_pairs(self.config)
         for key, value in self._translated_nv_pairs.items():
             self.payload["nvPairs"][key] = value
 
-
     @property
     def config(self):
+        """
+        Basic initial validatation for individual fabric configuration
+        Verifies that config is a dict() and that mandatory keys are
+        present.
+        """
         return self.properties["config"]
+
     @config.setter
     def config(self, param):
         if not self._validate_config(param):
@@ -872,36 +903,45 @@ class VerifyFabricParams:
         self.properties["config"] = param
 
     @property
-    def fabric_name(self):
-        return self.properties["fabric_name"]
-    @fabric_name.setter
-    def fabric_name(self, param):
-        self.properties["fabric_name"] = param
-
-    @property
     def msg(self):
+        """
+        messages to return to the caller
+        """
         return self.properties["msg"]
+
     @msg.setter
     def msg(self, param):
         self.properties["msg"] = param
 
     @property
     def payload(self):
+        """
+        The payload to send to NDFC
+        """
         return self.properties["payload"]
+
     @payload.setter
     def payload(self, param):
         self.properties["payload"] = param
 
     @property
     def result(self):
+        """
+        get/set intermediate results and final result
+        """
         return self.properties["result"]
+
     @result.setter
     def result(self, param):
         self.properties["result"] = param
 
     @property
     def state(self):
+        """
+        The Ansible state provided by the caller
+        """
         return self.properties["state"]
+
     @state.setter
     def state(self, param):
         if param not in self._valid_states:
