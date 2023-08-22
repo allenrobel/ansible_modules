@@ -511,11 +511,17 @@ class DcnmFabric:
             verify = VerifyFabricParams()
             verify.state = state
             verify.config = fabric_config
+            # At this point VerifyFabricParams has validated
+            # state and config and seeded an appropriate msg
+            # in the event something is wrong with either.
             if verify.result is False:
                 self.module.fail_json(msg=verify.msg)
             verify.validate_config()
+            # Now we're validating the specific parameters
+            # that are set in the playbook.
             if verify.result is False:
                 self.module.fail_json(msg=verify.msg)
+            # If everything is good, we have a validated payload
             self.payloads[fabric_config["fabric_name"]] = verify.payload
 
     def _validate_input_for_merged_state(self):
