@@ -24,7 +24,7 @@
                 bfd_enable: True
                 bfd_auth_enable: True
                 bfd_auth_key: "asadflkajsdff"
-                bfd_auth_key_id: "100"
+                bfd_auth_key_id: 100
                 bgp_as: 65535.0
                 vrf_lite_autoconfig: 1
             -   fabric_name: AS_Plain
