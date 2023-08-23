@@ -30,6 +30,7 @@
             -   fabric_name: AS_Plain
                 anycast_gw_mac: 00dd.ccbb.aa00
                 bgp_as: 4294967295
+                bgp_lb_id: 1023
                 bgp_auth_enable: True
                 bgp_auth_key: "asdfasdfasdf"
                 bgp_auth_key_type: "3"

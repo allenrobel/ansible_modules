@@ -240,6 +240,14 @@ options:
             - NDFC tab, Protocols
             type: str
             required: false
+        bgp_lb_id:
+            description:
+            - (Min:0, Max:1023)
+            - NDFC label, Underlay Routing Loopback Id
+            - NDFC tab, Protocols
+            type: int
+            required: false
+            default: 0
         default_vrf_redis_bgp_rmap:
             description:
             - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -510,6 +518,11 @@ class DcnmFabric:
                 type="str",
                 default="",
                 choices=["3", "7"],
+            )
+        )
+        params_spec.update(
+            bgp_lb_id=dict(
+                required=False, type="int", range_min=0, range_max=1023, default=""
             )
         )
         params_spec.update(
