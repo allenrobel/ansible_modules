@@ -798,6 +798,28 @@ class VerifyFabricParams:
                     "value": True,
                     "mandatory": {
                         "bootstrap_enable": True,
+                        "dhcp_enable": True,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "dhcp_enable": {
+                    "value": True,
+                    "mandatory": {
+                        "bootstrap_enable": True,
+                        "dhcp_end": None,
+                        # dhcp_ipv6_enable _is_ mandatory, when
+                        # dhcp_enable is set to True.  However,
+                        # NDFC currently only has one value for this
+                        # (DHCPv4), and does set this value for the
+                        # user when dhcp_enable is True. BUT, this may
+                        # change in the future.
+                        #"dhcp_ipv6_enable": "DHCPv4",
+                        "dhcp_start": None,
+                        "mgmt_gw": None,
+                        "mgmt_prefix": None,
                     },
                 }
             }

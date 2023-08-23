@@ -282,7 +282,7 @@ options:
             - # This is a comment
             - 10.7.0.2, 10.7.0.9, 10.7.0.1, 24
             - NDFC label, DHCPv4 Multi Subnet Scope
-            - NDFC tab, ??
+            - NDFC tab, Bootstrap
             type: str
             required: false
             default: False
@@ -293,11 +293,59 @@ options:
             - NDFC tab, Resources
             type: str
             required: false, unless auto_vrflite_ifc_default_vrf is set to True
+        dhcp_enable:
+            description:
+            - Automatic IP Assignment For POAP From Local DHCP Server
+            - NDFC label, Enable Local DHCP Server
+            - NDFC tab, Bootstrap
+            type: bool
+            required: false
+            default: False
+        dhcp_end:
+            description:
+            - End Address For Switch POAP
+            - NDFC label, DHCP Scope End Address
+            - NDFC tab, Bootstrap
+            type: str
+            required: false
+            default: False
+        dhcp_ipv6_enable:
+            description:
+            - The DHCP version to use when DHCP is enabled
+            - This has nothing to do with ipv6 and is not a boolean
+            - Valid value: DHCPv4
+            - NDFC label, DHCP Version
+            - NDFC tab, Bootstrap
+            type: str
+            required: false
+            default: False
+        dhcp_start:
+            description:
+            - Start Address For Switch POAP
+            - NDFC label, DHCP Scope Start Address
+            - NDFC tab, Bootstrap
+            type: str
+            required: false
+            default: False
         fabric_name:
             description:
             - The name of the fabric
             type: str
             required: true
+        mgmt_gw:
+            description:
+            - Default Gateway For Management VRF On The Switch
+            - NDFC label, Switch Mgmt Default Gateway
+            - NDFC tab, Bootstrap
+            type: str
+            required: false
+        mgmt_prefix:
+            description:
+            - Min:8, Max:30
+            - NDFC label, Switch Mgmt IP Subnet Prefix
+            - NDFC tab, Bootstrap
+            type: int
+            required: false
         pm_enable:
             description:
             - Enable (True) or disable (False) fabric performance monitoring
@@ -587,7 +635,51 @@ class DcnmFabric:
         params_spec.update(
             default_vrf_redis_bgp_rmap=dict(required=False, type="str", default="")
         )
+        params_spec.update(
+            dhcp_enable=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
+        params_spec.update(
+            dhcp_ipv6_enable=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            dhcp_end=dict(
+                required=False,
+                type="ipv4",
+                default=False,
+            )
+        )
+        params_spec.update(
+            dhcp_start=dict(
+                required=False,
+                type="ipv4",
+                default=False,
+            )
+        )
         params_spec.update(fabric_name=dict(required=True, type="str"))
+        params_spec.update(
+            mgmt_gw=dict(
+                required=False,
+                type="ipv4",
+                default=False,
+            )
+        )
+        params_spec.update(
+            mgmt_prefix=dict(
+                required=False,
+                type="int",
+                min_range=8,
+                max_range=30,
+                default=False,
+            )
+        )
         params_spec.update(pm_enable=dict(required=False, type="bool", default=False))
         params_spec.update(
             replication_mode=dict(
