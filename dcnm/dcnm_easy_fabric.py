@@ -337,6 +337,15 @@ options:
             type: str
             required: False
             default: 10.33.0.0/16
+        dci_subnet_target_mask:
+            description:
+            - Prefix length for P2P Interfabric Connections
+            - Min:8, Max:31
+            - NDFC label, VRF Lite Subnet Mask
+            - NDFC tab, Resources
+            type: int
+            required: False
+            default: 30
         default_vrf_redis_bgp_rmap:
             description:
             - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -734,6 +743,15 @@ class DcnmFabric:
                 required=False,
                 type="ipv4_subnet",
                 default="10.33.0.0/16",
+            )
+        )
+        params_spec.update(
+            dci_subnet_target_mask=dict(
+                required=False,
+                type="int",
+                min_range=8,
+                max_range=31,
+                default=30,
             )
         )
         params_spec.update(
