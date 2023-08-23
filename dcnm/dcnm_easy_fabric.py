@@ -294,6 +294,24 @@ options:
             type: str
             required: False
             default: Disable
+        brownfield_network_name_format:
+            description:
+            - Brownfield Overlay Network Name Format
+            - Generated network name should be < 64 characters
+            - NDFC label, Brownfield Overlay Network Name Format
+            - NDFC tab, Advanced
+            type: str
+            required: False
+            default: "Auto_Net_VNI$$VNI$$_VLAN$$VLAN_ID$$"
+        brownfield_skip_overlay_network_attachments:
+            description:
+            - Enable (True) or disable (False) skipping overlay network interface attachments for Brownfield and Host Port Resync cases
+            - NDFC label, Skip Overlay Network Interface Attachments
+            - NDFC tab, Advanced
+            type: bool
+            required: False
+            default: False
+
         default_vrf_redis_bgp_rmap:
             description:
             - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -655,6 +673,20 @@ class DcnmFabric:
                 type="str",
                 default="Disable",
                 choices=["Disable", "Enable"],
+            )
+        )
+        params_spec.update(
+            brownfield_network_name_format=dict(
+                required=False,
+                type="str",
+                default="Auto_Net_VNI$$VNI$$_VLAN$$VLAN_ID$$",
+            )
+        )
+        params_spec.update(
+            brownfield_skip_overlay_network_attachments=dict(
+                required=False,
+                type="bool",
+                default=False,
             )
         )
         params_spec.update(

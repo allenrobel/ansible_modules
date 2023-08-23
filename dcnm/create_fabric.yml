@@ -57,7 +57,9 @@
                 bootstrap_conf: |
                     interface Ethernet1/1
                       no shutdown
-            -   fabric_name: Debug
+            -   fabric_name: Brownfield
                 bgp_as: 3
                 brfield_debug_flag: Enable
                 grfield_debug_flag: Enable
+                brownfield_network_name_format: "Vlan$$VLAN_ID$$_VNI$$VNI$$"
+                brownfield_skip_overlay_network_attachments: True
