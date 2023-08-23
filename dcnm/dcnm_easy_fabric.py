@@ -311,7 +311,14 @@ options:
             type: bool
             required: False
             default: False
-
+        cdp_enable:
+            description:
+            - Enable (True) or disable (False) CDP on management interface 
+            - NDFC label, Enable CDP for Bootstrapped Switch
+            - NDFC tab, Advanced
+            type: bool
+            required: False
+            default: False
         default_vrf_redis_bgp_rmap:
             description:
             - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -684,6 +691,13 @@ class DcnmFabric:
         )
         params_spec.update(
             brownfield_skip_overlay_network_attachments=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
+        params_spec.update(
+            cdp_enable=dict(
                 required=False,
                 type="bool",
                 default=False,
