@@ -329,6 +329,14 @@ options:
             required: False
             default: strict
             choices: dense, lenient, manual, moderate, strict
+        dci_subnet_range:
+            description:
+            - Address range to assign P2P Interfabric Connections
+            - NDFC label, VRF Lite Subnet IP Range
+            - NDFC tab, Resources
+            type: str
+            required: False
+            default: 10.33.0.0/16
         default_vrf_redis_bgp_rmap:
             description:
             - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -719,6 +727,13 @@ class DcnmFabric:
                 type="str",
                 default="strict",
                 choices=["dense", "lenient", "manual", "moderate", "strict"],
+            )
+        )
+        params_spec.update(
+            dci_subnet_range=dict(
+                required=False,
+                type="ipv4_subnet",
+                default="10.33.0.0/16",
             )
         )
         params_spec.update(
