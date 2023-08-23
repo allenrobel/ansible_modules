@@ -629,7 +629,7 @@ class DcnmFabric:
             bootstrap_multisubnet=dict(
                 required=False,
                 type="str",
-                default=False,
+                default="",
             )
         )
         params_spec.update(
