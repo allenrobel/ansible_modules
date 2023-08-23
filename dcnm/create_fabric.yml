@@ -57,3 +57,7 @@
                 bootstrap_conf: |
                     interface Ethernet1/1
                       no shutdown
+            -   fabric_name: Debug
+                bgp_as: 3
+                brfield_debug_flag: Enable
+                grfield_debug_flag: Enable

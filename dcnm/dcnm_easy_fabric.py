@@ -286,6 +286,14 @@ options:
             type: str
             required: false
             default: False
+        brfield_debug_flag:
+            description:
+            - Valid values: Disable, Enable
+            - NDFC label, ??
+            - NDFC tab, ??
+            type: str
+            required: False
+            default: Disable
         default_vrf_redis_bgp_rmap:
             description:
             - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -332,6 +340,15 @@ options:
             - The name of the fabric
             type: str
             required: true
+        grfield_debug_flag:
+            description:
+            - Switch Cleanup Without Reload When PreserveConfig=no
+            - Valid values: Disable, Enable
+            - NDFC label, Greenfield Cleanup Option
+            - NDFC tab, Advanced
+            type: str
+            required: False
+            default: Disable
         mgmt_gw:
             description:
             - Default Gateway For Management VRF On The Switch
@@ -633,6 +650,14 @@ class DcnmFabric:
             )
         )
         params_spec.update(
+            brfield_debug_flag=dict(
+                required=False,
+                type="str",
+                default="Disable",
+                choices=["Disable", "Enable"],
+            )
+        )
+        params_spec.update(
             default_vrf_redis_bgp_rmap=dict(required=False, type="str", default="")
         )
         params_spec.update(
@@ -664,6 +689,14 @@ class DcnmFabric:
             )
         )
         params_spec.update(fabric_name=dict(required=True, type="str"))
+        params_spec.update(
+            grfield_debug_flag=dict(
+                required=False,
+                type="str",
+                default="Disable",
+                choices=["Disable", "Enable"],
+            )
+        )
         params_spec.update(
             mgmt_gw=dict(
                 required=False,
