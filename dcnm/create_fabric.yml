@@ -66,3 +66,6 @@
             -   fabric_name: CDP
                 bgp_as: 4
                 cdp_enable: True
+            -   fabric_name: COPP
+                bgp_as: 5
+                copp_policy: dense

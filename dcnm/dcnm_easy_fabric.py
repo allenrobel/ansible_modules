@@ -319,6 +319,16 @@ options:
             type: bool
             required: False
             default: False
+        copp_policy:
+            description:
+            type: str
+            - Fabric Wide CoPP Policy
+            - Customized CoPP policy should be provided when 'manual' is selected 
+            - NDFC label, CoPP Profile
+            - NDFC tab, Advanced
+            required: False
+            default: strict
+            choices: dense, lenient, manual, moderate, strict
         default_vrf_redis_bgp_rmap:
             description:
             - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -701,6 +711,14 @@ class DcnmFabric:
                 required=False,
                 type="bool",
                 default=False,
+            )
+        )
+        params_spec.update(
+            copp_policy=dict(
+                required=False,
+                type="str",
+                default="strict",
+                choices=["dense", "lenient", "manual", "moderate", "strict"],
             )
         )
         params_spec.update(
