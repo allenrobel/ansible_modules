@@ -783,6 +783,17 @@ class VerifyFabricParams:
         )
         self._mandatory_params.update(
             {
+                "bgp_auth_enable": {
+                    "value": True,
+                    "mandatory": {
+                        "bgp_auth_key": None,
+                        "bgp_auth_key_type": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
                 "underlay_is_v6": {
                     "value": True,
                     "mandatory": {

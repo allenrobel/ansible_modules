@@ -218,6 +218,28 @@ options:
             - NDFC tab, General Parameters
             type: str
             required: true
+        bgp_auth_enable:
+            description:
+            - Enable (True) or disable (False) BGP Authentication
+            - NDFC label, Enable BGP Authentication
+            - NDFC tab, Protocols
+            type: bool
+            required: false
+            default: False
+        bgp_auth_key:
+            description:
+            - Encrypted BGP Authentication Key based on type
+            - NDFC label, BGP Authentication Key
+            - NDFC tab, Protocols
+            type: str
+            required: false
+        bgp_auth_key_type:
+            description:
+            - BGP Key Encryption Type: 3 - 3DES, 7 - Cisco
+            - NDFC label, BGP Authentication Key Encryption Type
+            - NDFC tab, Protocols
+            type: str
+            required: false
         default_vrf_redis_bgp_rmap:
             description:
             - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -468,6 +490,28 @@ class DcnmFabric:
         params_spec.update(bfd_ospf_enable=dict(required=False, type="bool", default=False))
         params_spec.update(bfd_pim_enable=dict(required=False, type="bool", default=False))
         params_spec.update(bgp_as=dict(required=True, type="str"))
+        params_spec.update(
+            bgp_auth_enable=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
+        params_spec.update(
+            bgp_auth_key=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            bgp_auth_key_type=dict(
+                required=False,
+                type="str",
+                default="",
+                choices=["3", "7"],
+            )
+        )
         params_spec.update(
             default_vrf_redis_bgp_rmap=dict(required=False, type="str", default="")
         )

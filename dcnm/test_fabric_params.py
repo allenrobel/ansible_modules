@@ -24,6 +24,19 @@ def test_bfd():
     verify.validate_config()
     print_result(verify.result, verify.msg, verify.payload)
 
+def test_bgp_auth():
+    config = {}
+    config["fabric_name"] = "foo"
+    config["bgp_as"] = "65000.869"
+    config["bgp_auth_enable"] = True
+    config["bgp_auth_key_type"] = 0
+    config["bgp_auth_key"] = "foo"
+    verify = VerifyFabricParams()
+    verify.config = config
+    verify.state = "merged"
+    verify.validate_config()
+    print_result(verify.result, verify.msg, verify.payload)
+
 def test_vrf_lite():
     config = {}
     config["fabric_name"] = "foo"
@@ -37,4 +50,5 @@ def test_vrf_lite():
     print_result(verify.result, verify.msg, verify.payload)
 
 test_bfd()
+test_bgp_auth()
 test_vrf_lite()
