@@ -794,6 +794,16 @@ class VerifyFabricParams:
         )
         self._mandatory_params.update(
             {
+                "bootstrap_multisubnet": {
+                    "value": True,
+                    "mandatory": {
+                        "bootstrap_enable": True,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
                 "underlay_is_v6": {
                     "value": True,
                     "mandatory": {

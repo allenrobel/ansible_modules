@@ -35,3 +35,13 @@
                 bgp_auth_key: "asdfasdfasdf"
                 bgp_auth_key_type: "3"
                 pm_enable: True
+            -   fabric_name: Bootstrap
+                bgp_as: 1
+                bootstrap_enable: True
+                bootstrap_multisubnet: |
+                    10.6.0.2, 10.6.0.9, 10.6.0.1, 24
+                    # This is a comment
+                    10.7.0.2, 10.7.0.9, 10.7.0.1, 24
+                bootstrap_conf: |
+                    interface Ethernet1/1
+                      no shutdown

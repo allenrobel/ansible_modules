@@ -248,6 +248,44 @@ options:
             type: int
             required: false
             default: 0
+        bgp_auth_enable:
+            description:
+            - Enable (True) or disable (False) Automatic IP Assignment For POAP
+            - NDFC label, Enable Bootstrap
+            - NDFC tab, Bootstrap
+            type: bool
+            required: false
+            default: False
+        bootstrap_conf:
+            description:
+            - Additional CLIs required during device bootup/login e.g. AAA/Radius
+            - NDFC label, Bootstrap Freeform Config
+            - NDFC tab, Bootstrap
+            type: str
+            required: false
+        bootstrap_enable:
+            description:
+            - Automatic IP Assignment For POAP
+            - NDFC label, Enable Bootstrap
+            - NDFC tab, Bootstrap
+            type: bool
+            required: false
+            default: False
+        bootstrap_multisubnet:
+            description:
+            - DHCPv4 Multi Subnet Scope
+            - lines with # prefix are ignored here
+            - Enter One Subnet Scope per line.
+            - Start_IP, End_IP, Gateway, Prefix
+            - e.g.
+            - 10.6.0.2, 10.6.0.9, 10.6.0.1, 24
+            - # This is a comment
+            - 10.7.0.2, 10.7.0.9, 10.7.0.1, 24
+            - NDFC label, DHCPv4 Multi Subnet Scope
+            - NDFC tab, ??
+            type: str
+            required: false
+            default: False
         default_vrf_redis_bgp_rmap:
             description:
             - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -523,6 +561,27 @@ class DcnmFabric:
         params_spec.update(
             bgp_lb_id=dict(
                 required=False, type="int", range_min=0, range_max=1023, default=""
+            )
+        )
+        params_spec.update(
+            bootstrap_conf=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            bootstrap_enable=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
+        params_spec.update(
+            bootstrap_multisubnet=dict(
+                required=False,
+                type="str",
+                default=False,
             )
         )
         params_spec.update(
