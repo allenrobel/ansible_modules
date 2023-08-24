@@ -346,6 +346,30 @@ options:
             type: int
             required: False
             default: 30
+        default_queuing_policy_cloudscale:
+            description:
+            - Queuing Policy for all 92xx, -EX, -FX, -FX2, -FX3, -GX series switches in the fabric
+            - NDFC label, N9K Cloud Scale Platform Queuing Policy
+            - NDFC tab, Advanced
+            type: str
+            required: False
+            choices: queuing_policy_default_8q_cloudscale, queuing_policy_default_4q_cloudscale
+        default_queuing_policy_other:
+            description:
+            - Queuing Policy for all other switches in the fabric
+            - NDFC label, Other N9K Platform Queuing Policy
+            - NDFC tab, Advanced
+            type: str
+            required: False
+            choices: queuing_policy_default_other
+        default_queuing_policy_r_series:
+            description:
+            - Queuing Policy for all other switches in the fabric
+            - NDFC label, N9K R-Series Platform Queuing Policy
+            - NDFC tab, Advanced
+            type: str
+            required: False
+            choices: queuing_policy_default_r_series
         default_vrf_redis_bgp_rmap:
             description:
             - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -385,6 +409,14 @@ options:
             - NDFC label, DHCP Scope Start Address
             - NDFC tab, Bootstrap
             type: str
+            required: false
+            default: False
+        enable_default_queuing_policy:
+            description:
+            - Automatic IP Assignment For POAP From Local DHCP Server
+            - NDFC label, Enable Default Queuing Policies
+            - NDFC tab, Advanced
+            type: bool
             required: false
             default: False
         fabric_name:
@@ -755,6 +787,30 @@ class DcnmFabric:
             )
         )
         params_spec.update(
+            default_queuing_policy_cloudscale=dict(
+                required=False,
+                type="str",
+                default="",
+                choices=["queuing_policy_default_8q_cloudscale", "queuing_policy_default_4q_cloudscale"],
+            )
+        )
+        params_spec.update(
+            default_queuing_policy_other=dict(
+                required=False,
+                type="str",
+                default="",
+                choices=["queuing_policy_default_other"],
+            )
+        )
+        params_spec.update(
+            default_queuing_policy_r_series=dict(
+                required=False,
+                type="str",
+                default="",
+                choices=["queuing_policy_default_r_series"],
+            )
+        )
+        params_spec.update(
             default_vrf_redis_bgp_rmap=dict(required=False, type="str", default="")
         )
         params_spec.update(
@@ -782,6 +838,13 @@ class DcnmFabric:
             dhcp_start=dict(
                 required=False,
                 type="ipv4",
+                default=False,
+            )
+        )
+        params_spec.update(
+            enable_default_queuing_policy=dict(
+                required=False,
+                type="bool",
                 default=False,
             )
         )

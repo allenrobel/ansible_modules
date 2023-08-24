@@ -108,7 +108,7 @@ class VerifyFabricParams:
         #  self._build_translatable_nv_pairs()
         self._translated_nv_pairs = {}
         self._valid_states = {"merged"}
-        self._mandatory_keys = {"fabric_name", "bgp_as"}
+        self._minimum_mandatory_keys = {"fabric_name", "bgp_as"}
         self._build_default_fabric_params()
         self._build_default_nv_pairs()
 
@@ -136,7 +136,7 @@ class VerifyFabricParams:
             return True
         On failure:
             set self.result to False
-            set self.msg to an approprate error message
+            append an approprate error message to self.msg
             return False
         """
         if not isinstance(config, dict):
@@ -144,8 +144,8 @@ class VerifyFabricParams:
             self.result = False
             self._append_msg(msg)
             return False
-        if not self._mandatory_keys.issubset(config):
-            missing_keys = self._mandatory_keys.difference(config.keys())
+        if not self._minimum_mandatory_keys.issubset(config):
+            missing_keys = self._minimum_mandatory_keys.difference(config.keys())
             msg = f"error: missing mandatory keys {','.join(sorted(missing_keys))}."
             self.result = False
             self._append_msg(msg)
@@ -167,7 +167,7 @@ class VerifyFabricParams:
 
     def _validate_merged_state_config(self):
         """
-        Caller: self._validate_config_for_merged_state()
+        Caller: self.validate_config()
 
         Update self.config with a verified version of the users playbook
         parameters.
@@ -574,6 +574,7 @@ class VerifyFabricParams:
             if param not in params:
                 continue
             self._translated_nv_pairs[param.upper()] = params[param]
+
         # special cases
         # dunder keys, these need no modification
         dunder_keys = {
@@ -586,6 +587,7 @@ class VerifyFabricParams:
             if key not in params:
                 continue
             self._translated_nv_pairs[key] = params[key]
+
         # camelCase keys
         # These are currently manually mapped with a dictionary.
         camel_keys = {
@@ -597,6 +599,23 @@ class VerifyFabricParams:
             if user_key not in params:
                 continue
             self._translated_nv_pairs[ndfc_key] = params[user_key]
+
+        # Keys with typos
+        # Lastly, NDFC has several keys with typos which we don't
+        # want the user to have to compensate for.  We map these from
+        # the correct spelling back into the incorrect spelling
+        # that NDFC requires and update the translated nvPairs
+        # dictionary accordingly.
+        typo_keys = {
+            "DEAFULT_QUEUING_POLICY_CLOUDSCALE": "default_queuing_policy_cloudscale",
+            "DEAFULT_QUEUING_POLICY_OTHER": "default_queuing_policy_other",
+            "DEAFULT_QUEUING_POLICY_R_SERIES": "default_queuing_policy_r_series",
+        }
+        for ndfc_key, user_key in typo_keys.items():
+            value = params.pop(user_key, None)
+            if value is None:
+                continue
+            self._translated_nv_pairs[ndfc_key] = value
 
     def _build_mandatory_params(self):
         """
@@ -826,6 +845,18 @@ class VerifyFabricParams:
         )
         self._mandatory_params.update(
             {
+                "enable_default_queuing_policy": {
+                    "value": True,
+                    "mandatory": {
+                        "default_queuing_policy_cloudscale": None,
+                        "default_queuing_policy_other": None,
+                        "default_queuing_policy_r_series": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
                 "underlay_is_v6": {
                     "value": True,
                     "mandatory": {
@@ -844,7 +875,7 @@ class VerifyFabricParams:
         """
         Validate cross-parameter dependencies.
 
-        Caller: self._validate_config_for_merged_state()
+        Caller: self._validate_merged_state_config()
 
         Generate a set() of parameters that require validation:
         - self._requires_validation
@@ -924,7 +955,7 @@ class VerifyFabricParams:
                         msg = f"This should never happen. {param_up} not "
                         msg += "found in default_nv_pairs.  Please open an "
                         msg += "issue."
-                        self.msg = msg
+                        self._append_msg(msg)
                         self.result = False
                         return
                     if self._default_nv_pairs[param_up] != check_value:

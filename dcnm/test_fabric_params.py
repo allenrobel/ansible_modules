@@ -69,7 +69,23 @@ def test_vrf_lite():
     verify.validate_config()
     print_result(test_name, verify.result, verify.msg, verify.payload)
 
+def test_queuing():
+    test_name = "queuing"
+    config = {}
+    config["fabric_name"] = "foo"
+    config["bgp_as"] = "65000.869"
+    config["enable_default_queuing_policy"] = True
+    config["default_queuing_policy_cloudscale"] = "queuing_policy_default_4q_cloudscale"
+    config["default_queuing_policy_other"] = "queuing_policy_default_other"
+    config["default_queuing_policy_r_series"] = "queuing_policy_default_r_series"
+    verify = VerifyFabricParams()
+    verify.config = config
+    verify.state = "merged"
+    verify.validate_config()
+    print_result(test_name, verify.result, verify.msg, verify.payload)
+
 test_bfd()
 test_bootstrap()
 test_bgp_auth()
 test_vrf_lite()
+test_queuing()
