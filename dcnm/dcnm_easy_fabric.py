@@ -364,7 +364,7 @@ options:
             choices: queuing_policy_default_other
         default_queuing_policy_r_series:
             description:
-            - Queuing Policy for all other switches in the fabric
+            - Queuing Policy for all R-Series switches in the fabric
             - NDFC label, N9K R-Series Platform Queuing Policy
             - NDFC tab, Advanced
             type: str
@@ -377,6 +377,15 @@ options:
             - NDFC tab, Resources
             type: str
             required: false, unless auto_vrflite_ifc_default_vrf is set to True
+        deployment_freeze:
+            description:
+            - Enable (True) or disable (False) Fabric Deployment
+            - NDFC label, None
+            - NDFC tab, None
+            - Fabric deployment is enabled/disabled in the NDFC GUI by right-clicking on a fabric and selecting 'More... Deployment Enable/Disable'
+            type: bool
+            required: false
+            default: False
         dhcp_enable:
             description:
             - Automatic IP Assignment For POAP From Local DHCP Server
@@ -812,6 +821,13 @@ class DcnmFabric:
         )
         params_spec.update(
             default_vrf_redis_bgp_rmap=dict(required=False, type="str", default="")
+        )
+        params_spec.update(
+            deployment_freeze=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
         )
         params_spec.update(
             dhcp_enable=dict(
