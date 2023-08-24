@@ -44,7 +44,7 @@ if verify.result == False:
 print(f"result {verify.result}, {verify.msg}, payload {verify.payload}")
 """
 import re
-
+import ipaddress
 
 def translate_mac_address(mac_addr):
     """
@@ -74,6 +74,18 @@ def translate_vrf_lite_autoconfig(value):
         return "Back2Back&ToExternal"
     return False
 
+def verify_ip_list(value):
+    """
+    Return True if value is a comma-separated list of ipv4/ipv6
+    addresses.
+    Return False otherwise
+    """
+    for ip in value.split(","):
+        try:
+            ipaddress.ip_address(ip.strip())
+        except ValueError:
+            return False
+    return True
 
 class VerifyFabricParams:
     """
@@ -209,6 +221,25 @@ class VerifyFabricParams:
                 self.result = False
                 return
             self.config["anycast_gw_mac"] = result
+        if "dns_server_ip_list" in self.config:
+            result = verify_ip_list(self.config["dns_server_ip_list"])
+            if result is False:
+                msg = f"invalid dns_server_ip_list {self.config['dns_server_ip_list']}"
+                self._append_msg(msg)
+                self.result = False
+                return
+        if "dns_server_vrf" in self.config:
+            vrf_list_length = len(self.config["dns_server_vrf"].split(","))
+            if vrf_list_length == 1:
+                return
+            dns_server_ip_list_length = len(self.config["dns_server_ip_list"].split(","))
+            if vrf_list_length != dns_server_ip_list_length:
+                msg = "If dns_server_vrf contains multiple entries, the "
+                msg += "number of entries must match the number of entries "
+                msg += "in dns_server_ip_list. "
+                self._append_msg(msg)
+                self.result = False
+                return
         if "vrf_lite_autoconfig" in self.config:
             result = translate_vrf_lite_autoconfig(self.config["vrf_lite_autoconfig"])
             if result is False:
@@ -839,6 +870,26 @@ class VerifyFabricParams:
                         "dhcp_start": None,
                         "mgmt_gw": None,
                         "mgmt_prefix": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "dns_server_ip_list": {
+                    "value": "__any__",
+                    "mandatory": {
+                        "dns_server_vrf": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "dns_server_vrf": {
+                    "value": "__any__",
+                    "mandatory": {
+                        "dns_server_ip_list": None,
                     },
                 }
             }

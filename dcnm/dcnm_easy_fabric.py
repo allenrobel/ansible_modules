@@ -401,7 +401,7 @@ options:
             - NDFC tab, Bootstrap
             type: str
             required: false
-            default: False
+            default: ""
         dhcp_ipv6_enable:
             description:
             - The DHCP version to use when DHCP is enabled
@@ -411,7 +411,7 @@ options:
             - NDFC tab, Bootstrap
             type: str
             required: false
-            default: False
+            default: ""
         dhcp_start:
             description:
             - Start Address For Switch POAP
@@ -419,7 +419,26 @@ options:
             - NDFC tab, Bootstrap
             type: str
             required: false
-            default: False
+            default: ""
+        dns_server_ip_list:
+            description:
+            - List of DNS servers used by switches within the fabric
+            - Comma separated list of ipv4/ipv6 addresses
+            - NDFC label, DNS Server IPs
+            - NDFC tab, Manageability
+            type: str
+            required: false
+            default: ""
+        dns_server_vrf:
+            description:
+            - List of VRFs in which the DNS server(s) in dns_server_ip_list reside
+            - Comma separated list of VRF names
+            - If a single VRF is specified, it will be used for all DNS servers, else the number of VRFs must match the number of DNS servers
+            - NDFC label, DNS Server VRFs
+            - NDFC tab, Manageability
+            type: str
+            required: false
+            default: ""
         enable_default_queuing_policy:
             description:
             - Automatic IP Assignment For POAP From Local DHCP Server
@@ -855,6 +874,20 @@ class DcnmFabric:
                 required=False,
                 type="ipv4",
                 default=False,
+            )
+        )
+        params_spec.update(
+            dns_server_ip_list=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            dns_server_vrf=dict(
+                required=False,
+                type="str",
+                default="",
             )
         )
         params_spec.update(

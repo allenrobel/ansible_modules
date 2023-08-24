@@ -56,6 +56,19 @@ def test_bootstrap():
     verify.validate_config()
     print_result(test_name, verify.result, verify.msg, verify.payload)
 
+def test_dns_server_ip_list():
+    test_name = "dns_server_ip_list"
+    config = {}
+    config["fabric_name"] = "foo"
+    config["bgp_as"] = "65000.869"
+    config["dns_server_ip_list"] = "1.1.1.1, 2001:1:2::1, 2.2.2.2"
+    config["dns_server_vrf"] = "management, foo, bar"
+    verify = VerifyFabricParams()
+    verify.config = config
+    verify.state = "merged"
+    verify.validate_config()
+    print_result(test_name, verify.result, verify.msg, verify.payload)
+
 def test_vrf_lite():
     test_name = "vrf_lite"
     config = {}
@@ -87,5 +100,6 @@ def test_queuing():
 test_bfd()
 test_bootstrap()
 test_bgp_auth()
+test_dns_server_ip_list()
 test_vrf_lite()
 test_queuing()
