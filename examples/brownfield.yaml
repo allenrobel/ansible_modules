@@ -1,0 +1,13 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+        - cisco.dcnm.dcnm_easy_fabric:
+            state: merged
+            config:
+            -   fabric_name: Brownfield
+                bgp_as: 3
+                brfield_debug_flag: Enable
+                grfield_debug_flag: Enable
+                brownfield_network_name_format: "Vlan$$VLAN_ID$$_VNI$$VNI$$"
+                brownfield_skip_overlay_network_attachments: True

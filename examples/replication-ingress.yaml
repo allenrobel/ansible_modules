@@ -1,0 +1,20 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+        - cisco.dcnm.dcnm_easy_fabric:
+            state: merged
+            config:
+            -   fabric_name: IR-Fabric
+                advertise_pip_bgp: True
+                anycast_bgw_advertise_pip: True
+                anycast_gw_mac: 00:aa:bb:cc:dd:ee
+                anycast_rp_ip_range: 10.65.0.0/16
+                bgp_as: 65535.65535
+                dci_subnet_range: 11.22.33.0/24
+                replication_mode: Ingress
+                vrf_lite_autoconfig: 1
+                auto_symmetric_vrf_lite: True
+                auto_vrflite_ifc_default_vrf: True
+                auto_symmetric_default_vrf: True
+                default_vrf_redis_bgp_rmap: extcon-rmap-filter
