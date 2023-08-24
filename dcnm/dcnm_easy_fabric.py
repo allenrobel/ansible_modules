@@ -64,12 +64,21 @@ options:
         suboptions:
         aaa_remote_ip_enabled:
             description:
-            - Enable (True) or disable (False) AAA remote IP
+            - Enable (True) or disable (False) AAA IP Authorization
+            - Enable only when IP Authorization is enabled on the AAA Server
             - NDFC label, Enable AAA IP Authorization
             - NDFC tab, Advanced
             type: bool
             required: false
             default: False
+        aaa_server_conf:
+            description:
+            - AAA Configurations
+            - NDFC label, AAA Freeform Config
+            - NDFC tab, Manageability
+            type: str
+            required: false
+            default: "2020.0000.00aa"
         advertise_pip_bgp:
             description:
             - Enable (True) or disable (False) usage of Primary VTEP IP Advertisement As Next-Hop Of Prefix Routes
@@ -439,6 +448,14 @@ options:
             type: str
             required: false
             default: ""
+        enable_aaa:
+            description:
+            - Include AAA configs from Manageability tab during device bootup
+            - NDFC label, Enable AAA Config
+            - NDFC tab, Bootstrap
+            type: bool
+            required: false
+            default: False
         enable_default_queuing_policy:
             description:
             - Automatic IP Assignment For POAP From Local DHCP Server
@@ -665,9 +682,18 @@ class DcnmFabric:
         Return: params_spec, a dictionary containing the set of
                 parameter specifications.
         """
-        params_spec = {}
+        params_spec = {} 
         params_spec.update(
-            aaa_remote_ip_enabled=dict(required=False, type="bool", default=False)
+            aaa_remote_ip_enabled=dict(
+            required=False,
+            type="bool",
+            default=False)
+        )
+        params_spec.update(
+            aaa_server_conf=dict(
+            required=False,
+            type="str",
+            default="")
         )
         # TODO:6 active_migration
         # active_migration doesn't seem to be represented in
@@ -888,6 +914,13 @@ class DcnmFabric:
                 required=False,
                 type="str",
                 default="",
+            )
+        )
+        params_spec.update(
+            enable_aaa=dict(
+                required=False,
+                type="bool",
+                default=False,
             )
         )
         params_spec.update(
