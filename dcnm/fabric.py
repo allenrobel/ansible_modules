@@ -123,6 +123,7 @@ class VerifyFabricParams:
         self._minimum_mandatory_keys = {"fabric_name", "bgp_as"}
         self._build_default_fabric_params()
         self._build_default_nv_pairs()
+        self._add_default_nv_pairs_12_1_3b()
 
     def _initialize_properties(self):
         self.properties = {}
@@ -557,6 +558,88 @@ class VerifyFabricParams:
         ] = "Default_VRF_Extension_Universal"
         self._default_fabric_params["vrfTemplate"] = "Default_VRF_Universal"
 
+    def _add_default_nv_pairs_12_1_3b(self):
+        """
+        Caller: __init__()
+        NDFC 12.1.3b adds the following default nvPairs:
+
+        Mandatory (will cause fabric errors if not present)):
+            AUTO_UNIQUE_VRF_LITE_IP_PREFIX: "false"
+            BANNER: ""
+            NXAPI_HTTPS_PORT: "443"
+            NXAPI_HTTP_PORT: "80"
+            OBJECT_TRACKING_NUMBER_RANGE: "100-299"
+            PER_VRF_LOOPBACK_AUTO_PROVISION: "false"
+            SLA_ID_RANGE: "10000-19999"
+            TOPDOWN_CONFIG_RM_TRACKING: "notstarted"
+
+        Optional:
+            ADVERTISE_PIP_ON_BORDER: "true"
+            ALLOW_NXC: "true"
+            ALLOW_NXC_PREV: "true"
+            AUTO_UNIQUE_VRF_LITE_IP_PREFIX_PREV: "false"
+            DOMAIN_NAME_INTERNAL: ""
+            ESR_OPTION: "PBR"
+            EXT_FABRIC_TYPE: ""
+            NXC_DEST_VRF: "management"
+            NXC_PROXY_PORT: "8080"
+            NXC_PROXY_SERVER: ""
+            NXC_SRC_INTF: ""
+            OVERWRITE_GLOBAL_NXC: "false"
+            PER_VRF_LOOPBACK_AUTO_PROVISION_PREV: "false"
+            PER_VRF_LOOPBACK_IP_RANGE: ""
+            UPGRADE_FROM_VERSION: ""
+
+        All:
+            ADVERTISE_PIP_ON_BORDER: "true"
+            ALLOW_NXC: "true"
+            ALLOW_NXC_PREV: "true"
+            AUTO_UNIQUE_VRF_LITE_IP_PREFIX: "false"
+            AUTO_UNIQUE_VRF_LITE_IP_PREFIX_PREV: "false"
+            BANNER: ""
+            DOMAIN_NAME_INTERNAL: ""
+            ESR_OPTION: "PBR"
+            EXT_FABRIC_TYPE: ""
+            NXAPI_HTTPS_PORT: "443"
+            NXAPI_HTTP_PORT: "80"
+            NXC_DEST_VRF: "management"
+            NXC_PROXY_PORT: "8080"
+            NXC_PROXY_SERVER: ""
+            NXC_SRC_INTF: ""
+            OBJECT_TRACKING_NUMBER_RANGE: "100-299"
+            OVERWRITE_GLOBAL_NXC: "false"
+            PER_VRF_LOOPBACK_AUTO_PROVISION: "false"
+            PER_VRF_LOOPBACK_AUTO_PROVISION_PREV: "false"
+            PER_VRF_LOOPBACK_IP_RANGE: ""
+            SLA_ID_RANGE: "10000-19999"
+            TOPDOWN_CONFIG_RM_TRACKING: "notstarted"
+            UPGRADE_FROM_VERSION: ""
+
+        """
+        self._default_nv_pairs["ADVERTISE_PIP_ON_BORDER"] = True
+        self._default_nv_pairs["ALLOW_NXC"] = True
+        self._default_nv_pairs["ALLOW_NXC_PREV"] = True
+        self._default_nv_pairs["AUTO_UNIQUE_VRF_LITE_IP_PREFIX"] = False
+        self._default_nv_pairs["AUTO_UNIQUE_VRF_LITE_IP_PREFIX_PREV"] = False
+        self._default_nv_pairs["BANNER"] = ""
+        self._default_nv_pairs["DOMAIN_NAME_INTERNAL"] = ""
+        self._default_nv_pairs["ESR_OPTION"] = "PBR"
+        self._default_nv_pairs["EXT_FABRIC_TYPE"] = ""
+        self._default_nv_pairs["NXAPI_HTTPS_PORT"] = "443"
+        self._default_nv_pairs["NXAPI_HTTP_PORT"] = "80"
+        self._default_nv_pairs["NXC_DEST_VRF"] = "management"
+        self._default_nv_pairs["NXC_PROXY_PORT"] = "8080"
+        self._default_nv_pairs["NXC_PROXY_SERVER"] = ""
+        self._default_nv_pairs["NXC_SRC_INTF"] = ""
+        self._default_nv_pairs["OBJECT_TRACKING_NUMBER_RANGE"] = "100-299"
+        self._default_nv_pairs["OVERWRITE_GLOBAL_NXC"] = False
+        self._default_nv_pairs["PER_VRF_LOOPBACK_AUTO_PROVISION"] = False
+        self._default_nv_pairs["PER_VRF_LOOPBACK_AUTO_PROVISION_PREV"] = False
+        self._default_nv_pairs["PER_VRF_LOOPBACK_IP_RANGE"] = ""
+        self._default_nv_pairs["SLA_ID_RANGE"] = "10000-19999"
+        self._default_nv_pairs["TOPDOWN_CONFIG_RM_TRACKING"] = "notstarted"
+        self._default_nv_pairs["UPGRADE_FROM_VERSION"] = ""
+
     def _build_translatable_nv_pairs(self):
         """
         Caller: _translate_to_ndfc_nv_pairs()
@@ -598,7 +681,9 @@ class VerifyFabricParams:
         self._build_translatable_nv_pairs()
         # TODO:4 We currently don't handle non-dunder uppercase and lowercase,
         #   e.g. THIS or that.  But (knock on wood), so far there are no
-        #   cases like this (or THAT).
+        #   cases like this (or THAT).  Apparentely we did not knock hard
+        #  enough on wood, as we now have a case where we need to handle
+        #  non-dunder uppercase for BANNER in NDFC 2.3.1f
         self._translated_nv_pairs = {}
         # upper-case dunder keys
         for param in self._translatable_nv_pairs:

@@ -152,6 +152,16 @@ options:
             type: bool
             required: false
             default: False
+        banner:
+            description:
+            - Introduced: 12.1.3f
+            - Message of the Day (motd) banner. Delimiter char (very first char is delimiter char) followed by message ending with delimiter
+            - NDFC label, Banner
+            - NDFC tab, Manageability
+            - Example: ^This is a banner^
+            type: str
+            required: false
+            default: ""
         bfd_auth_enable:
             description:
             - Enable (True) or disable (False) BGP Authentication
@@ -730,6 +740,7 @@ class DcnmFabric:
                 required=False, type="bool", default=False
             )
         )
+        params_spec.update(banner=dict(required=False, type="str", default=""))
         params_spec.update(bfd_auth_enable=dict(required=False, type="bool", default=False))
         params_spec.update(bfd_auth_key=dict(required=False, type="str"))
         params_spec.update(bfd_auth_key_id=dict(required=False, type="str"))
@@ -1046,6 +1057,7 @@ class DcnmFabric:
             fabric = item["fabric_name"]
 
             payload = self.payloads[fabric]
+            self.log_msg(f"create_fabrics: payload {payload}")
             response = dcnm_send(self.module, "POST", path, data=json.dumps(payload))
             result = self._handle_post_put_response(response, "POST")
 
