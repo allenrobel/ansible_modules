@@ -978,6 +978,16 @@ class VerifyFabricParams:
         )
         self._mandatory_params.update(
             {
+                "enable_fabric_vpc_domain_id": {
+                    "value": True,
+                    "mandatory": {
+                        "fabric_vpc_domain_id": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
                 "dns_server_ip_list": {
                     "value": "__any__",
                     "mandatory": {

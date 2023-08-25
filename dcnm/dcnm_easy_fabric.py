@@ -469,17 +469,42 @@ options:
             type: bool
             required: false
             default: False
+        enable_agent:
+            description:
+            - ??
+            - NDFC label, ??
+            - NDFC tab, ??
+            type: bool
+            required: false
+            default: False
         enable_default_queuing_policy:
             description:
-            - Automatic IP Assignment For POAP From Local DHCP Server
+            - Enable (True) or disable (False) Default Queuing Policies
             - NDFC label, Enable Default Queuing Policies
             - NDFC tab, Advanced
             type: bool
             required: false
             default: False
+        enable_fabric_vpc_domain_id:
+            description:
+            - Enable (True) or disable (False) the same vPC Domain Id for all vPC Pairs
+            - Not recommended
+            - NDFC label, Enable the same vPC Domain Id for all vPC Pairs
+            - NDFC tab, vPC
+            type: bool
+            required: false
+            default: True
         fabric_name:
             description:
             - The name of the fabric
+            type: str
+            required: true
+        fabric_vpc_domain_id:
+            description:
+            - vPC Domain Id to be used on all vPC pairs
+            - NDFC label, vPC Domain Id
+            - NDFC tab, vPC
+            - Min:1, Max:1000
             type: str
             required: true
         grfield_debug_flag:
@@ -938,13 +963,36 @@ class DcnmFabric:
             )
         )
         params_spec.update(
+            enable_agent=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
+        params_spec.update(
             enable_default_queuing_policy=dict(
                 required=False,
                 type="bool",
                 default=False,
             )
         )
+        params_spec.update(
+            enable_fabric_vpc_domain_id=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
         params_spec.update(fabric_name=dict(required=True, type="str"))
+        params_spec.update(
+            fabric_vpc_domain_id=dict(
+                required=False,
+                type="int",
+                default="",
+                range_min=1,
+                range_max=1000,
+            )
+        )
         params_spec.update(
             grfield_debug_flag=dict(
                 required=False,
