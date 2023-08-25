@@ -558,6 +558,8 @@ options:
             default: ""
         macsec_fallback_key_string:
             - Cisco Type 7 Encrypted Octet String
+            - Must be 66 hex characters for AES_128_CMAC algorithm
+            - Must be 130 hex characters for AES_256_CMAC algorithm
             - NDFC label, MACsec Fallback Key String
             - NDFC tab, Advanced
             type: str
@@ -565,7 +567,8 @@ options:
             default: ""
         macsec_key_string:
             - Cisco Type 7 Encrypted Octet String
-            - Length between 1 and 130 hex characters
+            - Must be 66 hex characters for AES_128_CMAC algorithm
+            - Must be 130 hex characters for AES_256_CMAC algorithm
             - NDFC label, MACsec Primary Key String
             - NDFC tab, Advanced
             type: str

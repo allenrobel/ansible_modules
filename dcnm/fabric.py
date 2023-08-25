@@ -96,6 +96,7 @@ def verify_macsec_key_string(value):
     a string that passes this verification:
 
     MACsec primary key string length must be 66 with AES_128_CMAC
+    MACsec fallback key string length must be 130 with AES_256_CMAC
 
     Move this into VerifyFabricParams() so that we can check the
     macsec_algorithm and do a proper validation. 

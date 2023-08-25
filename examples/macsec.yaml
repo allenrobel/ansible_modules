@@ -11,6 +11,6 @@
             macsec_algorithm: 1
             macsec_cipher_suite: 1
             macsec_fallback_algorithm: 2
-            macsec_fallback_key_string: "asdfasdfa"
-            macsec_key_string: "55f8asdfasdfa"
+            macsec_key_string: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+            macsec_fallback_key_string: "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
             macsec_report_timer: 10
