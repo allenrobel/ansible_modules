@@ -2,12 +2,12 @@
 -   hosts: ndfc
     gather_facts: false
     tasks:
-        - cisco.dcnm.dcnm_easy_fabric:
-            state: merged
-            config:
-            -   fabric_name: BFD
-                bgp_as: 1
-                bfd_enable: True
-                bfd_auth_enable: True
-                bfd_auth_key: "asadflkajsdff"
-                bfd_auth_key_id: 100
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: BFD
+            bgp_as: 1
+            bfd_enable: True
+            bfd_auth_enable: True
+            bfd_auth_key: "asadflkajsdff"
+            bfd_auth_key_id: 100

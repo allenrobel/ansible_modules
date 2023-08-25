@@ -2,11 +2,11 @@
 -   hosts: ndfc
     gather_facts: false
     tasks:
-        - cisco.dcnm.dcnm_easy_fabric:
-            state: merged
-            config:
-            -   fabric_name: BGP_Auth
-                bgp_as: 1
-                bgp_auth_enable: True
-                bgp_auth_key: "asdfasdfasdf"
-                bgp_auth_key_type: "3"
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: BGP_Auth
+            bgp_as: 1
+            bgp_auth_enable: True
+            bgp_auth_key: "asdfasdfasdf"
+            bgp_auth_key_type: "3"

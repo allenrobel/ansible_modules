@@ -2,28 +2,28 @@
 -   hosts: ndfc
     gather_facts: false
     tasks:
-        - cisco.dcnm.dcnm_easy_fabric:
-            state: merged
-            config:
-            -   fabric_name: Bootstrap
-                bgp_as: 1
-                bootstrap_enable: True
-                dhcp_end: 5.1.1.5
-                dhcp_start: 5.1.1.2
-                dhcp_enable: True
-                # Unlike every other *_enable parameter,
-                # dhcp_ipv6_enable is not a boolean.
-                # It has only one valid value: DHCPv4
-                # If this is not set, NDFC will default
-                # to DHCPv4, but this behavior may change
-                # in the future.
-                # dhcp_ipv6_enable: DHCPv4
-                mgmt_gw: 5.1.1.1
-                mgmt_prefix: 24
-                bootstrap_multisubnet: |
-                    10.6.0.2, 10.6.0.9, 10.6.0.1, 24
-                    # This is a comment
-                    10.7.0.2, 10.7.0.9, 10.7.0.1, 24
-                bootstrap_conf: |
-                    interface Ethernet1/1
-                      no shutdown
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: Bootstrap
+            bgp_as: 1
+            bootstrap_enable: True
+            dhcp_end: 5.1.1.5
+            dhcp_start: 5.1.1.2
+            dhcp_enable: True
+            # Unlike every other *_enable parameter,
+            # dhcp_ipv6_enable is not a boolean.
+            # It has only one valid value: DHCPv4
+            # If this is not set, NDFC will default
+            # to DHCPv4, but this behavior may change
+            # in the future.
+            # dhcp_ipv6_enable: DHCPv4
+            mgmt_gw: 5.1.1.1
+            mgmt_prefix: 24
+            bootstrap_multisubnet: |
+                10.6.0.2, 10.6.0.9, 10.6.0.1, 24
+                # This is a comment
+                10.7.0.2, 10.7.0.9, 10.7.0.1, 24
+            bootstrap_conf: |
+                interface Ethernet1/1
+                    no shutdown

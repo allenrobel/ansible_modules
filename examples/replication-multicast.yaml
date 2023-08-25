@@ -2,16 +2,16 @@
 -   hosts: ndfc
     gather_facts: false
     tasks:
-        - cisco.dcnm.dcnm_easy_fabric:
-            state: merged
-            config:
-            -   fabric_name: MC-Fabric
-                anycast_gw_mac: 00ffeeddccbb
-                advertise_pip_bgp: False
-                anycast_bgw_advertise_pip: False
-                bfd_enable: True
-                bfd_auth_enable: True
-                bfd_auth_key: "asadflkajsdff"
-                bfd_auth_key_id: 100
-                bgp_as: 65535.0
-                vrf_lite_autoconfig: 1
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: MC-Fabric
+            anycast_gw_mac: 00ffeeddccbb
+            advertise_pip_bgp: False
+            anycast_bgw_advertise_pip: False
+            bfd_enable: True
+            bfd_auth_enable: True
+            bfd_auth_key: "asadflkajsdff"
+            bfd_auth_key_id: 100
+            bgp_as: 65535.0
+            vrf_lite_autoconfig: 1
