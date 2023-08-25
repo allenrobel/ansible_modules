@@ -38,6 +38,9 @@ from ansible_collections.cisco.dcnm.plugins.module_utils.fabric.fabric import (
 __metaclass__ = type
 __author__ = "Allen Robel"
 
+# NOTE: Going forward, add an "version_added" field for each
+# parameter that contains the version of NDFC that first
+# introduced the parameter.
 DOCUMENTATION = """
 ---
 module: dcnm_easy_fabric
@@ -154,7 +157,6 @@ options:
             default: False
         banner:
             description:
-            - Introduced: 12.1.3f
             - Message of the Day (motd) banner. Delimiter char (very first char is delimiter char) followed by message ending with delimiter
             - NDFC label, Banner
             - NDFC tab, Manageability
@@ -162,6 +164,7 @@ options:
             type: str
             required: false
             default: ""
+            version_added: 12.1.3f
         bfd_auth_enable:
             description:
             - Enable (True) or disable (False) BGP Authentication
