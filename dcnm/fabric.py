@@ -802,6 +802,24 @@ class VerifyFabricParams:
             }
         }
 
+        NOTE: We considered the following validator, but it does not
+        provide the functionality we need:
+
+        https://docs.ansible.com/ansible/latest/reference_appendices/module_utils.html#argument-spec
+
+        ansible.module_utils.common.arg_spec.ArgumentSpecValidator()
+
+        Specifically:
+        
+        1. "required_if" does allow to specify the value that a parameter
+        must have, but it doesn't allow to specify what value (if any) the
+        dependent parameter(s) must have.  It also does not allow us to specify
+        that a parameter must be present, but the value need not be considered,
+        when triggering the dependencies.
+
+        2. "required_by" does not allow us to specify the value that a
+        parameter must have, nor the value that any dependent parameters
+        must have.
         """
         self._mandatory_params = {}
         self._mandatory_params.update(
