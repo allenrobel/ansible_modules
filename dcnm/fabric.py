@@ -86,6 +86,25 @@ def verify_ip_list(value):
         except ValueError:
             return False
     return True
+def verify_macsec_key_string(value):
+    """
+    Return True if value is a hex string between 1-130 characters
+    Return False otherwise
+
+    TODO: This is a half-hearted, half-baked validation and needs to be
+    improved.  For example, NDFC returns the following error for
+    a string that passes this verification:
+
+    MACsec primary key string length must be 66 with AES_128_CMAC
+
+    Move this into VerifyFabricParams() so that we can check the
+    macsec_algorithm and do a proper validation. 
+    """
+    if len(value) not in range(1,131):
+        return False
+    if not re.search("^[A-Fa-f0-9]+$", value):
+        return False
+    return True
 
 class VerifyFabricParams:
     """
@@ -124,6 +143,7 @@ class VerifyFabricParams:
         self._build_default_fabric_params()
         self._build_default_nv_pairs()
         self._add_default_nv_pairs_12_1_3b()
+        self._build_parameter_aliases()
 
     def _initialize_properties(self):
         self.properties = {}
@@ -242,14 +262,73 @@ class VerifyFabricParams:
                 self.result = False
                 return
         if "vrf_lite_autoconfig" in self.config:
-            result = translate_vrf_lite_autoconfig(self.config["vrf_lite_autoconfig"])
+            key = "vrf_lite_autoconfig"
+            result = translate_vrf_lite_autoconfig(self.config[key])
             if result is False:
-                msg = "invalid vrf_lite_autoconfig "
-                msg += f"{self.config['vrf_lite_autoconfig']}. Expected one of 0,1"
+                msg = f"invalid {key} "
+                msg += f"{self.config[key]}. "
+                msg += "Expected one of "
+                msg += f"{self._get_parameter_alias_values(key)}"
                 self._append_msg(msg)
                 self.result = False
                 return
             self.config["vrf_lite_autoconfig"] = result
+        if "macsec_algorithm" in self.config:
+            key = "macsec_algorithm"
+            result = self._translate_macsec_algorithm(self.config[key])
+            if result is False:
+                msg = f"invalid {key} "
+                msg += f"{self.config[key]}. "
+                msg += "Expected one of "
+                msg += f"{self._get_parameter_alias_values(key)}"
+                self._append_msg(msg)
+                self.result = False
+                return
+            self.config["macsec_algorithm"] = result
+        if "macsec_cipher_suite" in self.config:
+            key = "macsec_cipher_suite"
+            result = self._translate_macsec_cipher_suite(self.config[key])
+            if result is False:
+                msg = f"invalid {key} "
+                msg += f"{self.config[key]}. "
+                msg += "Expected one of "
+                msg += f"{self._get_parameter_alias_values(key)}"
+                self._append_msg(msg)
+                self.result = False
+                return
+            self.config["macsec_cipher_suite"] = result
+        if "macsec_fallback_algorithm" in self.config:
+            key = "macsec_fallback_algorithm"
+            result = self._translate_macsec_algorithm(self.config[key])
+            if result is False:
+                msg = f"invalid {key} "
+                msg += f"{self.config[key]}. "
+                msg += "Expected one of "
+                msg += f"{self._get_parameter_alias_values(key)}"
+                self._append_msg(msg)
+                self.result = False
+                return
+            self.config[key] = result
+        if "macsec_fallback_key_string" in self.config:
+            key = "macsec_fallback_key_string"
+            result = verify_macsec_key_string(self.config[key])
+            if result is False:
+                msg = f"invalid {key} "
+                msg += f"{self.config[key]}. "
+                msg += f"Expected hex string between 1-130 characters."
+                self._append_msg(msg)
+                self.result = False
+                return
+        if "macsec_key_string" in self.config:
+            key = "macsec_key_string"
+            result = verify_macsec_key_string(self.config[key])
+            if result is False:
+                msg = f"invalid {key} "
+                msg += f"{self.config[key]}. "
+                msg += f"Expected hex string between 1-130 characters."
+                self._append_msg(msg)
+                self.result = False
+                return
 
         # validate self.config for cross-parameter dependencies
         self._validate_dependencies()
@@ -988,6 +1067,21 @@ class VerifyFabricParams:
         )
         self._mandatory_params.update(
             {
+                "enable_macsec": {
+                    "value": True,
+                    "mandatory": {
+                        "macsec_algorithm": None,
+                        "macsec_cipher_suite": None,
+                        "macsec_fallback_algorithm": None,
+                        "macsec_fallback_key_string": None,
+                        "macsec_key_string": None,
+                        "macsec_report_timer": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
                 "dns_server_ip_list": {
                     "value": "__any__",
                     "mandatory": {
@@ -1139,7 +1233,6 @@ class VerifyFabricParams:
         """
         if not self._failed_dependencies:
             return
-        self._build_parameter_aliases()
         for user_param in self._requires_validation:
             if self._mandatory_params[user_param]["value"] == "__any__":
                 msg = f"When {user_param} is set, "
@@ -1178,10 +1271,55 @@ class VerifyFabricParams:
         See also: accessor method self._get_parameter_alias()
         """
         self._parameter_aliases = {}
+        self._parameter_aliases["macsec_algorithm"] = {
+            "AES_128_CMAC": 1,
+            "AES_256_CMAC": 2,
+        }
+        self._parameter_aliases["macsec_cipher_suite"] = {
+            "GCM-AES-128": 1,
+            "GCM-AES-256": 2,
+            "GCM-AES-XPN-128": 3,
+            "GCM-AES-XPN-256": 4,
+        }
+        self._parameter_aliases["macsec_fallback_algorithm"] = {
+            "AES_128_CMAC": 1,
+            "AES_256_CMAC": 2,
+        }
         self._parameter_aliases["vrf_lite_autoconfig"] = {
             "Back2Back&ToExternal": 1,
             "Manual": 0,
         }
+
+    def _translate_macsec_algorithm(self, value):
+        """
+        Translate macsec_algorithm and macsec_fallback_algorithm
+        playbook values to those expected by NDFC.
+
+        TODO: If the values for macsec_algorithm and macsec_fallback_algorithm
+        ever diverge, we'll need to split this into two methods.
+        """
+        try:
+            value = int(value)
+        except ValueError:
+            return False
+        for key, val in self._parameter_aliases["macsec_algorithm"].items():
+            if value == val:
+                return key
+        return False
+
+    def _translate_macsec_cipher_suite(self, value):
+        """
+        Translate macsec_cipher_suite playbook values
+        to those expected by NDFC
+        """
+        try:
+            value = int(value)
+        except ValueError:
+            return False
+        for key, val in self._parameter_aliases["macsec_cipher_suite"].items():
+            if value == val:
+                return key
+        return False
 
     def _get_parameter_alias(self, param, value):
         """
@@ -1205,6 +1343,16 @@ class VerifyFabricParams:
         if value not in self._parameter_aliases[param]:
             return None
         return self._parameter_aliases[param][value]
+
+    def _get_parameter_alias_values(self, param):
+        """
+        Accessor method for self._parameter_aliases
+        Return the value(s) associated with param.
+        Caller self._validate_merged_state_config()
+        """
+        if param not in self._parameter_aliases:
+            return []
+        return sorted(self._parameter_aliases[param].values())
 
     def _build_payload(self):
         """

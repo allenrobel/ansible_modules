@@ -494,6 +494,14 @@ options:
             type: bool
             required: false
             default: True
+        enable_macsec:
+            description:
+            - Enable (True) or disable (False) MACsec in the fabric
+            - NDFC label, Enable MACsec
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: False
         fabric_name:
             description:
             - The name of the fabric
@@ -516,6 +524,61 @@ options:
             type: str
             required: False
             default: Disable
+        macsec_algorithm:
+            - Configure Cipher Suite
+            - Valid values:
+              - 1 AES_128_CMAC
+              - 2 AES_256_CMAC
+            - NDFC label, MACsec Primary Cryptographic Algorithm
+            - NDFC tab, Advanced
+            type: int
+            required: When enable_macsec is True
+            default: ""
+        macsec_cipher_suite:
+            - Configure Cipher Suite
+            - Valid values:
+              - 1 GCM-AES-128
+              - 2 GCM-AES-256
+              - 3 GCM-AES-XPN-128
+              - 4 GCM-AES-XPN-256
+            - NDFC label, MACsec Cipher Suite
+            - NDFC tab, Advanced
+            type: int
+            required: When enable_macsec is True
+            default: ""
+        macsec_fallback_algorithm:
+            - Configure Cipher Suite
+            - Valid values:
+              - 1 AES_128_CMAC
+              - 2 AES_256_CMAC
+            - NDFC label, MACsec Fallback Cryptographic Algorithm
+            - NDFC tab, Advanced
+            type: int
+            required: When enable_macsec is True
+            default: ""
+        macsec_fallback_key_string:
+            - Cisco Type 7 Encrypted Octet String
+            - NDFC label, MACsec Fallback Key String
+            - NDFC tab, Advanced
+            type: str
+            required: When enable_macsec is True
+            default: ""
+        macsec_key_string:
+            - Cisco Type 7 Encrypted Octet String
+            - Length between 1 and 130 hex characters
+            - NDFC label, MACsec Primary Key String
+            - NDFC tab, Advanced
+            type: str
+            required: When enable_macsec is True
+            default: ""
+        macsec_report_timer:
+            - MACsec Operational Status periodic report timer in minutes
+            - Valid values: 5-60
+            - NDFC label, MACsec Status Report Timer
+            - NDFC tab, Advanced
+            type: int
+            required: When enable_macsec is True
+            default: ""
         mgmt_gw:
             description:
             - Default Gateway For Management VRF On The Switch
@@ -983,6 +1046,13 @@ class DcnmFabric:
                 default=False,
             )
         )
+        params_spec.update(
+            enable_macsec=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
         params_spec.update(fabric_name=dict(required=True, type="str"))
         params_spec.update(
             fabric_vpc_domain_id=dict(
@@ -999,6 +1069,56 @@ class DcnmFabric:
                 type="str",
                 default="Disable",
                 choices=["Disable", "Enable"],
+            )
+        )
+        params_spec.update(
+            macsec_algorithm=dict(
+                required=False,
+                type="int",
+                default="",
+                range_min=1,
+                range_max=2,
+            )
+        )
+        params_spec.update(
+            macsec_cipher_suite=dict(
+                required=False,
+                type="int",
+                default="",
+                range_min=1,
+                range_max=4,
+            )
+        )
+        params_spec.update(
+            macsec_fallback_algorithm=dict(
+                required=False,
+                type="int",
+                default="",
+                range_min=1,
+                range_max=2,
+            )
+        )
+        params_spec.update(
+            macsec_fallback_key_string=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            macsec_key_string=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            macsec_report_timer=dict(
+                required=False,
+                type="int",
+                default="",
+                range_min=5,
+                range_max=60,
             )
         )
         params_spec.update(

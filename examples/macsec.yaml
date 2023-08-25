@@ -1,0 +1,16 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: MACSEC
+            bgp_as: 1
+            enable_macsec: True
+            macsec_algorithm: 1
+            macsec_cipher_suite: 1
+            macsec_fallback_algorithm: 2
+            macsec_fallback_key_string: "asdfasdfa"
+            macsec_key_string: "55f8asdfasdfa"
+            macsec_report_timer: 10

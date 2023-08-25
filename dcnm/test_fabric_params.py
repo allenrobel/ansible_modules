@@ -69,13 +69,31 @@ def test_dns_server_ip_list():
     verify.validate_config()
     print_result(test_name, verify.result, verify.msg, verify.payload)
 
+def test_macsec_cipher_suite():
+    test_name = "macsec_cipher_suite"
+    config = {}
+    config["fabric_name"] = "foo"
+    config["bgp_as"] = "65000.869"
+    config["enable_macsec"] = True
+    config["macsec_algorithm"] = 1
+    config["macsec_cipher_suite"] = 3
+    config["macsec_fallback_algorithm"] = 1
+    config["macsec_fallback_key_string"] = "f77844"
+    config["macsec_key_string"] = "f77844"
+    config["macsec_report_timer"] = 10
+    verify = VerifyFabricParams()
+    verify.config = config
+    verify.state = "merged"
+    verify.validate_config()
+    print_result(test_name, verify.result, verify.msg, verify.payload)
+
 def test_vrf_lite():
     test_name = "vrf_lite"
     config = {}
     config["fabric_name"] = "foo"
     config["bgp_as"] = "65000.869"
     config["auto_symmetric_vrf_lite"] = True
-    config["vrf_lite_autoconfig"] = 0
+    config["vrf_lite_autoconfig"] = 1
     verify = VerifyFabricParams()
     verify.config = config
     verify.state = "merged"
@@ -101,5 +119,6 @@ test_bfd()
 test_bootstrap()
 test_bgp_auth()
 test_dns_server_ip_list()
+test_macsec_cipher_suite()
 test_vrf_lite()
 test_queuing()
