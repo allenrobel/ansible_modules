@@ -765,7 +765,7 @@ class VerifyFabricParams:
 
         Hence, we have the following structure for the
         self._mandatory_params dictionary, to handle the case where
-        underlay_is_v6 is set to True.  Below, we don't case what the
+        underlay_is_v6 is set to True.  Below, we don't care what the
         value for any of the mandatory parameters is.  We only care that
         they are set.
 
@@ -789,9 +789,10 @@ class VerifyFabricParams:
         Set "value:" above to "__any__" if the dependent parameters are
         mandatory regardless of the parameter's value.  For example, if
         we wanted to verify that underlay_is_v6 is set to True in the case
-        that anycast_lb_id is set (which can be a value between 1-1023) we
+        that anycast_lb_id (which can be a value between 1-1023) is set, we
         don't care what the value of anycast_lb_id is.  We only care that
-        underlay_is_v6 is set to True.  In this case, we could add the following:
+        underlay_is_v6 is set to True.  In this case, we could add the
+        following:
 
         self._mandatory_params.update = {
             "anycast_lb_id": {
@@ -805,17 +806,15 @@ class VerifyFabricParams:
         NOTE: We considered the following validator, but it does not
         provide the functionality we need:
 
-        https://docs.ansible.com/ansible/latest/reference_appendices/module_utils.html#argument-spec
-
         ansible.module_utils.common.arg_spec.ArgumentSpecValidator()
 
         Specifically:
         
         1. "required_if" does allow to specify the value that a parameter
         must have, but it doesn't allow to specify what value (if any) the
-        dependent parameter(s) must have.  It also does not allow us to specify
-        that a parameter must be present, but the value need not be considered,
-        when triggering the dependencies.
+        dependent parameter(s) must have.  It also does not allow us to
+        specify that a parameter must be present, but the value need not be
+        considered, when triggering the dependencies.
 
         2. "required_by" does not allow us to specify the value that a
         parameter must have, nor the value that any dependent parameters
@@ -1120,6 +1119,7 @@ class VerifyFabricParams:
                     # the value in the playbook doesn't match the required value
                     self._failed_dependencies[check_param] = check_value
                     continue
+
     def _handle_failed_dependencies(self):
         """
         If there are failed dependencies:
