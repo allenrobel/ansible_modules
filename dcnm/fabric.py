@@ -343,27 +343,28 @@ class VerifyFabricParams:
             -   False, otherwise
         -   msg: message explaining result
         """
-        result = {}
-        result["result"] = True
-        result["msg"] = "Validated"
+        algo_keys = {}
+        algo_keys["macsec_key_string"] = "macsec_algorithm"
+        algo_keys["macsec_fallback_key_string"] = "macsec_fallback_algorithm"
+        result = {"result": True, "msg": "Validated"}
         if not re.search("^[A-Fa-f0-9]+$", value):
             msg = f"{key} string must be a hex string. "
             msg += f"Got {value}."
             return {"result": False, "msg": msg}
-        if algorithm not in self._get_parameter_alias_keys("macsec_algorithm"):
-            msg = f"invalid macsec_algorithm. "
+        if algorithm not in self._get_parameter_alias_keys(algo_keys[key]):
+            msg = f"invalid {algo_keys[key]}. "
             msg += "Expected one of "
             msg += f"{self._get_parameter_alias_values(algorithm)}. "
             msg += f"Got {algorithm}."
             return {"result": False, "msg": msg}
         if algorithm == "AES_128_CMAC" and len(value) != 66:
             msg = f"{key} length must be 66 when "
-            msg += "macsec_algorithm is set to 1 (AES_128_CMAC). "
+            msg += f"{algo_keys[key]} is set to 1 ({algorithm}). "
             msg += f"Got {value} of length {len(value)}."
             return {"result": False, "msg": msg}
         if algorithm == "AES_256_CMAC" and len(value) != 130:
             msg = f"{key} length must be 130 when "
-            msg += "macsec_algorithm is set to 2 (AES_256_CMAC). "
+            msg += f"{algo_keys[key]} is set to 2 ({algorithm}). "
             msg += f"Got {value} of length {len(value)}."
             return {"result": False, "msg": msg}
         return result
