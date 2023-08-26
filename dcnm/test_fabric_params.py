@@ -71,15 +71,20 @@ def test_dns_server_ip_list():
 
 def test_macsec_cipher_suite():
     test_name = "macsec_cipher_suite"
+    hex_values = {}
+    hex_values["good_algo_1"] = "F" * 66
+    hex_values["good_algo_2"] = "E" * 130
+    hex_values["bad_len"] = "A" * 10
+    hex_values["bad_chars"] = "badhex"
     config = {}
     config["fabric_name"] = "foo"
     config["bgp_as"] = "65000.869"
     config["enable_macsec"] = True
     config["macsec_algorithm"] = 1
     config["macsec_cipher_suite"] = 3
-    config["macsec_fallback_algorithm"] = 1
-    config["macsec_fallback_key_string"] = "f77844"
-    config["macsec_key_string"] = "f77844"
+    config["macsec_fallback_algorithm"] = 2
+    config["macsec_fallback_key_string"] = hex_values["good_algo_2"]
+    config["macsec_key_string"] = hex_values["good_algo_1"]
     config["macsec_report_timer"] = 10
     verify = VerifyFabricParams()
     verify.config = config

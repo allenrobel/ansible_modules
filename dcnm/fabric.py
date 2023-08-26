@@ -86,26 +86,6 @@ def verify_ip_list(value):
         except ValueError:
             return False
     return True
-def verify_macsec_key_string(value):
-    """
-    Return True if value is a hex string between 1-130 characters
-    Return False otherwise
-
-    TODO: This is a half-hearted, half-baked validation and needs to be
-    improved.  For example, NDFC returns the following error for
-    a string that passes this verification:
-
-    MACsec primary key string length must be 66 with AES_128_CMAC
-    MACsec fallback key string length must be 130 with AES_256_CMAC
-
-    Move this into VerifyFabricParams() so that we can check the
-    macsec_algorithm and do a proper validation. 
-    """
-    if len(value) not in range(1,131):
-        return False
-    if not re.search("^[A-Fa-f0-9]+$", value):
-        return False
-    return True
 
 class VerifyFabricParams:
     """
@@ -312,22 +292,24 @@ class VerifyFabricParams:
             self.config[key] = result
         if "macsec_fallback_key_string" in self.config:
             key = "macsec_fallback_key_string"
-            result = verify_macsec_key_string(self.config[key])
-            if result is False:
-                msg = f"invalid {key} "
-                msg += f"{self.config[key]}. "
-                msg += f"Expected hex string between 1-130 characters."
-                self._append_msg(msg)
+            result = self._verify_macsec_key_string(
+                key,
+                self.config[key],
+                self.config["macsec_fallback_algorithm"]
+            )
+            if result["result"] is False:
+                self._append_msg(result["msg"])
                 self.result = False
                 return
         if "macsec_key_string" in self.config:
             key = "macsec_key_string"
-            result = verify_macsec_key_string(self.config[key])
-            if result is False:
-                msg = f"invalid {key} "
-                msg += f"{self.config[key]}. "
-                msg += f"Expected hex string between 1-130 characters."
-                self._append_msg(msg)
+            result = self._verify_macsec_key_string(
+                key,
+                self.config[key],
+                self.config["macsec_algorithm"]
+            )
+            if result["result"] is False:
+                self._append_msg(result["msg"])
                 self.result = False
                 return
 
@@ -336,6 +318,55 @@ class VerifyFabricParams:
         if self.result is False:
             return
         self._build_payload()
+
+    def _verify_macsec_key_string(self, key, value, algorithm):
+        """
+        Verify macsec key string.
+        key:
+            The playbook key to verify. One of:
+            - macsec_key_string
+            - macsec_fallback_key_string
+        value:
+            The value of the playbook key
+        algorithm:
+            -   If key == macsec_key_string, the value of
+                playbook key: macsec_algorithm
+            -   If key == macsec_fallback_key_string, the value of
+                playbook key macsec_fallback_algorithm
+        Returns dictionary result, with the following keys:
+
+        -   result:
+            -   True, if algorithm is AES_128_CMAC and value is a 66
+                character hex string
+            -   True, if algorithm is AES_256_CMAC and value is a 130
+                character hex string
+            -   False, otherwise
+        -   msg: message explaining result
+        """
+        result = {}
+        result["result"] = True
+        result["msg"] = "Validated"
+        if not re.search("^[A-Fa-f0-9]+$", value):
+            msg = f"{key} string must be a hex string. "
+            msg += f"Got {value}."
+            return {"result": False, "msg": msg}
+        if algorithm not in self._get_parameter_alias_keys("macsec_algorithm"):
+            msg = f"invalid macsec_algorithm. "
+            msg += "Expected one of "
+            msg += f"{self._get_parameter_alias_values(algorithm)}. "
+            msg += f"Got {algorithm}."
+            return {"result": False, "msg": msg}
+        if algorithm == "AES_128_CMAC" and len(value) != 66:
+            msg = f"{key} length must be 66 when "
+            msg += "macsec_algorithm is set to 1 (AES_128_CMAC). "
+            msg += f"Got {value} of length {len(value)}."
+            return {"result": False, "msg": msg}
+        if algorithm == "AES_256_CMAC" and len(value) != 130:
+            msg = f"{key} length must be 130 when "
+            msg += "macsec_algorithm is set to 2 (AES_256_CMAC). "
+            msg += f"Got {value} of length {len(value)}."
+            return {"result": False, "msg": msg}
+        return result
 
     def _build_default_nv_pairs(self):
         """
@@ -1354,6 +1385,16 @@ class VerifyFabricParams:
         if param not in self._parameter_aliases:
             return []
         return sorted(self._parameter_aliases[param].values())
+
+    def _get_parameter_alias_keys(self, param):
+        """
+        Accessor method for self._parameter_aliases
+        Return the key(s) associated with param.
+        Caller self._validate_merged_state_config()
+        """
+        if param not in self._parameter_aliases:
+            return []
+        return sorted(self._parameter_aliases[param].keys())
 
     def _build_payload(self):
         """
