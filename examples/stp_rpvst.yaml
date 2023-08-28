@@ -9,4 +9,4 @@
             bgp_as: 1
             stp_root_option: rpvst+
             stp_bridge_priority: 4096
-            stp_vlan_range: 1,10-11,13,14-15
+            stp_vlan_range: 1,10-11,13,15-16
