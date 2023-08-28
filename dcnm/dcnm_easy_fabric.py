@@ -680,6 +680,22 @@ options:
             - NDFC tab, Advanced
             type: str
             required: When stp_root_option is "rpvst+"
+        strict_cc_mode:
+            description:
+            - Enable (True) or disable (False) bi-directional compliance checks to flag additional configs in the running config that are not in the intent/expected config
+            - NDFC label, Enable Strict Config Compliance
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: False
+        subinterface_range:
+            description:
+            - Per Border Dot1q Range For VRF Lite Connectivity
+            - Min 2, Max 4093
+            - Example "2-511"
+            - NDFC label, Subinterface Dot1q Range
+            - NDFC tab, Resources
+            type: str
         vrf_lite_autoconfig:
             description:
             - VRF Lite Inter-Fabric Connection Deployment Options.
@@ -1265,6 +1281,14 @@ class DcnmFabric:
         )
         params_spec.update(
             stp_vlan_range=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(strict_cc_mode=dict(required=False, type="bool", default=False))
+        params_spec.update(
+            subinterface_range=dict(
                 required=False,
                 type="str",
                 default="",
