@@ -757,6 +757,14 @@ options:
             - NDFC label, Syslog Server Severity
             - NDFC tab, Manageability
             type: str
+        tcam_allocation:
+            description:
+            - Enable (True) or disable (False) auto-generation of TCAM commands for VxLAN and vPC Fabric Peering
+            - NDFC label, Enable TCAM Allocation
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: True
         vrf_lite_autoconfig:
             description:
             - VRF Lite Inter-Fabric Connection Deployment Options.
@@ -1405,6 +1413,7 @@ class DcnmFabric:
                 type="str",
             )
         )
+        params_spec.update(tcam_allocation=dict(required=False, type="bool", default=True))
         params_spec.update(
             vrf_lite_autoconfig=dict(
                 required=False,
