@@ -673,7 +673,7 @@ class VerifyFabricParams:
     def _add_default_nv_pairs_12_1_3b(self):
         """
         Caller: __init__()
-        NDFC 12.1.3b adds the following default nvPairs:
+        NDFC 12.1.3b adds the following nvPairs:
 
         Mandatory (will cause fabric errors if not present)):
             AUTO_UNIQUE_VRF_LITE_IP_PREFIX: "false"
@@ -1141,6 +1141,17 @@ class VerifyFabricParams:
                         "default_queuing_policy_cloudscale": None,
                         "default_queuing_policy_other": None,
                         "default_queuing_policy_r_series": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "mpls_handoff": {
+                    "value": True,
+                    "mandatory": {
+                        "mpls_lb_id": None,
+                        "mpls_loopback_ip_range": None,
                     },
                 }
             }

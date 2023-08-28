@@ -596,6 +596,28 @@ options:
             - NDFC tab, Bootstrap
             type: int
             required: false
+        mpls_handoff:
+            description:
+            - Enable (True) or disable (False) VXLAN to MPLS SR/LDP Handoff
+            - NDFC label, Enable MPLS Handoff
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: False
+        mpls_lb_id:
+            description:
+            - Min:0, Max:1023
+            - NDFC label, Underlay MPLS Loopback Id
+            - NDFC tab, Advanced
+            type: int
+            required: When mpls_handoff is True
+        mpls_loopback_ip_range:
+            description:
+            - Used for VXLAN to MPLS SR/LDP Handoff
+            - NDFC label, Underlay MPLS Loopback IP Range
+            - NDFC tab, Resources
+            type: str
+            required: When mpls_handoff is True
         pm_enable:
             description:
             - Enable (True) or disable (False) fabric performance monitoring
@@ -786,7 +808,7 @@ class DcnmFabric:
         Return: params_spec, a dictionary containing the set of
                 parameter specifications.
         """
-        params_spec = {} 
+        params_spec = {}
         params_spec.update(
             aaa_remote_ip_enabled=dict(
             required=False,
@@ -940,8 +962,8 @@ class DcnmFabric:
             dci_subnet_target_mask=dict(
                 required=False,
                 type="int",
-                min_range=8,
-                max_range=31,
+                range_min=8,
+                range_max=31,
                 default=30,
             )
         )
@@ -1135,9 +1157,32 @@ class DcnmFabric:
             mgmt_prefix=dict(
                 required=False,
                 type="int",
-                min_range=8,
-                max_range=30,
+                range_min=8,
+                range_max=30,
                 default=False,
+            )
+        )
+        params_spec.update(
+            mpls_handoff=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
+        params_spec.update(
+            mpls_lb_id=dict(
+                required=False,
+                type="int",
+                range_min=0,
+                range_max=1023,
+                default="",
+            )
+        )
+        params_spec.update(
+            mpls_loopback_ip_range=dict(
+                required=False,
+                type="ipv4_subnet",
+                default="",
             )
         )
         params_spec.update(pm_enable=dict(required=False, type="bool", default=False))
@@ -1163,7 +1208,6 @@ class DcnmFabric:
         Validate the playbook parameters
         Build the payloads for each fabric
         """
-
         state = self.params["state"]
 
         # TODO:2 remove this when we implement query state
@@ -1269,7 +1313,6 @@ class DcnmFabric:
         # }
         result = {}
         success_return_codes = {200, 404}
-        self.log_msg(f"_handle_get_request: response {response}")
         if (
             response.get("RETURN_CODE") == 404
             and response.get("MESSAGE") == "Not Found"

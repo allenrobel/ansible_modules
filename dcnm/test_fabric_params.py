@@ -92,6 +92,21 @@ def test_macsec_cipher_suite():
     verify.validate_config()
     print_result(test_name, verify.result, verify.msg, verify.payload)
 
+def test_mpls_handoff():
+    test_name = "mpls_handoff"
+    config = {}
+    config["fabric_name"] = "foo"
+    config["bgp_as"] = "7"
+    config["mpls_handoff"] = True
+    config["mpls_lb_id"] = 1023
+    config["mpls_loopback_ip_range"] = "10.103.0.0/25"
+    verify = VerifyFabricParams()
+    verify.config = config
+    verify.state = "merged"
+    verify.validate_config()
+    print_result(test_name, verify.result, verify.msg, verify.payload)
+
+
 def test_vrf_lite():
     test_name = "vrf_lite"
     config = {}
@@ -125,5 +140,6 @@ test_bootstrap()
 test_bgp_auth()
 test_dns_server_ip_list()
 test_macsec_cipher_suite()
+test_mpls_handoff()
 test_vrf_lite()
 test_queuing()
