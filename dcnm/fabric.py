@@ -1156,6 +1156,40 @@ class VerifyFabricParams:
                 }
             }
         )
+        # While NDFC has a default for mst_instance_range,
+        # i.e. 0, and the GUI does display this default
+        # if it's not set via the API, the fabric will be in
+        # error state if the user doesn't set it via the API
+        # (until the user manually edits the fabric in the GUI
+        # and clicks Save).
+        # Hence, we force the user to set it here.
+        self._mandatory_params.update(
+            {
+                "stp_root_option": {
+                    "value": "mst",
+                    "mandatory": {
+                        "mst_instance_range": None,
+                    },
+                }
+            }
+        )
+        # While NDFC has a default for stp_vlan_range,
+        # i.e. 1-3967, and the GUI does display this default
+        # if it's not set via the API, the fabric will be in
+        # error state if the user doesn't set it via the API
+        # (until the user manually edits the fabric in the GUI
+        # and clicks Save).
+        # Hence, we force the user to set it here.
+        self._mandatory_params.update(
+            {
+                "stp_root_option": {
+                    "value": "rpvst+",
+                    "mandatory": {
+                        "stp_vlan_range": None,
+                    },
+                }
+            }
+        )
         self._mandatory_params.update(
             {
                 "underlay_is_v6": {

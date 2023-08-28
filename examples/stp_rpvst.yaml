@@ -1,0 +1,12 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: STP_RPVST
+            bgp_as: 1
+            stp_root_option: rpvst+
+            stp_bridge_priority: 4096
+            mst_instance_range: 0,10-11,13,14-15

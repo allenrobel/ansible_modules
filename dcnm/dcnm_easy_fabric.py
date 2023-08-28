@@ -618,6 +618,20 @@ options:
             - NDFC tab, Resources
             type: str
             required: When mpls_handoff is True
+        # TODO: Check if these are ND vs NDFC
+        # mso_connectivity_deployed:
+        # mso_controler_id:
+        # mso_site_group_name:
+        # mso_site_id:
+        mst_instance_range:
+            description:
+            - Vlan range for multi-instance spanning tree (mst).
+            - Example "0-3,5,7-9"
+            - Default No default via API ("0" via the NDFC GUI)
+            - NDFC label, MST Instance Range
+            - NDFC tab, Advanced
+            type: str
+            required: When stp_root_option is "mst"
         pm_enable:
             description:
             - Enable (True) or disable (False) fabric performance monitoring
@@ -637,6 +651,35 @@ options:
             - Ingress
             - Multicast
             default: Multicast
+        stp_bridge_priority:
+            description:
+            - Bridge priority for the spanning tree in increments of 4096.
+            - NDFC label, Spanning Tree Bridge Priority
+            - NDFC tab, Advanced
+            type: int
+            required: false
+            choices: [0, 4096, 8192, 12288, 16384, 20480, 24576, 28672, 32768, 36864, 40960, 45056, 49152, 53248, 57344, 61440]
+        stp_root_option:
+            description:
+            - Which protocol to use for configuring root bridge.
+            - NDFC label, Spanning Tree Root Bridge Protocol
+            - NDFC tab, Advanced
+            type: str
+            required: false
+            default: 0
+            choices:
+            - "mst" Multiple Spanning Tree
+            - "rpvst+" Rapid Per-VLAN Spanning Tree
+            - "unmanaged" (default) STP Root not managed by NDFC
+        stp_vlan_range:
+            description:
+            - Vlan range for rpvst+ spanning tree.
+            - Example "1,3-5,7,9-11"
+            - No default via API ("1-3967" via the NDFC GUI)
+            - NDFC label, Spanning Tree VLAN Range
+            - NDFC tab, Advanced
+            type: str
+            required: When stp_root_option is "rpvst+"
         vrf_lite_autoconfig:
             description:
             - VRF Lite Inter-Fabric Connection Deployment Options.
@@ -1185,6 +1228,13 @@ class DcnmFabric:
                 default="",
             )
         )
+        params_spec.update(
+            mst_instance_range=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
         params_spec.update(pm_enable=dict(required=False, type="bool", default=False))
         params_spec.update(
             replication_mode=dict(
@@ -1192,6 +1242,32 @@ class DcnmFabric:
                 type="str",
                 default="Multicast",
                 choices=["Ingress", "Multicast"],
+            )
+        )
+        params_spec.update(
+            stp_bridge_priority=dict(
+                required=False,
+                type="str",
+                # validate_list_of_dicts() does not support choices
+                # being a list of int, so we've converted
+                # the user's input to str and compare to str(). We convert
+                # this back to int() before sending to NDFC.
+                choices=[str(x) for x in range(0,61441) if not x % 4096],
+            )
+        )        
+        params_spec.update(
+            stp_root_option=dict(
+                required=False,
+                type="str",
+                default="unmanaged",
+                choices=["mst", "rpvst+", "unmanaged"],
+            )
+        )
+        params_spec.update(
+            stp_vlan_range=dict(
+                required=False,
+                type="str",
+                default="",
             )
         )
         params_spec.update(
@@ -1248,12 +1324,28 @@ class DcnmFabric:
             msg = "config: element is mandatory for state merged"
             self.module.fail_json(msg=msg)
 
+        # validate_list_of_dicts() does not like a list of int()
+        # for choices.  We convert things like stp_bridge_priority
+        # to str() before calling it, then convert it back to int()
+        # afterwards.  If there are more parameters like this, we'll
+        # move this to its own function.
+        if "stp_bridge_priority" in self.config:
+            self.config["stp_bridge_priority"] = str(
+                self.config["stp_bridge_priority"]
+            )
         valid_params, invalid_params = validate_list_of_dicts(
             self.config, params_spec, self.module
         )
         # We're not using self.validated. Keeping this to avoid
         # linter error due to non-use of valid_params
         self.validated = copy.deepcopy(valid_params)
+
+        if "stp_bridge_priority" in self.config:
+            # this is safe, since we've already validated
+            # this is an int-like string.
+            self.config["stp_bridge_priority"] = int(
+                self.config["stp_bridge_priority"]
+            )
 
         if invalid_params:
             msg = "Invalid parameters in playbook: "
