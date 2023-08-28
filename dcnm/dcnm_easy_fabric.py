@@ -696,6 +696,22 @@ options:
             - NDFC label, Subinterface Dot1q Range
             - NDFC tab, Resources
             type: str
+        subnet_range:
+            description:
+            - Address range to assign Numbered and Peer Link SVI IPs
+            - Example "10.4.0.0/16"
+            - NDFC label, Underlay Subnet IP Range
+            - NDFC tab, Resources
+            type: str
+        subnet_target_mask:
+            description:
+            - Mask (prefix) for Underlay Subnet IP Range
+            - Min: 30, Max 31
+            - Default 30
+            - Example 31
+            - NDFC label, Underlay Subnet IP Mask
+            - NDFC tab, General Parameters
+            type: int
         vrf_lite_autoconfig:
             description:
             - VRF Lite Inter-Fabric Connection Deployment Options.
@@ -1292,6 +1308,22 @@ class DcnmFabric:
                 required=False,
                 type="str",
                 default="",
+            )
+        )
+        params_spec.update(
+            subnet_range=dict(
+                required=False,
+                type="ipv4_subnet",
+                default="10.4.0.0/16",
+            )
+        )
+        params_spec.update(
+            subnet_target_mask=dict(
+                required=False,
+                type="int",
+                range_min=30,
+                range_max=31,
+                default=30,
             )
         )
         params_spec.update(

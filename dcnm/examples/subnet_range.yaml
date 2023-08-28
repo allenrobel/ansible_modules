@@ -1,0 +1,11 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: SUBNET_RANGE
+            bgp_as: 1
+            subnet_range: "10.100.0.0/16"
+            subnet_target_mask: 31
