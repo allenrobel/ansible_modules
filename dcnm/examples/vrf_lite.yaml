@@ -6,6 +6,7 @@
         state: merged
         config:
         -   fabric_name: VRF_LITE
+            bgp_as: 1
             vrf_lite_autoconfig: 1
             auto_symmetric_vrf_lite: True
             auto_vrflite_ifc_default_vrf: True
