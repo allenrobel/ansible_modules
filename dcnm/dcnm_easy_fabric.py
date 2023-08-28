@@ -1272,7 +1272,11 @@ class DcnmFabric:
         )
         params_spec.update(
             vrf_lite_autoconfig=dict(
-                required=False, type="int", default=0, choices=[0, 1]
+                required=False,
+                type="int",
+                default=0,
+                range_min=0,
+                range_max=1,
             )
         )
         return params_spec
@@ -1333,6 +1337,7 @@ class DcnmFabric:
             self.config["stp_bridge_priority"] = str(
                 self.config["stp_bridge_priority"]
             )
+
         valid_params, invalid_params = validate_list_of_dicts(
             self.config, params_spec, self.module
         )
