@@ -179,6 +179,34 @@ class VerifyFabricParams:
         if self.state == "merged":
             self._validate_merged_state_config()
 
+    def _verify_vrf_list_length(self, vrf_list_key, ip_list_key):
+        """
+        There are three parameters that need to be checked for
+        correct list of VRFs vs list of IP addresses.  This method
+        handles these parameters.
+
+        vrf_list_key - the key name of the vrf list e.g. dns_server_vrf
+        ip_list_key - the key name of the ip list e.g. dns_server_ip_list
+
+        dns_server_vrf validated against dns_server_ip_list
+        ntp_server_vrf validated against ntp_server_ip_list
+        syslog_server_vrf validated against syslog_server_ip_list
+
+
+        """
+        if vrf_list_key in self.config:
+            vrf_list_length = len(self.config[vrf_list_key].split(","))
+            if vrf_list_length == 1:
+                return
+            ip_list_length = len(self.config[ip_list_key].split(","))
+            if vrf_list_length != ip_list_length:
+                msg = f"If {vrf_list_key} contains multiple entries, the "
+                msg += "number of entries must match the number of entries "
+                msg += f"in {ip_list_key}. "
+                self._append_msg(msg)
+                self.result = False
+                return
+
     def _validate_merged_state_config(self):
         """
         Caller: self.validate_config()
@@ -223,37 +251,18 @@ class VerifyFabricParams:
                 self.result = False
                 return
             self.config["anycast_gw_mac"] = result
-        if "dns_server_ip_list" in self.config:
-            result = verify_ip_list(self.config["dns_server_ip_list"])
-            if result is False:
-                msg = f"invalid dns_server_ip_list {self.config['dns_server_ip_list']}"
-                self._append_msg(msg)
-                self.result = False
-                return
-        if "dns_server_vrf" in self.config:
-            vrf_list_length = len(self.config["dns_server_vrf"].split(","))
-            if vrf_list_length == 1:
-                return
-            dns_server_ip_list_length = len(self.config["dns_server_ip_list"].split(","))
-            if vrf_list_length != dns_server_ip_list_length:
-                msg = "If dns_server_vrf contains multiple entries, the "
-                msg += "number of entries must match the number of entries "
-                msg += "in dns_server_ip_list. "
-                self._append_msg(msg)
-                self.result = False
-                return
-        if "vrf_lite_autoconfig" in self.config:
-            key = "vrf_lite_autoconfig"
-            result = translate_vrf_lite_autoconfig(self.config[key])
-            if result is False:
-                msg = f"invalid {key} "
-                msg += f"{self.config[key]}. "
-                msg += "Expected one of "
-                msg += f"{self._get_parameter_alias_values(key)}"
-                self._append_msg(msg)
-                self.result = False
-                return
-            self.config["vrf_lite_autoconfig"] = result
+        self._verify_vrf_list_length("dns_server_vrf", "dns_server_ip_list")
+        for key in [
+            "dns_server_ip_list",
+            "ntp_server_ip_list",
+            "syslog_server_ip_list"]:
+            if key in self.config:
+                result = verify_ip_list(self.config[key])
+                if result is False:
+                    msg = f"invalid {key} {self.config[key]}"
+                    self._append_msg(msg)
+                    self.result = False
+                    return
         if "macsec_algorithm" in self.config:
             key = "macsec_algorithm"
             result = self._translate_macsec_algorithm(self.config[key])
@@ -312,6 +321,34 @@ class VerifyFabricParams:
                 self._append_msg(result["msg"])
                 self.result = False
                 return
+        self._verify_vrf_list_length("ntp_server_vrf", "ntp_server_ip_list")
+        self._verify_vrf_list_length("syslog_server_vrf", "syslog_server_ip_list")
+        # We're sorta overloading this function, but it's convenient to use it.
+        self._verify_vrf_list_length("syslog_sev", "syslog_server_ip_list")
+        if "syslog_sev" in self.config:
+            key = "syslog_sev"
+            values = self.config[key].split(",")
+            for value in values:
+                try:
+                    int(value)
+                except ValueError:
+                    msg = f"invalid {key} ({value}) in {self.config[key]}. "
+                    self._append_msg(msg)
+                    self.result = False
+                    return
+
+        if "vrf_lite_autoconfig" in self.config:
+            key = "vrf_lite_autoconfig"
+            result = translate_vrf_lite_autoconfig(self.config[key])
+            if result is False:
+                msg = f"invalid {key} "
+                msg += f"{self.config[key]}. "
+                msg += "Expected one of "
+                msg += f"{self._get_parameter_alias_values(key)}"
+                self._append_msg(msg)
+                self.result = False
+                return
+            self.config["vrf_lite_autoconfig"] = result
 
         # validate self.config for cross-parameter dependencies
         self._validate_dependencies()
@@ -1186,6 +1223,16 @@ class VerifyFabricParams:
                     "value": "rpvst+",
                     "mandatory": {
                         "stp_vlan_range": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "syslog_server_ip_list": {
+                    "value": "__any__",
+                    "mandatory": {
+                        "syslog_sev": None,
                     },
                 }
             }

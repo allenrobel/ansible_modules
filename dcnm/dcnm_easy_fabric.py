@@ -446,6 +446,7 @@ options:
             description:
             - List of DNS servers used by switches within the fabric
             - Comma separated list of ipv4/ipv6 addresses
+            - Example "10.4.0.1,2001::1"
             - NDFC label, DNS Server IPs
             - NDFC tab, Manageability
             type: str
@@ -632,6 +633,26 @@ options:
             - NDFC tab, Advanced
             type: str
             required: When stp_root_option is "mst"
+        ntp_server_ip_list:
+            description:
+            - List of NTP servers used by switches within the fabric
+            - Comma separated list of ipv4/ipv6 addresses
+            - Example "10.4.0.1,2001::1"
+            - NDFC label, NTP Server IPs
+            - NDFC tab, Manageability
+            type: str
+            required: false
+            default: ""
+        ntp_server_vrf:
+            description:
+            - List of VRFs in which the NTP server(s) in ntp_server_ip_list reside
+            - Comma separated list of VRF names
+            - If a single VRF is specified, it will be used for all NTP servers, else the number of VRFs must match the number of NTP servers
+            - NDFC label, NTP Server VRFs
+            - NDFC tab, Manageability
+            type: str
+            required: false
+            default: ""
         pm_enable:
             description:
             - Enable (True) or disable (False) fabric performance monitoring
@@ -712,6 +733,30 @@ options:
             - NDFC label, Underlay Subnet IP Mask
             - NDFC tab, General Parameters
             type: int
+        syslog_server_ip_list:
+            description:
+            - Comma separated list of IP Addresses(v4/v6)
+            - Example "10.4.0.1,2001::1"
+            - NDFC label, Syslog Server IPs
+            - NDFC tab, Manageability
+            type: str
+        syslog_server_vrf:
+            description:
+            - List of VRFs in which the Syslog server(s) in syslog_server_ip_list reside
+            - Comma separated list of VRF names
+            - If a single VRF is specified, it will be used for all Syslog servers, else the number of VRFs must match the number of Syslog servers
+            - Example "management,default"
+            - NDFC label, Syslog Server VRFs
+            - NDFC tab, Manageability
+            type: str
+        syslog_sev:
+            description:
+            - Comma separated list of Syslog severity values, one per Syslog server
+            - Min:0, Max:7
+            - Example "0,4,7"
+            - NDFC label, Syslog Server Severity
+            - NDFC tab, Manageability
+            type: str
         vrf_lite_autoconfig:
             description:
             - VRF Lite Inter-Fabric Connection Deployment Options.
@@ -1267,6 +1312,20 @@ class DcnmFabric:
                 default="",
             )
         )
+        params_spec.update(
+            ntp_server_ip_list=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            ntp_server_vrf=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
         params_spec.update(pm_enable=dict(required=False, type="bool", default=False))
         params_spec.update(
             replication_mode=dict(
@@ -1324,6 +1383,26 @@ class DcnmFabric:
                 range_min=30,
                 range_max=31,
                 default=30,
+            )
+        )
+        params_spec.update(
+            syslog_server_ip_list=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            syslog_server_vrf=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            syslog_sev=dict(
+                required=False,
+                type="str",
             )
         )
         params_spec.update(
