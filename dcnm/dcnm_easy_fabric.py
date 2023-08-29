@@ -525,6 +525,25 @@ options:
             type: str
             required: False
             default: Disable
+        loopback0_ipv6_range:
+            description:
+            - Underlay Routing Loopback IPv6 Range
+            - Valid values: ipv6 network with prefix
+            - Default: fd00::a02:0/119
+            - NDFC label, Underlay Routing Loopback IPv6 Range
+            - NDFC tab, Resources
+            type: str
+            required: False
+        loopback1_ipv6_range:
+            description:
+            - Underlay VTEP Loopback IPv6 Range
+            - Typically Loopback1 and Anycast Loopback IPv6 Address Range
+            - Valid values: ipv6 network with prefix
+            - Default: fd00::a03:0/118
+            - NDFC label, Underlay VTEP Loopback IPv6 Range
+            - NDFC tab, Resources
+            type: str
+            required: False
         macsec_algorithm:
             - Configure Cipher Suite
             - Valid values:
@@ -672,6 +691,14 @@ options:
             - Ingress
             - Multicast
             default: Multicast
+        router_id_range:
+            description:
+            - BGP Router ID Range for IPv6 Underlay
+            - NDFC label, BGP Router ID Range for IPv6 Underlay
+            - NDFC tab, Resources
+            - Default: 10.2.0.0/23
+            type: str
+            required: False
         stp_bridge_priority:
             description:
             - Bridge priority for the spanning tree in increments of 4096.
@@ -765,6 +792,42 @@ options:
             type: bool
             required: false
             default: True
+        underlay_is_v6:
+            description:
+            - Enable (True) or disable (False) IpV6 Underlay Addressing
+            - NDFC label, Enable IPv6 Underlay
+            - NDFC tab, General Parameters
+            type: bool
+            required: false
+            default: False
+        use_link_local:
+            description:
+            - Enable (True) or disable (False) IPv6 link-local addressing for Spine-Leaf interfaces
+            - NDFC label, Enable IPv6 Link-Local Address
+            - NDFC tab, General Parameters
+            type: bool
+            required: false
+            default: True (when underlay_is_v6 is True)
+        v6_subnet_range:
+            description:
+            - IPv6 Address range to assign Numbered and Peer Link SVI IPs
+            - Valid values: ipv6 network with prefix
+            - Default: fd00::a03:0/118 (when use_link_local is True)
+            - Default: fd00::a04:0/112 (when use_link_local is False)
+            - NDFC label, Underlay Subnet IPv6 Range
+            - NDFC tab, Resources
+            type: str
+            required: False
+        v6_subnet_target_mask:
+            description:
+            - Mask (prefix) for IPv6 Underlay Subnet
+            - Min: 126, Max 127
+            - Default 126
+            - Example 127
+            - NDFC label, Underlay Subnet IPv6 Mask
+            - NDFC tab, General Parameters
+            type: int
+            required: False
         vrf_lite_autoconfig:
             description:
             - VRF Lite Inter-Fabric Connection Deployment Options.
@@ -1225,6 +1288,20 @@ class DcnmFabric:
             )
         )
         params_spec.update(
+            loopback0_ipv6_range=dict(
+                required=False,
+                type="ipv6_subnet",
+                default="",
+            )
+        )
+        params_spec.update(
+            loopback1_ipv6_range=dict(
+                required=False,
+                type="ipv6_subnet",
+                default="",
+            )
+        )
+        params_spec.update(
             macsec_algorithm=dict(
                 required=False,
                 type="int",
@@ -1414,6 +1491,25 @@ class DcnmFabric:
             )
         )
         params_spec.update(tcam_allocation=dict(required=False, type="bool", default=True))
+        params_spec.update(underlay_is_v6=dict(required=False, type="bool", default=False))
+        params_spec.update(use_link_local=dict(required=False, type="bool", default=False))
+        # TODO:4 Ask about this.  The default is different depending on the value of use_link_local
+        params_spec.update(
+            v6_subnet_range=dict(
+                required=False,
+                type="ipv6_subnet",
+                default="fd00::a03:0/118",
+            )
+        )
+        params_spec.update(
+            v6_subnet_target_mask=dict(
+                required=False,
+                type="int",
+                range_min=126,
+                range_max=127,
+                default=126,
+            )
+        )
         params_spec.update(
             vrf_lite_autoconfig=dict(
                 required=False,

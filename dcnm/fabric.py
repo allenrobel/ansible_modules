@@ -350,6 +350,10 @@ class VerifyFabricParams:
                 return
             self.config["vrf_lite_autoconfig"] = result
 
+        # Update default nvPairs if underlay_is_v6 is True
+        self._update_default_nv_pairs_ipv6()
+        # Update default nvPairs if use_link_local is False
+        self._update_default_nv_pairs_use_link_local_false()
         # validate self.config for cross-parameter dependencies
         self._validate_dependencies()
         if self.result is False:
@@ -707,6 +711,40 @@ class VerifyFabricParams:
         ] = "Default_VRF_Extension_Universal"
         self._default_fabric_params["vrfTemplate"] = "Default_VRF_Universal"
 
+    def _update_default_nv_pairs_ipv6(self):
+        """
+        Update the default nvPairs with the following default values
+        if the playbook value of underlay_is_v6 is True.
+        We overwrite these later with the playbook values if they are present.
+        TODO:3 We should clear ipv4 defaults here, but NDFC doesn't seem to mind if IPv4 values are set.
+
+        Caller: self._validate_merged_state_config()
+        """
+        if "underlay_is_v6" not in self.config:
+            return
+        if self.config["underlay_is_v6"] is False:
+            return
+        self._default_nv_pairs["ANYCAST_LB_ID"] = 10
+        self._default_nv_pairs["LOOPBACK0_IPV6_RANGE"] = "fd00::a02:0/119"
+        self._default_nv_pairs["LOOPBACK1_IPV6_RANGE"] = "fd00::a03:0/118"
+        self._default_nv_pairs["ROUTER_ID_RANGE"] = "10.2.0.0/23"
+        self._default_nv_pairs["USE_LINK_LOCAL"] = True
+
+    def _update_default_nv_pairs_use_link_local_false(self):
+        """
+        Update the default nvPairs with the following default values
+        if the playbook value of use_link_local is False.
+        We overwrite these later with the playbook values if they are present.
+
+        Caller: self._validate_merged_state_config()
+        """
+        if "use_link_local" not in self.config:
+            return
+        if self.config["use_link_local"] is True:
+            return
+        self._default_nv_pairs["V6_SUBNET_RANGE"] = "fd00::a04:0/112"
+        self._default_nv_pairs["V6_SUBNET_TARGET_MASK"] = 126
+
     def _add_default_nv_pairs_12_1_3b(self):
         """
         Caller: __init__()
@@ -890,22 +928,17 @@ class VerifyFabricParams:
 
         Certain parameters become mandatory only if another parameter is
         set, or only if it's set to a specific value.  For example, if
-        underlay_is_v6 is set to True, the following parameters become
+        stp_root_option is set to "rpvst+" the following parameters become
         mandatory:
-        -   anycast_lb_id
-        -   loopback0_ipv6_range
-        -   loopback1_ipv6_range
-        -   router_id_range
-        -   v6_subnet_range
-        -   v6_subnet_target_mask
+        -   stp_vlan_range
 
         self._mandatory_params is a dictionary, keyed on parameter.
         The value is a dictionary with the following keys:
 
         value:  The parameter value that makes the dependent parameters
-                mandatory.  Using underlay_is_v6 as an example, it must
-                have a value of True, for the six dependent parameters to
-                be considered mandatory.
+                mandatory.  Using stp_root_option as an example, it must
+                have a value of rpvst+, for stp_vlan_range to be considered
+                mandatory.
         mandatory:  a python dict() containing mandatory parameters and what
                     value (if any) they must have.  Indicate that the value
                     should not be considered by setting it to None.
@@ -914,26 +947,21 @@ class VerifyFabricParams:
 
         Hence, we have the following structure for the
         self._mandatory_params dictionary, to handle the case where
-        underlay_is_v6 is set to True.  Below, we don't care what the
+        stp_root_option is set to rpvst+.  Below, we don't care what the
         value for any of the mandatory parameters is.  We only care that
         they are set.
 
         self._mandatory_params = {
-            "underlay_is_v6": {
-                "value": True,
+            "stp_root_option": {
+                "value": "rpvst+",
                 "mandatory": {
-                    "anycast_lb_id": None
-                    "loopback0_ipv6_range": None
-                    "loopback1_ipv6_range": None
-                    "router_id_range": None
-                    "v6_subnet_range": None
-                    "v6_subnet_target_mask": None
+                    "stp_vlan_range": None
                 }
             }
         }
 
         Above, we validate that all mandatory parameters are set, only
-        if the value of underlay_is_v6 is True.
+        if the value of stp_root_option is rpvst+.
 
         Set "value:" above to "__any__" if the dependent parameters are
         mandatory regardless of the parameter's value.  For example, if
@@ -1200,6 +1228,7 @@ class VerifyFabricParams:
         # (until the user manually edits the fabric in the GUI
         # and clicks Save).
         # Hence, we force the user to set it here.
+        # TODO:3 We can fix this in the same way we handle underlay_is_v6.
         self._mandatory_params.update(
             {
                 "stp_root_option": {
@@ -1217,6 +1246,7 @@ class VerifyFabricParams:
         # (until the user manually edits the fabric in the GUI
         # and clicks Save).
         # Hence, we force the user to set it here.
+        # TODO:3 We can fix this in the same way we handle underlay_is_v6.
         self._mandatory_params.update(
             {
                 "stp_root_option": {
@@ -1233,21 +1263,6 @@ class VerifyFabricParams:
                     "value": "__any__",
                     "mandatory": {
                         "syslog_sev": None,
-                    },
-                }
-            }
-        )
-        self._mandatory_params.update(
-            {
-                "underlay_is_v6": {
-                    "value": True,
-                    "mandatory": {
-                        "anycast_lb_id": None,
-                        "loopback0_ipv6_range": None,
-                        "loopback1_ipv6_range": None,
-                        "router_id_range": None,
-                        "v6_subnet_range": None,
-                        "v6_subnet_target_mask": None,
                     },
                 }
             }
