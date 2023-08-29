@@ -2,11 +2,10 @@
 from ansible_collections.cisco.dcnm.plugins.module_utils.fabric.fabric import (
     VerifyFabricParams,
 )
-SHOW_PAYLOAD = False
 
-def print_result(test_name, result, msg, payload):
+def print_result(test_name, result, msg, payload, show_payload=True):
     _payload = ""
-    if SHOW_PAYLOAD:
+    if show_payload:
         _payload = f", payload {payload}"
     print(f"{test_name}: result {result}, message {msg}{_payload}")
 
@@ -23,7 +22,7 @@ def test_bfd():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload)
+    print_result(test_name, verify.result, verify.msg, verify.payload, False)
 
 def test_bgp_auth():
     test_name = "bgp_auth"
@@ -37,7 +36,7 @@ def test_bgp_auth():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload)
+    print_result(test_name, verify.result, verify.msg, verify.payload, False)
 
 def test_bootstrap():
     test_name = "bootstrap"
@@ -54,7 +53,7 @@ def test_bootstrap():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload)
+    print_result(test_name, verify.result, verify.msg, verify.payload, False)
 
 def test_dns_server_ip_list():
     test_name = "dns_server_ip_list"
@@ -67,7 +66,7 @@ def test_dns_server_ip_list():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload)
+    print_result(test_name, verify.result, verify.msg, verify.payload, False)
 
 def test_macsec_cipher_suite():
     test_name = "macsec_cipher_suite"
@@ -90,7 +89,7 @@ def test_macsec_cipher_suite():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload)
+    print_result(test_name, verify.result, verify.msg, verify.payload, False)
 
 def test_mpls_handoff():
     test_name = "mpls_handoff"
@@ -104,8 +103,37 @@ def test_mpls_handoff():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload)
+    print_result(test_name, verify.result, verify.msg, verify.payload, False)
 
+def test_netflow():
+    exporter_dict = {}
+    exporter_dict["EXPORTER_NAME"] = "foo"
+    exporter_dict["IP"] = "10.1.1.1"
+    exporter_dict["VRF"] = "default"
+    exporter_dict["SRC_IF_NAME"] = "Loopback0"
+    exporter_dict["UDP_PORT"] = "5050"
+    record_dict = {}
+    record_dict["RECORD_NAME"] = "foo"
+    record_dict["RECORD_TEMPLATE"] = "netflow_ipv4_record"
+    record_dict["LAYER2_RECORD"] = False
+    monitor_dict = {}
+    monitor_dict["MONITOR_NAME"] = "netflow-monitor"
+    monitor_dict["RECORD_NAME"] = "ipv4-record"
+    monitor_dict["EXPORTER1"] = "exporter1"
+    monitor_dict["EXPORTER2"] = "exporter2"
+    test_name = "netflow"
+    config = {}
+    config["fabric_name"] = "foo"
+    config["bgp_as"] = 65008
+    config["enable_netflow"] = True
+    config["netflow_exporter_list"] = [exporter_dict]
+    config["netflow_record_list"] = [record_dict]
+    config["netflow_monitor_list"] = [monitor_dict]
+    verify = VerifyFabricParams()
+    verify.config = config
+    verify.state = "merged"
+    verify.validate_config()
+    print_result(test_name, verify.result, verify.msg, verify.payload, False)
 
 def test_vrf_lite():
     test_name = "vrf_lite"
@@ -118,7 +146,7 @@ def test_vrf_lite():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload)
+    print_result(test_name, verify.result, verify.msg, verify.payload, False)
 
 def test_queuing():
     test_name = "queuing"
@@ -133,7 +161,7 @@ def test_queuing():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload)
+    print_result(test_name, verify.result, verify.msg, verify.payload, False)
 
 test_bfd()
 test_bootstrap()
@@ -141,5 +169,6 @@ test_bgp_auth()
 test_dns_server_ip_list()
 test_macsec_cipher_suite()
 test_mpls_handoff()
+test_netflow()
 test_vrf_lite()
 test_queuing()
