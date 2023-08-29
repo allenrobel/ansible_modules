@@ -43,6 +43,8 @@ if verify.result == False:
     sys.exit(1)
 print(f"result {verify.result}, {verify.msg}, payload {verify.payload}")
 """
+import copy
+import json
 import re
 import ipaddress
 
@@ -207,6 +209,165 @@ class VerifyFabricParams:
                 self.result = False
                 return
 
+    @staticmethod
+    def _verify_list_of_dict(param):
+        """
+        raise TypeError if param is not a list() of dict()
+        """
+        if not isinstance(param, list):
+            msg = f"expected list(), got {type(param).__name__}"
+            raise TypeError(msg)
+        for elem in param:
+            if not isinstance(elem, dict):
+                msg = "expected list() of dict(), "
+                msg = f" got {type(elem).__name__} for at least one "
+                msg += "list element"
+                raise TypeError(msg)
+
+    @staticmethod
+    def _verify_keys(args):
+        """
+        Verify that args["keys"] are present in args["dict"]
+
+        args is a dict() with the following keys:
+        - keys: a set() of keys that are expected in dict
+        - dict: the dictionary to test
+
+        raise TypeError if args is not a dict
+        raise KeyError if args does not contain keys "keys" and "dict"
+        raise TypeError if args["keys"] is not a set()
+        raise TypeError if args["dict"] is not a dict()
+        raise KeyError if args["dict"] does not contain all args["keys"]
+        """
+        if not isinstance(args, dict):
+            msg = f"expected dict. got {args}"
+            raise TypeError(msg)
+        mandatory_keys = {"keys", "dict"}
+        if not mandatory_keys.issubset(args):
+            msg = "missing keys (internal error, please raise an issue). "
+            msg += f"expected {mandatory_keys} "
+            msg += f"got: {args.keys()}"
+            raise KeyError(msg)
+        if not isinstance(args["keys"], set):
+            msg = "keys (bad type): expected python set(). "
+            msg += f"got {type(args['keys']).__name__}"
+            raise TypeError(msg)
+        if not isinstance(args["dict"], dict):
+            msg = "keys (bad type): expected python dict(). "
+            msg += f"got {type(args['dict']).__name__}"
+            raise TypeError(msg)
+        if not args["keys"].issubset(args["dict"]):
+            missing = ','.join(sorted(args["keys"].difference(args["dict"])))
+            msg = f"missing keys {missing}. expected {','.join(sorted(args['keys']))}, "
+            msg += f"got {','.join(sorted(args['dict'].keys()))}"
+            raise KeyError(msg)
+
+    def _validate_netflow_exporter_list(self, param):
+        """
+        Verify the following:
+        1. param is a list of dict
+        2. mandatory keys are present in every dict
+        3. each key's value is appropriate
+        """
+        try:
+            self._verify_list_of_dict(param)
+        except TypeError as err:
+            msg = "invalid netflow_exporter_list. "
+            msg += f"expected list of dict. got {param}. "
+            msg += f"error detail: {err}"
+            self._append_msg(msg)
+            self.result = False
+            return
+        keys = {"EXPORTER_NAME", "IP", "VRF", "SRC_IF_NAME", "UDP_PORT"}
+        for item in param:
+            args = {}
+            args["keys"] = keys
+            args["dict"] = item
+            try:
+                self._verify_keys(args)
+            except (KeyError, TypeError) as err:
+                msg = f"invalid netflow_exporter_list: {err}"
+                self._append_msg(msg)
+                self.result = False
+                return
+
+    def _validate_netflow_record_list(self, param):
+        """
+        Verify the following:
+        1. param is a list of dict
+        2. mandatory keys are present in every dict
+        3. each key's value is appropriate
+        """
+        try:
+            self._verify_list_of_dict(param)
+        except TypeError as err:
+            msg = "invalid netflow_record_list. "
+            msg += f"expected list of dict. got {param}. "
+            msg += f"error detail: {err}"
+            self._append_msg(msg)
+            self.result = False
+            return
+        keys = {"RECORD_NAME", "RECORD_TEMPLATE", "LAYER2_RECORD"}
+        for item in param:
+            args = {}
+            args["keys"] = keys
+            args["dict"] = item
+            try:
+                self._verify_keys(args)
+            except (KeyError, TypeError) as err:
+                msg = f"invalid netflow_record_list: {err}"
+                self._append_msg(msg)
+                self.result = False
+                return
+
+    def _translate_netflow_record_list(self, param):
+        """
+        Perform any conversions that are needed to satisfy NDFC
+
+        Conversions:
+        1. Convert LAYER2_RECORD from bool to lowercase str()
+
+        NOTES:
+        1.  param has already been validated so it's safe to forge ahead
+        2.  LAYER2_RECORD MUST be lowercase, not title-case, so
+            a simple conversion like str(bool) won't work.
+        """
+        new_param = []
+        for item in param:
+            new_item = copy.deepcopy(item)
+            new_item["LAYER2_RECORD"] = str(new_item["LAYER2_RECORD"]).lower()
+            new_param.append(new_item)
+        return new_param
+
+    def _validate_netflow_monitor_list(self, param):
+        """
+        Verify the following:
+        1. param is a list of dict
+        2. mandatory keys are present in every dict
+        3. each key's value is appropriate
+        """
+        try:
+            self._verify_list_of_dict(param)
+        except TypeError as err:
+            msg = "invalid netflow_monitor_list. "
+            msg += f"expected list of dict. got {param}. "
+            msg += f"error detail: {err}"
+            self._append_msg(msg)
+            self.result = False
+            return
+        keys = {"MONITOR_NAME", "RECORD_NAME", "EXPORTER1"}
+        for item in param:
+            args = {}
+            args["keys"] = keys
+            args["dict"] = item
+            try:
+                self._verify_keys(args)
+            except (KeyError, TypeError) as err:
+                msg = f"invalid netflow_monitor_list: {err}"
+                self._append_msg(msg)
+                self.result = False
+                return
+
     def _validate_merged_state_config(self):
         """
         Caller: self.validate_config()
@@ -321,6 +482,20 @@ class VerifyFabricParams:
                 self._append_msg(result["msg"])
                 self.result = False
                 return
+        if "netflow_exporter_list" in self.config:
+            self._validate_netflow_exporter_list(self.config["netflow_exporter_list"])
+            if self.result is False:
+                return
+        if "netflow_record_list" in self.config:
+            self._validate_netflow_record_list(self.config["netflow_record_list"])
+            if self.result is False:
+                return
+            self.config["netflow_record_list"] = self._translate_netflow_record_list(self.config["netflow_record_list"])
+        if "netflow_monitor_list" in self.config:
+            self._validate_netflow_monitor_list(self.config["netflow_monitor_list"])
+            if self.result is False:
+                return
+
         self._verify_vrf_list_length("ntp_server_vrf", "ntp_server_ip_list")
         self._verify_vrf_list_length("syslog_server_vrf", "syslog_server_ip_list")
         # We're sorta overloading this function, but it's convenient to use it.
@@ -1180,6 +1355,18 @@ class VerifyFabricParams:
         )
         self._mandatory_params.update(
             {
+                "enable_netflow": {
+                    "value": True,
+                    "mandatory": {
+                        "netflow_exporter_list": None,
+                        "netflow_record_list": None,
+                        "netflow_monitor_list": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
                 "dns_server_ip_list": {
                     "value": "__any__",
                     "mandatory": {
@@ -1506,7 +1693,7 @@ class VerifyFabricParams:
 
     def _build_payload(self):
         """
-        Build the payload to create the fabric specified self.config
+        Build the payload to create the fabric specified in self.config
         Caller: self._validate_merged_state_config()
         """
         self.payload = self._default_fabric_params
@@ -1516,7 +1703,15 @@ class VerifyFabricParams:
         self._translate_to_ndfc_nv_pairs(self.config)
         for key, value in self._translated_nv_pairs.items():
             self.payload["nvPairs"][key] = value
-
+        # TODO:4 clean this netflow stuff up.  It works, but it's messy.
+        netflow_list_keys = ["NETFLOW_EXPORTER_LIST", "NETFLOW_RECORD_LIST", "NETFLOW_MONITOR_LIST"]
+        for key in netflow_list_keys:
+            if key not in self.payload["nvPairs"]:
+                continue
+            tmp_dict = {}
+            tmp_dict[key] = self.payload["nvPairs"][key]
+            self.payload["nvPairs"][key] = json.dumps(tmp_dict)
+            
     @property
     def config(self):
         """

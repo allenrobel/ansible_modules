@@ -503,6 +503,14 @@ options:
             type: bool
             required: false
             default: False
+        enable_netflow:
+            description:
+            - Enable (True) or disable (False) Netflow on VTEPs
+            - NDFC label, Enable Netflow
+            - NDFC tab, Flow Monitor
+            type: bool
+            required: false
+            default: False
         fabric_name:
             description:
             - The name of the fabric
@@ -602,6 +610,40 @@ options:
             type: int
             required: When enable_macsec is True
             default: ""
+        netflow_exporter_list:
+            description:
+            - List of dictionaries containing Netflow Exporter details
+            - NDFC label, Netflow Exporter
+            - NDFC tab, Flow Monitor
+            - Dictionary keys:
+                - EXPORTER_NAME: The name of the exporter
+                - IP: The IP address of the exporter
+                - VRF: The VRF in which the exporter resides
+                - UDP_PORT: The UDP port used by the exporter
+            type: list of dict
+            required: When enable_netflow is True
+        netflow_record_list:
+            description:
+            - List of dictionaries containing Netflow Record details
+            - NDFC label, Netflow Record
+            - NDFC tab, Flow Monitor
+            - Dictionary keys:
+                - RECORD_NAME: The name of the record
+                - RECORD_TEMPLATE: The template to use for the record
+                - LAYER2_RECORD: True or False.  If True, this is a layer-2 record.
+            type: list of dict
+            required: When enable_netflow is True
+        netflow_monitor_list:
+            description:
+            - List of dictionaries containing Netflow Exporter details
+            - NDFC label, Netflow Exporter
+            - NDFC tab, Flow Monitor
+            - Dictionary keys:
+                - MONITOR_NAME: The name of the monitor
+                - RECORD_NAME: The name of the netflow record. Must match RECORD_NAME in netflow_record_list.
+                - EXPORTER1: The name of the exporter for this monitor. Must match EXPORTER_NAME in netflow_exporter_list.
+            type: list of dict
+            required: When enable_netflow is True
         mgmt_gw:
             description:
             - Default Gateway For Management VRF On The Switch
@@ -1200,17 +1242,17 @@ class DcnmFabric:
             )
         )
         params_spec.update(
-            dhcp_ipv6_enable=dict(
-                required=False,
-                type="str",
-                default="",
-            )
-        )
-        params_spec.update(
             dhcp_end=dict(
                 required=False,
                 type="ipv4",
                 default=False,
+            )
+        )
+        params_spec.update(
+            dhcp_ipv6_enable=dict(
+                required=False,
+                type="str",
+                default="",
             )
         )
         params_spec.update(
@@ -1255,6 +1297,8 @@ class DcnmFabric:
                 default=False,
             )
         )
+        # enable_evpn is not required or supported by 
+        # VXLAN/EVPN fabric type
         params_spec.update(
             enable_fabric_vpc_domain_id=dict(
                 required=False,
@@ -1264,6 +1308,13 @@ class DcnmFabric:
         )
         params_spec.update(
             enable_macsec=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
+        params_spec.update(
+            enable_netflow=dict(
                 required=False,
                 type="bool",
                 default=False,
@@ -1392,6 +1443,27 @@ class DcnmFabric:
         )
         params_spec.update(
             mst_instance_range=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            netflow_exporter_list=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            netflow_record_list=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            netflow_monitor_list=dict(
                 required=False,
                 type="str",
                 default="",
