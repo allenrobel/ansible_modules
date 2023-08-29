@@ -217,6 +217,10 @@ class VerifyFabricParams:
         if not isinstance(param, list):
             msg = f"expected list(), got {type(param).__name__}"
             raise TypeError(msg)
+        if len(param) == 0:
+            msg = f"expected list() with at least one dict(), "
+            msg += f"got {type(param).__name__} with length 0"
+            raise TypeError(msg)
         for elem in param:
             if not isinstance(elem, dict):
                 msg = "expected list() of dict(), "
