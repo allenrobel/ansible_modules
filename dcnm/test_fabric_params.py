@@ -161,9 +161,18 @@ def test_nxapi(print_payload=False):
     config["fabric_name"] = test_name
     config["bgp_as"] = "65000.1"
     config["enable_nxapi"] = True
-    config["enable_nxapi_http"] = False
+    config["enable_nxapi_http"] = True
     config["nxapi_https_port"] = 443
     config["nxapi_http_port"] = 8080
+    validate_merged_state(config, test_name, print_payload)
+
+def test_pbr(print_payload=False):
+    test_name = "pbr"
+    config = {}
+    config["fabric_name"] = test_name
+    config["bgp_as"] = "65000.1"
+    config["enable_pbr"] = True
+    config["esr_option"] = "ePBR"
     validate_merged_state(config, test_name, print_payload)
 
 def test_vrf_lite(print_payload=False):
@@ -195,6 +204,7 @@ test_macsec_cipher_suite()
 test_mpls_handoff()
 test_netflow()
 test_ngoam()
-test_nxapi(True)
+test_nxapi()
+test_pbr(True)
 test_vrf_lite()
 test_queuing()

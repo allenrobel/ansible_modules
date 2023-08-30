@@ -535,6 +535,24 @@ options:
             type: bool
             required: false
             default: True
+        enable_pbr:
+            description:
+            - Enable (True) or disable (False) PBR or ePBR
+            - NDFC label, Enable Policy-Based Routing (PBR)/Enhanced PBR (ePBR)
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: False
+        esr_option:
+            description:
+            - Choose between Policy-Based Routing (PBR) or Enhanced PBR (ePBR)
+            - Determines whether PBR or ePBR is used when enable_pbr is True
+            - NDFC label, Elastic Services Re-direction (ESR) Options
+            - NDFC tab, Advanced
+            - Valid values: PBR, ePBR
+            type: str
+            required: false
+            default: PBR
         fabric_name:
             description:
             - The name of the fabric
@@ -1362,7 +1380,16 @@ class DcnmFabric:
         )
         params_spec.update(enable_ngoam=dict(required=False, type="bool", default=True))
         params_spec.update(enable_nxapi=dict(required=False, type="bool", default=True))
+        params_spec.update(enable_pbr=dict(required=False, type="bool", default=False))
         params_spec.update(enable_http_nxapi=dict(required=False, type="bool", default=True))
+        params_spec.update(
+            esr_option=dict(
+                required=False,
+                type="str",
+                default="PBR",
+                choices=["ePBR", "PBR"],
+            )
+        )
         params_spec.update(fabric_name=dict(required=True, type="str"))
         params_spec.update(
             fabric_vpc_domain_id=dict(
