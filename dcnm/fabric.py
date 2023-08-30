@@ -633,6 +633,8 @@ class VerifyFabricParams:
                 return
             self.config["vrf_lite_autoconfig"] = result
 
+        # Update default nvPairs if enable_pvlan is True
+        self._update_default_nv_pairs_enable_pvlan_true()
         # Update default nvPairs if underlay_is_v6 is True
         self._update_default_nv_pairs_ipv6()
         # Update default nvPairs if use_link_local is False
@@ -1012,6 +1014,20 @@ class VerifyFabricParams:
         self._default_nv_pairs["LOOPBACK1_IPV6_RANGE"] = "fd00::a03:0/118"
         self._default_nv_pairs["ROUTER_ID_RANGE"] = "10.2.0.0/23"
         self._default_nv_pairs["USE_LINK_LOCAL"] = True
+
+    def _update_default_nv_pairs_enable_pvlan_true(self):
+        """
+        Update the default nvPairs with the following default values
+        if the playbook value of enable_pvlan is True.
+        We overwrite these later with the playbook values if they are present.
+
+        Caller: self._validate_merged_state_config()
+        """
+        if "enable_pvlan" not in self.config:
+            return
+        if self.config["enable_pvlan"] is False:
+            return
+        self._default_nv_pairs["default_pvlan_sec_network"] = "Pvlan_Secondary_Network"
 
     def _update_default_nv_pairs_use_link_local_false(self):
         """

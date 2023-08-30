@@ -368,6 +368,14 @@ options:
             type: int
             required: False
             default: 30
+        default_pvlan_sec_network:
+            description:
+            - Default PVLAN Secondary Network Template
+            - NDFC label, PVLAN Secondary Network Template
+            - NDFC tab, Advanced
+            type: str
+            required: False
+            default: Pvlan_Secondary_Network
         default_queuing_policy_cloudscale:
             description:
             - Queuing Policy for all 92xx, -EX, -FX, -FX2, -FX3, -GX series switches in the fabric
@@ -543,6 +551,14 @@ options:
             type: bool
             required: false
             default: False
+        enable_pvlan:
+            description:
+            - Enable (True) or disable (False) Private VLAN (PVLAN) Enable PVLAN on switches except spines and super spines
+            - NDFC label, Enable Private VLAN (PVLAN)
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: False        
         esr_option:
             description:
             - Choose between Policy-Based Routing (PBR) or Enhanced PBR (ePBR)
@@ -1349,6 +1365,14 @@ class DcnmFabric:
             )
         )
         params_spec.update(
+            default_pvlan_sec_network=dict(
+                required=False,
+                type="str",
+                default="Pvlan_Secondary_Network",
+                choices=["Pvlan_Secondary_Network"],
+            )
+        )
+        params_spec.update(
             enable_default_queuing_policy=dict(
                 required=False,
                 type="bool",
@@ -1357,6 +1381,7 @@ class DcnmFabric:
         )
         # enable_evpn is not required or supported by 
         # VXLAN/EVPN fabric type
+        params_spec.update(enable_http_nxapi=dict(required=False, type="bool", default=True))
         params_spec.update(
             enable_fabric_vpc_domain_id=dict(
                 required=False,
@@ -1381,7 +1406,7 @@ class DcnmFabric:
         params_spec.update(enable_ngoam=dict(required=False, type="bool", default=True))
         params_spec.update(enable_nxapi=dict(required=False, type="bool", default=True))
         params_spec.update(enable_pbr=dict(required=False, type="bool", default=False))
-        params_spec.update(enable_http_nxapi=dict(required=False, type="bool", default=True))
+        params_spec.update(enable_pvlan=dict(required=False, type="bool", default=False))
         params_spec.update(
             esr_option=dict(
                 required=False,

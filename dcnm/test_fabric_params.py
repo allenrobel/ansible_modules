@@ -175,6 +175,14 @@ def test_pbr(print_payload=False):
     config["esr_option"] = "ePBR"
     validate_merged_state(config, test_name, print_payload)
 
+def test_pvlan(print_payload=False):
+    test_name = "pvlan"
+    config = {}
+    config["fabric_name"] = test_name
+    config["bgp_as"] = "65000.1"
+    config["enable_pvlan"] = True
+    validate_merged_state(config, test_name, print_payload)
+
 def test_vrf_lite(print_payload=False):
     test_name = "vrf_lite"
     config = {}
@@ -205,6 +213,7 @@ test_mpls_handoff()
 test_netflow()
 test_ngoam()
 test_nxapi()
-test_pbr(True)
+test_pbr()
+test_pvlan()
 test_vrf_lite()
 test_queuing()
