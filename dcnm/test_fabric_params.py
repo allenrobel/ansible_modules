@@ -116,19 +116,25 @@ def test_mpls_handoff(print_payload=False):
     validate_merged_state(config, test_name, print_payload)
 
 def test_netflow(print_payload=False):
-    exporter_dict = {}
-    #exporter_dict["EXPORTER_NAME"] = "foo"
-    exporter_dict["IP"] = "10.1.1.1"
-    exporter_dict["VRF"] = "default"
-    exporter_dict["SRC_IF_NAME"] = "Loopback0"
-    exporter_dict["UDP_PORT"] = "5050"
+    exporter_dict1 = {}
+    exporter_dict1["EXPORTER_NAME"] = "exporter1"
+    exporter_dict1["IP"] = "10.1.1.1"
+    exporter_dict1["VRF"] = "default"
+    exporter_dict1["SRC_IF_NAME"] = "Loopback0"
+    exporter_dict1["UDP_PORT"] = "5050"
+    exporter_dict2 = {}
+    exporter_dict2["EXPORTER_NAME"] = "exporter2"
+    exporter_dict2["IP"] = "10.1.1.2"
+    exporter_dict2["VRF"] = "default"
+    exporter_dict2["SRC_IF_NAME"] = "Loopback0"
+    exporter_dict2["UDP_PORT"] = "5051"
     record_dict = {}
-    record_dict["RECORD_NAME"] = "foo"
+    record_dict["RECORD_NAME"] = "record1"
     record_dict["RECORD_TEMPLATE"] = "netflow_ipv4_record"
     record_dict["LAYER2_RECORD"] = False
     monitor_dict = {}
     monitor_dict["MONITOR_NAME"] = "netflow-monitor"
-    monitor_dict["RECORD_NAME"] = "ipv4-record"
+    monitor_dict["RECORD_NAME"] = "record1"
     monitor_dict["EXPORTER1"] = "exporter1"
     monitor_dict["EXPORTER2"] = "exporter2"
     test_name = "netflow"
@@ -136,7 +142,7 @@ def test_netflow(print_payload=False):
     config["fabric_name"] = "foo"
     config["bgp_as"] = 65008
     config["enable_netflow"] = True
-    config["netflow_exporter_list"] = [exporter_dict]
+    config["netflow_exporter_list"] = [exporter_dict1, exporter_dict2]
     config["netflow_record_list"] = [record_dict]
     config["netflow_monitor_list"] = [monitor_dict]
     validate_merged_state(config, test_name, print_payload)
@@ -147,6 +153,17 @@ def test_ngoam(print_payload=False):
     config["fabric_name"] = "ngoam"
     config["bgp_as"] = "65000.1"
     config["enable_ngoam"] = False
+    validate_merged_state(config, test_name, print_payload)
+
+def test_nxapi(print_payload=False):
+    test_name = "nxapi"
+    config = {}
+    config["fabric_name"] = test_name
+    config["bgp_as"] = "65000.1"
+    config["enable_nxapi"] = True
+    config["enable_nxapi_http"] = False
+    config["nxapi_https_port"] = 443
+    config["nxapi_http_port"] = 8080
     validate_merged_state(config, test_name, print_payload)
 
 def test_vrf_lite(print_payload=False):
@@ -178,5 +195,6 @@ test_macsec_cipher_suite()
 test_mpls_handoff()
 test_netflow()
 test_ngoam()
+test_nxapi(True)
 test_vrf_lite()
 test_queuing()
