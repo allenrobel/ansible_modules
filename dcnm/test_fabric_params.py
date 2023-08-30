@@ -9,7 +9,7 @@ def print_result(test_name, result, msg, payload, show_payload=True):
         _payload = f", payload {payload}"
     print(f"{test_name}: result {result}, message {msg}{_payload}")
 
-def test_aaa():
+def test_aaa(print_payload=False):
     test_name = "aaa"
     config = {}
     config["fabric_name"] = "AAA"
@@ -38,9 +38,9 @@ no aaa authentication login ascii-authentication
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, True)
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
 
-def test_bfd():
+def test_bfd(print_payload=False):
     test_name = "bfd"
     config = {}
     config["fabric_name"] = "foo"
@@ -53,9 +53,9 @@ def test_bfd():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, False)
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
 
-def test_bgp_auth():
+def test_bgp_auth(print_payload=False):
     test_name = "bgp_auth"
     config = {}
     config["fabric_name"] = "foo"
@@ -67,9 +67,9 @@ def test_bgp_auth():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, False)
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
 
-def test_bootstrap():
+def test_bootstrap(print_payload=False):
     test_name = "bootstrap"
     config = {}
     config["fabric_name"] = "foo"
@@ -84,9 +84,9 @@ def test_bootstrap():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, False)
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
 
-def test_dns_server_ip_list():
+def test_dns_server_ip_list(print_payload=False):
     test_name = "dns_server_ip_list"
     config = {}
     config["fabric_name"] = "foo"
@@ -97,9 +97,9 @@ def test_dns_server_ip_list():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, False)
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
 
-def test_macsec_cipher_suite():
+def test_macsec_cipher_suite(print_payload=False):
     test_name = "macsec_cipher_suite"
     hex_values = {}
     hex_values["good_algo_1"] = "F" * 66
@@ -120,9 +120,9 @@ def test_macsec_cipher_suite():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, False)
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
 
-def test_mpls_handoff():
+def test_mpls_handoff(print_payload=False):
     test_name = "mpls_handoff"
     config = {}
     config["fabric_name"] = "foo"
@@ -134,11 +134,11 @@ def test_mpls_handoff():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, False)
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
 
-def test_netflow():
+def test_netflow(print_payload=False):
     exporter_dict = {}
-    exporter_dict["EXPORTER_NAME"] = "foo"
+    #exporter_dict["EXPORTER_NAME"] = "foo"
     exporter_dict["IP"] = "10.1.1.1"
     exporter_dict["VRF"] = "default"
     exporter_dict["SRC_IF_NAME"] = "Loopback0"
@@ -164,9 +164,9 @@ def test_netflow():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, False)
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
 
-def test_vrf_lite():
+def test_vrf_lite(print_payload=False):
     test_name = "vrf_lite"
     config = {}
     config["fabric_name"] = "foo"
@@ -177,9 +177,9 @@ def test_vrf_lite():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, False)
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
 
-def test_queuing():
+def test_queuing(print_payload=False):
     test_name = "queuing"
     config = {}
     config["fabric_name"] = "foo"
@@ -192,7 +192,7 @@ def test_queuing():
     verify.config = config
     verify.state = "merged"
     verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, False)
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
 
 test_aaa()
 test_bfd()
