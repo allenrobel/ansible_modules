@@ -371,6 +371,46 @@ class VerifyFabricParams:
                 self._append_msg(msg)
                 self.result = False
                 return
+    def _validate_netflow_monitor_list_exporters(self, monitor_list, exporter_list):
+        """
+        Verify the following:
+        1. All exporters referenced exist in netflow_exporter_list
+        """
+        exporter_set = set()
+        for exporter in exporter_list:
+            exporter_set.add(exporter["EXPORTER_NAME"])
+        for monitor in monitor_list:
+            if "EXPORTER1" in monitor:
+                if monitor["EXPORTER1"] not in exporter_set:
+                    msg = f"invalid netflow_monitor_list: {monitor.get('MONITOR_NAME', 'unknown')}. "
+                    msg += f"EXPORTER1 {monitor['EXPORTER1']} not found in netflow_exporter_list"
+                    self._append_msg(msg)
+                    self.result = False
+                    return
+            if "EXPORTER2" in monitor:
+                if monitor["EXPORTER2"] not in exporter_set:
+                    msg = f"invalid netflow_monitor_list: {monitor.get('MONITOR_NAME', 'unknown')}. "
+                    msg += f"EXPORTER2 {monitor['EXPORTER2']} not found in netflow_exporter_list."
+                    self._append_msg(msg)
+                    self.result = False
+                    return
+
+    def _validate_netflow_monitor_list_record_names(self, monitor_list, record_list):
+        """
+        Verify the following:
+        1. All RECORD_NAME referenced in monitor_list exist in netflow_record_list
+        """
+        record_set = set()
+        for record in record_list:
+            record_set.add(record["RECORD_NAME"])
+        for monitor in monitor_list:
+            if "RECORD_NAME" in monitor:
+                if monitor["RECORD_NAME"] not in record_set:
+                    msg = f"invalid netflow_monitor_list: {monitor.get('MONITOR_NAME', 'unknown')}. "
+                    msg += f"RECORD_NAME {monitor['RECORD_NAME']} not found in netflow_record_list"
+                    self._append_msg(msg)
+                    self.result = False
+                    return
 
     def _validate_merged_state_config(self):
         """
@@ -499,6 +539,14 @@ class VerifyFabricParams:
             self._validate_netflow_monitor_list(self.config["netflow_monitor_list"])
             if self.result is False:
                 return
+        if "netflow_record_list" in self.config and "netflow_monitor_list" in self.config:
+            self._validate_netflow_monitor_list_record_names(
+                self.config["netflow_monitor_list"],
+                self.config["netflow_record_list"])
+        if "netflow_exporter_list" in self.config and "netflow_monitor_list" in self.config:
+            self._validate_netflow_monitor_list_exporters(
+                self.config["netflow_monitor_list"],
+                self.config["netflow_exporter_list"])
 
         self._verify_vrf_list_length("ntp_server_vrf", "ntp_server_ip_list")
         self._verify_vrf_list_length("syslog_server_vrf", "syslog_server_ip_list")

@@ -14,11 +14,29 @@
                 VRF: default
                 SRC_IF_NAME: Loopback1
                 UDP_PORT: 6500
+            -   EXPORTER_NAME: exporter2
+                IP: 172.22.150.103
+                VRF: default
+                SRC_IF_NAME: Loopback1
+                UDP_PORT: 6500
             netflow_record_list:
-            -   RECORD_NAME: ipv4-record
+            -   RECORD_NAME: ipv4-record1
                 RECORD_TEMPLATE: netflow_ipv4_record
                 LAYER2_RECORD: False
+            -   RECORD_NAME: ipv4-record2
+                RECORD_TEMPLATE: netflow_ipv4_record
+                LAYER2_RECORD: False
+            -   RECORD_NAME: l2-record1
+                RECORD_TEMPLATE: netflow_l2_record
+                LAYER2_RECORD: True
             netflow_monitor_list:
-            -   MONITOR_NAME: netflow-monitor
-                RECORD_NAME: ipv4-record
+            -   MONITOR_NAME: netflow-monitor1
+                RECORD_NAME: ipv4-record1
+                EXPORTER1: exporter1
+            -   MONITOR_NAME: netflow-monitor2
+                RECORD_NAME: ipv4-record2
+                EXPORTER1: exporter1
+                EXPORTER2: exporter2
+            -   MONITOR_NAME: netflow-monitor3
+                RECORD_NAME: l2-record1
                 EXPORTER1: exporter1
