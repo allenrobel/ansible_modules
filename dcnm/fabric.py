@@ -1712,6 +1712,15 @@ class VerifyFabricParams:
         for key in netflow_list_keys:
             if key not in self.payload["nvPairs"]:
                 continue
+            # The default values for these keys are empty strings (i.e. if
+            # the fabric is created manually using NDFC GUI). But NDFC 12.1.3b
+            # does not like a value of an empty string for these keys when sent
+            # via REST (12.1.2e was fine with this).  So, we delete these keys
+            # if the user hasn't set them.
+            # TODO:1 Test with 12.1.2e to verify that the absense of thes keys doesn't cause a problem.
+            if not isinstance(self.payload["nvPairs"][key], list):
+                self.payload["nvPairs"].pop(key, None)
+                continue
             tmp_dict = {}
             tmp_dict[key] = self.payload["nvPairs"][key]
             self.payload["nvPairs"][key] = json.dumps(tmp_dict)
