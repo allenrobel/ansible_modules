@@ -9,6 +9,37 @@ def print_result(test_name, result, msg, payload, show_payload=True):
         _payload = f", payload {payload}"
     print(f"{test_name}: result {result}, message {msg}{_payload}")
 
+def test_aaa():
+    test_name = "aaa"
+    config = {}
+    config["fabric_name"] = "AAA"
+    config["bgp_as"] = "65000.869"
+    config["enable_aaa"] = True
+    config["aaa_server_conf"] = """
+aaa group server radius radius 
+snmp-server aaa-user cache-timeout 3600
+no snmp-server disable snmp-aaa sync
+no snmp-server enable traps aaa server-state-change
+aaa authentication login default local 
+aaa authorization ssh-publickey default local 
+aaa authorization ssh-certificate default local 
+aaa accounting default local 
+aaa user default-role 
+aaa authentication login default fallback error local 
+aaa authentication login console fallback error local 
+no aaa authentication login invalid-username-log 
+no aaa authentication login error-enable 
+no aaa authentication login mschap enable 
+no aaa authentication login mschapv2 enable 
+no aaa authentication login chap enable 
+no aaa authentication login ascii-authentication 
+"""
+    verify = VerifyFabricParams()
+    verify.config = config
+    verify.state = "merged"
+    verify.validate_config()
+    print_result(test_name, verify.result, verify.msg, verify.payload, True)
+
 def test_bfd():
     test_name = "bfd"
     config = {}
@@ -163,6 +194,7 @@ def test_queuing():
     verify.validate_config()
     print_result(test_name, verify.result, verify.msg, verify.payload, False)
 
+test_aaa()
 test_bfd()
 test_bootstrap()
 test_bgp_auth()
