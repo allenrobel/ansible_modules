@@ -519,6 +519,22 @@ options:
             type: bool
             required: false
             default: True
+        enable_nxapi:
+            description:
+            - Enable (True) or disable (False) HTTPS NX-API
+            - NDFC label, Enable NX-API
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: True
+        enable_nxapi_http:
+            description:
+            - Enable (True) or disable (False) HTTP NX-API
+            - NDFC label, Enable HTTP NX-API
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: True
         fabric_name:
             description:
             - The name of the fabric
@@ -652,6 +668,22 @@ options:
                 - EXPORTER1: The name of the exporter for this monitor. Must match EXPORTER_NAME in netflow_exporter_list.
             type: list of dict
             required: When enable_netflow is True
+        nxapi_https_port:
+            description:
+            - HTTPS Port Number For NX-API
+            - Default 443
+            - NDFC label, NX-API HTTPS Port Number
+            - NDFC tab, Advanced
+            type: int
+            required: false
+        nxapi_http_port:
+            description:
+            - HTTPS Port Number For NX-API
+            - Default 80
+            - NDFC label, NX-API HTTP Port Number
+            - NDFC tab, Advanced
+            type: int
+            required: false
         mgmt_gw:
             description:
             - Default Gateway For Management VRF On The Switch
@@ -1329,6 +1361,8 @@ class DcnmFabric:
             )
         )
         params_spec.update(enable_ngoam=dict(required=False, type="bool", default=True))
+        params_spec.update(enable_nxapi=dict(required=False, type="bool", default=True))
+        params_spec.update(enable_http_nxapi=dict(required=False, type="bool", default=True))
         params_spec.update(fabric_name=dict(required=True, type="str"))
         params_spec.update(
             fabric_vpc_domain_id=dict(
@@ -1490,6 +1524,20 @@ class DcnmFabric:
                 required=False,
                 type="str",
                 default="",
+            )
+        )
+        params_spec.update(
+            nxapi_https_port=dict(
+                required=False,
+                type="int",
+                default=443,
+            )
+        )
+        params_spec.update(
+            nxapi_http_port=dict(
+                required=False,
+                type="int",
+                default=80,
             )
         )
         params_spec.update(pm_enable=dict(required=False, type="bool", default=False))

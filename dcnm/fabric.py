@@ -1095,8 +1095,8 @@ class VerifyFabricParams:
         self._default_nv_pairs["DOMAIN_NAME_INTERNAL"] = ""
         self._default_nv_pairs["ESR_OPTION"] = "PBR"
         self._default_nv_pairs["EXT_FABRIC_TYPE"] = ""
-        self._default_nv_pairs["NXAPI_HTTPS_PORT"] = "443"
-        self._default_nv_pairs["NXAPI_HTTP_PORT"] = "80"
+        self._default_nv_pairs["NXAPI_HTTPS_PORT"] = 443
+        self._default_nv_pairs["NXAPI_HTTP_PORT"] = 80
         self._default_nv_pairs["NXC_DEST_VRF"] = "management"
         self._default_nv_pairs["NXC_PROXY_PORT"] = "8080"
         self._default_nv_pairs["NXC_PROXY_SERVER"] = ""
@@ -1438,6 +1438,38 @@ class VerifyFabricParams:
         )
         self._mandatory_params.update(
             {
+                "dns_server_ip_list": {
+                    "value": "__any__",
+                    "mandatory": {
+                        "dns_server_vrf": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "dns_server_vrf": {
+                    "value": "__any__",
+                    "mandatory": {
+                        "dns_server_ip_list": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "enable_default_queuing_policy": {
+                    "value": True,
+                    "mandatory": {
+                        "default_queuing_policy_cloudscale": None,
+                        "default_queuing_policy_other": None,
+                        "default_queuing_policy_r_series": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
                 "enable_fabric_vpc_domain_id": {
                     "value": True,
                     "mandatory": {
@@ -1475,32 +1507,12 @@ class VerifyFabricParams:
         )
         self._mandatory_params.update(
             {
-                "dns_server_ip_list": {
-                    "value": "__any__",
-                    "mandatory": {
-                        "dns_server_vrf": None,
-                    },
-                }
-            }
-        )
-        self._mandatory_params.update(
-            {
-                "dns_server_vrf": {
-                    "value": "__any__",
-                    "mandatory": {
-                        "dns_server_ip_list": None,
-                    },
-                }
-            }
-        )
-        self._mandatory_params.update(
-            {
-                "enable_default_queuing_policy": {
+                "enable_nxapi_http": {
                     "value": True,
                     "mandatory": {
-                        "default_queuing_policy_cloudscale": None,
-                        "default_queuing_policy_other": None,
-                        "default_queuing_policy_r_series": None,
+                        "enable_nxapi": True,
+                        "nxapi_https_port": None,
+                        "nxapi_http_port": None,
                     },
                 }
             }
@@ -1512,6 +1524,28 @@ class VerifyFabricParams:
                     "mandatory": {
                         "mpls_lb_id": None,
                         "mpls_loopback_ip_range": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "nxapi_https_port": {
+                    "value": "__any__",
+                    "mandatory": {
+                        "enable_nxapi": True,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "nxapi_http_port": {
+                    "value": "__any__",
+                    "mandatory": {
+                        "enable_nxapi": True,
+                        "enable_nxapi_http": True,
+                        "nxapi_https_port": None,
                     },
                 }
             }
@@ -1621,6 +1655,11 @@ class VerifyFabricParams:
             mandatory_params = self._mandatory_params[user_param]["mandatory"]
             for check_param in mandatory_params:
                 check_value = mandatory_params[check_param]
+                if check_param not in self.config:
+                    # The playbook doesn't contain this mandatory parameter.
+                    # Go to jail.  Do not pass go.  Do not collect $200.
+                    self._failed_dependencies[check_param] = "missing from playbook"
+                    continue
                 if check_param not in self.config and check_value is None:
                     # The playbook doesn't contain this mandatory parameter,
                     # and we need not consider its value (e.g. there is
