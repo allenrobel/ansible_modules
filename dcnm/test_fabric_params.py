@@ -77,6 +77,14 @@ def test_bootstrap(print_payload=False):
     config["mgmt_prefix"] = 24
     validate_merged_state(config, test_name, print_payload)
 
+def test_dhcp(print_payload=False):
+    test_name = "dhcp"
+    config = {}
+    config["fabric_name"] = "tenant_dhcp"
+    config["bgp_as"] = "65000.869"
+    config["enable_tenant_dhcp"] = True
+    validate_merged_state(config, test_name, print_payload)
+
 def test_dns_server_ip_list(print_payload=False):
     test_name = "dns_server_ip_list"
     config = {}
@@ -207,6 +215,7 @@ test_aaa()
 test_bfd()
 test_bootstrap()
 test_bgp_auth()
+test_dhcp(True)
 test_dns_server_ip_list()
 test_macsec_cipher_suite()
 test_mpls_handoff()

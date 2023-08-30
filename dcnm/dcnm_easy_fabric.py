@@ -558,7 +558,15 @@ options:
             - NDFC tab, Advanced
             type: bool
             required: false
-            default: False        
+            default: False
+        enable_tenant_dhcp:
+            description:
+            - Enable (True) or disable (False) Tenant DHCP
+            - NDFC label, Enable Tenant DHCP
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: True
         esr_option:
             description:
             - Choose between Policy-Based Routing (PBR) or Enhanced PBR (ePBR)
@@ -1407,6 +1415,7 @@ class DcnmFabric:
         params_spec.update(enable_nxapi=dict(required=False, type="bool", default=True))
         params_spec.update(enable_pbr=dict(required=False, type="bool", default=False))
         params_spec.update(enable_pvlan=dict(required=False, type="bool", default=False))
+        params_spec.update(enable_tenant_dhcp=dict(required=False, type="bool", default=True))
         params_spec.update(
             esr_option=dict(
                 required=False,
