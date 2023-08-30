@@ -266,6 +266,95 @@ class VerifyFabricParams:
             msg += f"got {','.join(sorted(args['dict'].keys()))}"
             raise KeyError(msg)
 
+    def _validate_macsec(self):
+        if "macsec_algorithm" in self.config:
+            key = "macsec_algorithm"
+            result = self._translate_macsec_parameters(self.config[key], key)
+            if result is False:
+                self.result = False
+                msg = f"invalid {key} "
+                msg += f"{self.config[key]}. "
+                msg += "Expected one of "
+                msg += f"{self._get_parameter_alias_values(key)}"
+                self._append_msg(msg)
+                return
+            self.config["macsec_algorithm"] = result
+
+        if "macsec_cipher_suite" in self.config:
+            key = "macsec_cipher_suite"
+            result = self._translate_macsec_parameters(self.config[key], key)
+            if result is False:
+                self.result = False
+                msg = f"invalid {key} "
+                msg += f"{self.config[key]}. "
+                msg += "Expected one of "
+                msg += f"{self._get_parameter_alias_values(key)}"
+                self._append_msg(msg)
+                return
+            self.config["macsec_cipher_suite"] = result
+
+        if "macsec_fallback_algorithm" in self.config:
+            key = "macsec_fallback_algorithm"
+            result = self._translate_macsec_parameters(self.config[key], key)
+            if result is False:
+                self.result = False
+                msg = f"invalid {key} "
+                msg += f"{self.config[key]}. "
+                msg += "Expected one of "
+                msg += f"{self._get_parameter_alias_values(key)}"
+                self._append_msg(msg)
+                return
+            self.config[key] = result
+
+        if "macsec_fallback_key_string" in self.config:
+            key = "macsec_fallback_key_string"
+            result = self._verify_macsec_key_string(
+                key,
+                self.config[key],
+                self.config["macsec_fallback_algorithm"]
+            )
+            if result["result"] is False:
+                self.result = False
+                self._append_msg(result["msg"])
+                return
+
+        if "macsec_key_string" in self.config:
+            key = "macsec_key_string"
+            result = self._verify_macsec_key_string(
+                key,
+                self.config[key],
+                self.config["macsec_algorithm"]
+            )
+            if result["result"] is False:
+                self.result = False
+                self._append_msg(result["msg"])
+                return
+
+    def _validate_netflow(self):
+        if "netflow_exporter_list" in self.config:
+            self._validate_netflow_exporter_list(self.config["netflow_exporter_list"])
+            if self.result is False:
+                return
+        if "netflow_record_list" in self.config:
+            self._validate_netflow_record_list(self.config["netflow_record_list"])
+            if self.result is False:
+                return
+            self.config["netflow_record_list"] = self._translate_netflow_record_list(self.config["netflow_record_list"])
+        if "netflow_monitor_list" in self.config:
+            self._validate_netflow_monitor_list(self.config["netflow_monitor_list"])
+            if self.result is False:
+                return
+        if "netflow_record_list" in self.config and "netflow_monitor_list" in self.config:
+            self._validate_netflow_monitor_list_record_names(
+                self.config["netflow_monitor_list"],
+                self.config["netflow_record_list"])
+            if self.result is False:
+                return
+        if "netflow_exporter_list" in self.config and "netflow_monitor_list" in self.config:
+            self._validate_netflow_monitor_list_exporters(
+                self.config["netflow_monitor_list"],
+                self.config["netflow_exporter_list"])
+
     def _validate_netflow_exporter_list(self, param):
         """
         Verify the following:
@@ -276,11 +365,11 @@ class VerifyFabricParams:
         try:
             self._verify_list_of_dict(param)
         except TypeError as err:
+            self.result = False
             msg = "invalid netflow_exporter_list. "
             msg += f"expected list of dict. got {param}. "
             msg += f"error detail: {err}"
             self._append_msg(msg)
-            self.result = False
             return
         keys = {"EXPORTER_NAME", "IP", "VRF", "SRC_IF_NAME", "UDP_PORT"}
         for item in param:
@@ -290,9 +379,12 @@ class VerifyFabricParams:
             try:
                 self._verify_keys(args)
             except (KeyError, TypeError) as err:
-                msg = f"invalid netflow_exporter_list: {err}"
-                self._append_msg(msg)
                 self.result = False
+                list_name = ""
+                if "EXPORTER_NAME" in item:
+                    list_name = item["EXPORTER_NAME"]
+                msg = f"invalid netflow_exporter_list {list_name}: {err}"
+                self._append_msg(msg)
                 return
 
     def _validate_netflow_record_list(self, param):
@@ -305,11 +397,11 @@ class VerifyFabricParams:
         try:
             self._verify_list_of_dict(param)
         except TypeError as err:
+            self.result = False
             msg = "invalid netflow_record_list. "
             msg += f"expected list of dict. got {param}. "
             msg += f"error detail: {err}"
             self._append_msg(msg)
-            self.result = False
             return
         keys = {"RECORD_NAME", "RECORD_TEMPLATE", "LAYER2_RECORD"}
         for item in param:
@@ -319,9 +411,12 @@ class VerifyFabricParams:
             try:
                 self._verify_keys(args)
             except (KeyError, TypeError) as err:
-                msg = f"invalid netflow_record_list: {err}"
-                self._append_msg(msg)
                 self.result = False
+                list_name = ""
+                if "RECORD_NAME" in item:
+                    list_name = item["RECORD_NAME"]
+                msg = f"invalid netflow_record_list {list_name}: {err}"
+                self._append_msg(msg)
                 return
 
     def _translate_netflow_record_list(self, param):
@@ -353,11 +448,11 @@ class VerifyFabricParams:
         try:
             self._verify_list_of_dict(param)
         except TypeError as err:
+            self.result = False
             msg = "invalid netflow_monitor_list. "
             msg += f"expected list of dict. got {param}. "
             msg += f"error detail: {err}"
             self._append_msg(msg)
-            self.result = False
             return
         keys = {"MONITOR_NAME", "RECORD_NAME", "EXPORTER1"}
         for item in param:
@@ -367,50 +462,66 @@ class VerifyFabricParams:
             try:
                 self._verify_keys(args)
             except (KeyError, TypeError) as err:
-                msg = f"invalid netflow_monitor_list: {err}"
-                self._append_msg(msg)
                 self.result = False
+                list_name = ""
+                if "MONITOR_NAME" in item:
+                    list_name = item["MONITOR_NAME"]
+                msg = f"invalid netflow_monitor_list {list_name}: {err}"
+                self._append_msg(msg)
                 return
+
     def _validate_netflow_monitor_list_exporters(self, monitor_list, exporter_list):
         """
         Verify the following:
-        1. All exporters referenced exist in netflow_exporter_list
+        -   All exporters referenced exist in netflow_exporter_list
+        NOTES:
+        1.  We've already validated that all expected key names are present,
+            except for EXPORTER2. See:
+           - self._validate_netflow_exporter_list()
+           - self._validate_netflow_monitor_list()
         """
         exporter_set = set()
         for exporter in exporter_list:
             exporter_set.add(exporter["EXPORTER_NAME"])
         for monitor in monitor_list:
-            if "EXPORTER1" in monitor:
-                if monitor["EXPORTER1"] not in exporter_set:
-                    msg = f"invalid netflow_monitor_list: {monitor.get('MONITOR_NAME', 'unknown')}. "
-                    msg += f"EXPORTER1 {monitor['EXPORTER1']} not found in netflow_exporter_list"
-                    self._append_msg(msg)
-                    self.result = False
-                    return
-            if "EXPORTER2" in monitor:
-                if monitor["EXPORTER2"] not in exporter_set:
-                    msg = f"invalid netflow_monitor_list: {monitor.get('MONITOR_NAME', 'unknown')}. "
-                    msg += f"EXPORTER2 {monitor['EXPORTER2']} not found in netflow_exporter_list."
-                    self._append_msg(msg)
-                    self.result = False
-                    return
+            if monitor["EXPORTER1"] not in exporter_set:
+                self.result = False
+                msg = f"invalid netflow_monitor_list {monitor['MONITOR_NAME']}. "
+                msg += f"EXPORTER1 {monitor['EXPORTER1']} not found in "
+                msg += "netflow_exporter_list"
+                self._append_msg(msg)
+                return
+            if "EXPORTER2" not in monitor:
+                continue
+            if monitor["EXPORTER2"] not in exporter_set:
+                self.result = False
+                msg = f"invalid netflow_monitor_list: {monitor['MONITOR_NAME']}. "
+                msg += f"EXPORTER2 {monitor['EXPORTER2']} not found in "
+                msg += "netflow_exporter_list."
+                self._append_msg(msg)
+                return
 
     def _validate_netflow_monitor_list_record_names(self, monitor_list, record_list):
         """
         Verify the following:
         1. All RECORD_NAME referenced in monitor_list exist in netflow_record_list
+
+        NOTES:
+        1. We already validated that all expected key names are present. See:
+           - self._validate_netflow_monitor_list()
+           - self._validate_netflow_record_list()
         """
         record_set = set()
         for record in record_list:
             record_set.add(record["RECORD_NAME"])
         for monitor in monitor_list:
-            if "RECORD_NAME" in monitor:
-                if monitor["RECORD_NAME"] not in record_set:
-                    msg = f"invalid netflow_monitor_list: {monitor.get('MONITOR_NAME', 'unknown')}. "
-                    msg += f"RECORD_NAME {monitor['RECORD_NAME']} not found in netflow_record_list"
-                    self._append_msg(msg)
-                    self.result = False
-                    return
+            if monitor["RECORD_NAME"] not in record_set:
+                self.result = False
+                msg = f"invalid netflow_monitor_list {monitor['MONITOR_NAME']}. "
+                msg += f"RECORD_NAME {monitor['RECORD_NAME']} not found in "
+                msg += "netflow_record_list."
+                self._append_msg(msg)
+                return
 
     def _validate_merged_state_config(self):
         """
@@ -434,29 +545,36 @@ class VerifyFabricParams:
         that we couldn't fix
         """
         if not self.config:
+            self.result = False
             msg = "config: element is mandatory for state merged"
             self._append_msg(msg)
-            self.result = False
             return
+
         if "fabric_name" not in self.config:
+            self.result = False
             msg = "fabric_name is mandatory"
             self._append_msg(msg)
-            self.result = False
             return
+
         if "bgp_as" not in self.config:
+            self.result = False
             msg = "bgp_as is mandatory"
             self._append_msg(msg)
-            self.result = False
             return
+
         if "anycast_gw_mac" in self.config:
             result = translate_mac_address(self.config["anycast_gw_mac"])
             if result is False:
+                self.result = False
                 msg = f"invalid anycast_gw_mac {self.config['anycast_gw_mac']}"
                 self._append_msg(msg)
-                self.result = False
                 return
             self.config["anycast_gw_mac"] = result
+
         self._verify_vrf_list_length("dns_server_vrf", "dns_server_ip_list")
+        if self.result is False:
+            return
+
         for key in [
             "dns_server_ip_list",
             "ntp_server_ip_list",
@@ -464,94 +582,32 @@ class VerifyFabricParams:
             if key in self.config:
                 result = verify_ip_list(self.config[key])
                 if result is False:
+                    self.result = False
                     msg = f"invalid {key} {self.config[key]}"
                     self._append_msg(msg)
-                    self.result = False
                     return
-        if "macsec_algorithm" in self.config:
-            key = "macsec_algorithm"
-            result = self._translate_macsec_algorithm(self.config[key])
-            if result is False:
-                msg = f"invalid {key} "
-                msg += f"{self.config[key]}. "
-                msg += "Expected one of "
-                msg += f"{self._get_parameter_alias_values(key)}"
-                self._append_msg(msg)
-                self.result = False
-                return
-            self.config["macsec_algorithm"] = result
-        if "macsec_cipher_suite" in self.config:
-            key = "macsec_cipher_suite"
-            result = self._translate_macsec_cipher_suite(self.config[key])
-            if result is False:
-                msg = f"invalid {key} "
-                msg += f"{self.config[key]}. "
-                msg += "Expected one of "
-                msg += f"{self._get_parameter_alias_values(key)}"
-                self._append_msg(msg)
-                self.result = False
-                return
-            self.config["macsec_cipher_suite"] = result
-        if "macsec_fallback_algorithm" in self.config:
-            key = "macsec_fallback_algorithm"
-            result = self._translate_macsec_algorithm(self.config[key])
-            if result is False:
-                msg = f"invalid {key} "
-                msg += f"{self.config[key]}. "
-                msg += "Expected one of "
-                msg += f"{self._get_parameter_alias_values(key)}"
-                self._append_msg(msg)
-                self.result = False
-                return
-            self.config[key] = result
-        if "macsec_fallback_key_string" in self.config:
-            key = "macsec_fallback_key_string"
-            result = self._verify_macsec_key_string(
-                key,
-                self.config[key],
-                self.config["macsec_fallback_algorithm"]
-            )
-            if result["result"] is False:
-                self._append_msg(result["msg"])
-                self.result = False
-                return
-        if "macsec_key_string" in self.config:
-            key = "macsec_key_string"
-            result = self._verify_macsec_key_string(
-                key,
-                self.config[key],
-                self.config["macsec_algorithm"]
-            )
-            if result["result"] is False:
-                self._append_msg(result["msg"])
-                self.result = False
-                return
-        if "netflow_exporter_list" in self.config:
-            self._validate_netflow_exporter_list(self.config["netflow_exporter_list"])
-            if self.result is False:
-                return
-        if "netflow_record_list" in self.config:
-            self._validate_netflow_record_list(self.config["netflow_record_list"])
-            if self.result is False:
-                return
-            self.config["netflow_record_list"] = self._translate_netflow_record_list(self.config["netflow_record_list"])
-        if "netflow_monitor_list" in self.config:
-            self._validate_netflow_monitor_list(self.config["netflow_monitor_list"])
-            if self.result is False:
-                return
-        if "netflow_record_list" in self.config and "netflow_monitor_list" in self.config:
-            self._validate_netflow_monitor_list_record_names(
-                self.config["netflow_monitor_list"],
-                self.config["netflow_record_list"])
-        if "netflow_exporter_list" in self.config and "netflow_monitor_list" in self.config:
-            self._validate_netflow_monitor_list_exporters(
-                self.config["netflow_monitor_list"],
-                self.config["netflow_exporter_list"])
+
+        self._validate_macsec()
+        if self.result is False:
+            return
+
+        self._validate_netflow()
+        if self.result is False:
+            return
 
         self._verify_vrf_list_length("ntp_server_vrf", "ntp_server_ip_list")
+        if self.result is False:
+            return
+
         self._verify_vrf_list_length("syslog_server_vrf", "syslog_server_ip_list")
+        if self.result is False:
+            return
+
         # We're sorta overloading this function, but it's convenient to use it.
         self._verify_vrf_list_length("syslog_sev", "syslog_server_ip_list")
+        if self.result is False:
+            return
+
         if "syslog_sev" in self.config:
             key = "syslog_sev"
             values = self.config[key].split(",")
@@ -568,12 +624,12 @@ class VerifyFabricParams:
             key = "vrf_lite_autoconfig"
             result = translate_vrf_lite_autoconfig(self.config[key])
             if result is False:
+                self.result = False
                 msg = f"invalid {key} "
                 msg += f"{self.config[key]}. "
                 msg += "Expected one of "
                 msg += f"{self._get_parameter_alias_values(key)}"
                 self._append_msg(msg)
-                self.result = False
                 return
             self.config["vrf_lite_autoconfig"] = result
 
@@ -1639,7 +1695,7 @@ class VerifyFabricParams:
 
     def _build_parameter_aliases(self):
         """
-        Caller self._handle_failed_dependencies()
+        Caller self.__init__()
 
         For some parameters, like vrf_lite_autoconfig, we don't
         want the user to have to remember the spelling for
@@ -1669,7 +1725,7 @@ class VerifyFabricParams:
             "Manual": 0,
         }
 
-    def _translate_macsec_algorithm(self, value):
+    def _translate_macsec_parameters(self, value, macsec_key):
         """
         Translate macsec_algorithm and macsec_fallback_algorithm
         playbook values to those expected by NDFC.
@@ -1681,21 +1737,9 @@ class VerifyFabricParams:
             value = int(value)
         except ValueError:
             return False
-        for key, val in self._parameter_aliases["macsec_algorithm"].items():
-            if value == val:
-                return key
-        return False
-
-    def _translate_macsec_cipher_suite(self, value):
-        """
-        Translate macsec_cipher_suite playbook values
-        to those expected by NDFC
-        """
-        try:
-            value = int(value)
-        except ValueError:
+        if macsec_key not in self._parameter_aliases:
             return False
-        for key, val in self._parameter_aliases["macsec_cipher_suite"].items():
+        for key, val in self._parameter_aliases[macsec_key].items():
             if value == val:
                 return key
         return False
@@ -1765,7 +1809,7 @@ class VerifyFabricParams:
             # does not like a value of an empty string for these keys when sent
             # via REST (12.1.2e was fine with this).  So, we delete these keys
             # if the user hasn't set them.
-            # TODO:1 Test with 12.1.2e to verify that the absense of thes keys doesn't cause a problem.
+            # TODO:1 Verify absence of these keys with 12.1.2e
             if not isinstance(self.payload["nvPairs"][key], list):
                 self.payload["nvPairs"].pop(key, None)
                 continue
