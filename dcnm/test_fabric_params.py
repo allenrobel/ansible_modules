@@ -9,6 +9,13 @@ def print_result(test_name, result, msg, payload, show_payload=True):
         _payload = f", payload {payload}"
     print(f"{test_name}: result {result}, message {msg}{_payload}")
 
+def validate_merged_state(config, test_name, print_payload=False):
+    verify = VerifyFabricParams()
+    verify.config = config
+    verify.state = "merged"
+    verify.validate_config()
+    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+
 def test_aaa(print_payload=False):
     test_name = "aaa"
     config = {}
@@ -34,11 +41,7 @@ no aaa authentication login mschapv2 enable
 no aaa authentication login chap enable 
 no aaa authentication login ascii-authentication 
 """
-    verify = VerifyFabricParams()
-    verify.config = config
-    verify.state = "merged"
-    verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+    validate_merged_state(config, test_name, print_payload)
 
 def test_bfd(print_payload=False):
     test_name = "bfd"
@@ -49,11 +52,7 @@ def test_bfd(print_payload=False):
     config["bfd_enable"] = True
     config["bfd_auth_enable"] = True
     config["bfd_auth_key"] = "asadflkajsdff"
-    verify = VerifyFabricParams()
-    verify.config = config
-    verify.state = "merged"
-    verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+    validate_merged_state(config, test_name, print_payload)
 
 def test_bgp_auth(print_payload=False):
     test_name = "bgp_auth"
@@ -63,11 +62,7 @@ def test_bgp_auth(print_payload=False):
     config["bgp_auth_enable"] = True
     config["bgp_auth_key_type"] = 0
     config["bgp_auth_key"] = "foo"
-    verify = VerifyFabricParams()
-    verify.config = config
-    verify.state = "merged"
-    verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+    validate_merged_state(config, test_name, print_payload)
 
 def test_bootstrap(print_payload=False):
     test_name = "bootstrap"
@@ -80,11 +75,7 @@ def test_bootstrap(print_payload=False):
     config["dhcp_start"] = "5.1.1.2"
     config["mgmt_gw"] = "5.1.1.1"
     config["mgmt_prefix"] = 24
-    verify = VerifyFabricParams()
-    verify.config = config
-    verify.state = "merged"
-    verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+    validate_merged_state(config, test_name, print_payload)
 
 def test_dns_server_ip_list(print_payload=False):
     test_name = "dns_server_ip_list"
@@ -93,11 +84,7 @@ def test_dns_server_ip_list(print_payload=False):
     config["bgp_as"] = "65000.869"
     config["dns_server_ip_list"] = "1.1.1.1, 2001:1:2::1, 2.2.2.2"
     config["dns_server_vrf"] = "management, foo, bar"
-    verify = VerifyFabricParams()
-    verify.config = config
-    verify.state = "merged"
-    verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+    validate_merged_state(config, test_name, print_payload)
 
 def test_macsec_cipher_suite(print_payload=False):
     test_name = "macsec_cipher_suite"
@@ -116,11 +103,7 @@ def test_macsec_cipher_suite(print_payload=False):
     config["macsec_fallback_key_string"] = hex_values["good_algo_2"]
     config["macsec_key_string"] = hex_values["good_algo_1"]
     config["macsec_report_timer"] = 10
-    verify = VerifyFabricParams()
-    verify.config = config
-    verify.state = "merged"
-    verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+    validate_merged_state(config, test_name, print_payload)
 
 def test_mpls_handoff(print_payload=False):
     test_name = "mpls_handoff"
@@ -130,11 +113,7 @@ def test_mpls_handoff(print_payload=False):
     config["mpls_handoff"] = True
     config["mpls_lb_id"] = 1023
     config["mpls_loopback_ip_range"] = "10.103.0.0/25"
-    verify = VerifyFabricParams()
-    verify.config = config
-    verify.state = "merged"
-    verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+    validate_merged_state(config, test_name, print_payload)
 
 def test_netflow(print_payload=False):
     exporter_dict = {}
@@ -160,11 +139,15 @@ def test_netflow(print_payload=False):
     config["netflow_exporter_list"] = [exporter_dict]
     config["netflow_record_list"] = [record_dict]
     config["netflow_monitor_list"] = [monitor_dict]
-    verify = VerifyFabricParams()
-    verify.config = config
-    verify.state = "merged"
-    verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+    validate_merged_state(config, test_name, print_payload)
+
+def test_ngoam(print_payload=False):
+    test_name = "ngoam"
+    config = {}
+    config["fabric_name"] = "ngoam"
+    config["bgp_as"] = "65000.1"
+    config["enable_ngoam"] = False
+    validate_merged_state(config, test_name, print_payload)
 
 def test_vrf_lite(print_payload=False):
     test_name = "vrf_lite"
@@ -173,11 +156,7 @@ def test_vrf_lite(print_payload=False):
     config["bgp_as"] = "65000.869"
     config["auto_symmetric_vrf_lite"] = True
     config["vrf_lite_autoconfig"] = 1
-    verify = VerifyFabricParams()
-    verify.config = config
-    verify.state = "merged"
-    verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+    validate_merged_state(config, test_name, print_payload)
 
 def test_queuing(print_payload=False):
     test_name = "queuing"
@@ -188,11 +167,7 @@ def test_queuing(print_payload=False):
     config["default_queuing_policy_cloudscale"] = "queuing_policy_default_4q_cloudscale"
     config["default_queuing_policy_other"] = "queuing_policy_default_other"
     config["default_queuing_policy_r_series"] = "queuing_policy_default_r_series"
-    verify = VerifyFabricParams()
-    verify.config = config
-    verify.state = "merged"
-    verify.validate_config()
-    print_result(test_name, verify.result, verify.msg, verify.payload, print_payload)
+    validate_merged_state(config, test_name, print_payload)
 
 test_aaa()
 test_bfd()
@@ -202,5 +177,6 @@ test_dns_server_ip_list()
 test_macsec_cipher_suite()
 test_mpls_handoff()
 test_netflow()
+test_ngoam()
 test_vrf_lite()
 test_queuing()
