@@ -511,6 +511,14 @@ options:
             type: bool
             required: false
             default: False
+        enable_ngoam:
+            description:
+            - Enable (True) or disable (False) the Next Generation (NG) OAM feature for all switches in the fabric to aid in trouble-shooting VXLAN EVPN fabrics
+            - NDFC label, Enable VXLAN OAM
+            - NDFC tab, Advanced
+            type: bool
+            required: false
+            default: True
         fabric_name:
             description:
             - The name of the fabric
@@ -1320,6 +1328,7 @@ class DcnmFabric:
                 default=False,
             )
         )
+        params_spec.update(enable_ngoam=dict(required=False, type="bool", default=True))
         params_spec.update(fabric_name=dict(required=True, type="str"))
         params_spec.update(
             fabric_vpc_domain_id=dict(
