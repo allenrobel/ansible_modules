@@ -1,0 +1,10 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: PVLAN
+            bgp_as: 1
+            enable_pvlan: False

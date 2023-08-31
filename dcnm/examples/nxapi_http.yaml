@@ -1,0 +1,13 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: NXAPI_HTTP
+            bgp_as: 1
+            enable_nxapi: True
+            enable_nxapi_http: True
+            nxapi_https_port: "8443"
+            nxapi_http_port: "8888"
