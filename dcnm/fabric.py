@@ -181,7 +181,68 @@ class VerifyFabricParams:
         if self.state == "merged":
             self._validate_merged_state_config()
 
-    def _verify_vrf_list_length(self, vrf_list_key, ip_list_key):
+    @staticmethod
+    def _validate_ipv4_address_within_subnet(param, subnet):
+        """
+        Raise ipaddress.AddressValueError if param is not
+        contained within subnet.
+        """
+        try:
+            if (ipaddress.ip_address(param) not in 
+                ipaddress.ip_network(subnet)):
+                msg = f"address {param} must be contained within "
+                msg += f"network {subnet}"
+                raise ipaddress.AddressValueError(msg)
+        except ipaddress.AddressValueError as err:
+            msg = f"invalid address {param} or subnet {subnet}. "
+            msg += f"error detail: {err}"
+            raise ipaddress.AddressValueError(msg)
+
+
+    @staticmethod
+    def _validate_ipv4_multicast_address(param):
+        """
+        Raise ipaddress.AddressValueError if param is not an IPv4 multicast address
+        """
+        if "/" in param:
+            msg = f"invalid IPv4 multicast address {param}. "
+            msg += "expected IPv4 multicast address without prefix "
+            msg += "length, e.g. 225.1.1.1 rather than 225.1.1.0/24."
+            raise ipaddress.AddressValueError(msg)
+        try:
+            _tmp = ipaddress.IPv4Address(param)
+            if not _tmp.is_multicast:
+                msg = f"invalid IPv4 multicast address {param}."
+                raise ipaddress.AddressValueError(msg)
+        except ipaddress.AddressValueError:
+            msg = f"invalid IPv4 multicast address {param}"
+            raise ipaddress.AddressValueError(msg)
+
+    @staticmethod
+    def _validate_ipv4_multicast_subnet(param):
+        """
+        Raise AddressValueError if param is not an IPv4 multicast subnet
+        Raise NetmaskValueError if param has an invalid prefix length
+        """
+        if "/" not in param:
+            msg = f"invalid IPv4 multicast subnet {param}. expected "
+            msg += "IPv4 multicast subnet with prefix length, "
+            msg += "e.g. 224.1.1.0/24"
+            raise ipaddress.AddressValueError(msg)
+        try:
+            if not ipaddress.IPv4Interface(param).is_multicast:
+                msg = f"invalid IPv4 multicast subnet {param}"
+                raise ipaddress.AddressValueError(msg)
+        except ipaddress.AddressValueError as err:
+            msg = f"invalid IPv4 multicast subnet {param}. "
+            msg += f"error detail: {err}"
+            raise ipaddress.AddressValueError(msg)
+        except ipaddress.NetmaskValueError as err:
+            msg = f"invalid IPv4 multicast subnet {param}. "
+            msg += f"error detail: {err}"
+            raise ipaddress.NetmaskValueError(msg)
+
+    def _validate_vrf_list_length(self, vrf_list_key, ip_list_key):
         """
         There are three parameters that need to be checked for
         correct list of VRFs vs list of IP addresses.  This method
@@ -562,6 +623,15 @@ class VerifyFabricParams:
             self._append_msg(msg)
             return
 
+        # Update default nvPairs if enable_pvlan is True
+        self._update_default_nv_pairs_enable_pvlan_true()
+        # Update default nvPairs if enable_trm is True
+        self._update_default_nv_pairs_enable_trm_true()
+        # Update default nvPairs if underlay_is_v6 is True
+        self._update_default_nv_pairs_ipv6()
+        # Update default nvPairs if use_link_local is False
+        self._update_default_nv_pairs_use_link_local_false()
+
         if "anycast_gw_mac" in self.config:
             result = translate_mac_address(self.config["anycast_gw_mac"])
             if result is False:
@@ -571,7 +641,7 @@ class VerifyFabricParams:
                 return
             self.config["anycast_gw_mac"] = result
 
-        self._verify_vrf_list_length("dns_server_vrf", "dns_server_ip_list")
+        self._validate_vrf_list_length("dns_server_vrf", "dns_server_ip_list")
         if self.result is False:
             return
 
@@ -595,18 +665,77 @@ class VerifyFabricParams:
         if self.result is False:
             return
 
-        self._verify_vrf_list_length("ntp_server_vrf", "ntp_server_ip_list")
+        if "l3vni_mcast_group" in self.config:
+            key = "l3vni_mcast_group"
+            try:
+                self._validate_ipv4_multicast_address(self.config[key])
+            except ipaddress.AddressValueError as err:
+                self.result = False
+                msg = f"invalid {key} {self.config[key]}. "
+                msg+= f"error detail: {err}"
+                self._append_msg(msg)
+                return
+
+        self._validate_vrf_list_length("ntp_server_vrf", "ntp_server_ip_list")
         if self.result is False:
             return
 
-        self._verify_vrf_list_length("syslog_server_vrf", "syslog_server_ip_list")
+        self._validate_vrf_list_length("syslog_server_vrf", "syslog_server_ip_list")
         if self.result is False:
             return
 
         # We're sorta overloading this function, but it's convenient to use it.
-        self._verify_vrf_list_length("syslog_sev", "syslog_server_ip_list")
+        self._validate_vrf_list_length("syslog_sev", "syslog_server_ip_list")
         if self.result is False:
             return
+
+        if "multicast_group_subnet" in self.config:
+            key = "multicast_group_subnet"
+            try:
+                self._validate_ipv4_multicast_subnet(self.config[key])
+            except (ipaddress.AddressValueError,
+                    ipaddress.NetmaskValueError) as err:
+                self.result = False
+                msg = f"invalid {key} {self.config[key]}. "
+                msg+= f"error detail: {err}"
+                self._append_msg(msg)
+                return
+
+        # If both l3vni_mcast_group and multicast_group_subnet
+        # are in the playbook, validate that l3vni_mcast_group
+        # is contained within multicast_group_subnet
+        if ("multicast_group_subnet" in self.config and 
+            "l3vni_mcast_group" in self.config):
+            try:
+                self._validate_ipv4_address_within_subnet(
+                    self.config["l3vni_mcast_group"],
+                    self.config["multicast_group_subnet"])
+            except ipaddress.AddressValueError as err:
+                self.result = False
+                msg = f"l3vni_mcast_group {self.config['l3vni_mcast_group']} "
+                msg += "must be contained within multicast_group_subnet "
+                msg += f"{self.config['multicast_group_subnet']}. "
+                msg += f"error detail: {err}"
+                self._append_msg(msg)
+                return
+
+        # If l3vni_mcast_group is in the playbook, but multicast_group_subnet
+        # is not, validate that l3vni_mcast_group is contained within the
+        # default range for MULTICAST_GROUP_SUBNET.
+        if ("multicast_group_subnet" not in self.config and 
+            "l3vni_mcast_group" in self.config):
+            try:
+                self._validate_ipv4_address_within_subnet(
+                    self.config["l3vni_mcast_group"],
+                    self._default_nv_pairs["MULTICAST_GROUP_SUBNET"])
+            except ipaddress.AddressValueError as err:
+                self.result = False
+                msg = f"l3vni_mcast_group {self.config['l3vni_mcast_group']} "
+                msg += "must be contained within multicast_group_subnet "
+                msg += f"{self._default_nv_pairs['MULTICAST_GROUP_SUBNET']}. "
+                msg += f"error detail: {err}"
+                self._append_msg(msg)
+                return
 
         if "syslog_sev" in self.config:
             key = "syslog_sev"
@@ -633,12 +762,6 @@ class VerifyFabricParams:
                 return
             self.config["vrf_lite_autoconfig"] = result
 
-        # Update default nvPairs if enable_pvlan is True
-        self._update_default_nv_pairs_enable_pvlan_true()
-        # Update default nvPairs if underlay_is_v6 is True
-        self._update_default_nv_pairs_ipv6()
-        # Update default nvPairs if use_link_local is False
-        self._update_default_nv_pairs_use_link_local_false()
         # validate self.config for cross-parameter dependencies
         self._validate_dependencies()
         if self.result is False:
@@ -1018,7 +1141,10 @@ class VerifyFabricParams:
     def _update_default_nv_pairs_enable_pvlan_true(self):
         """
         Update the default nvPairs with the following default values
-        if the playbook value of enable_pvlan is True.
+        if the playbook value of enable_pvlan is True:
+
+        default_pvlan_sec_network
+
         We overwrite these later with the playbook values if they are present.
 
         Caller: self._validate_merged_state_config()
@@ -1029,10 +1155,31 @@ class VerifyFabricParams:
             return
         self._default_nv_pairs["default_pvlan_sec_network"] = "Pvlan_Secondary_Network"
 
+    def _update_default_nv_pairs_enable_trm_true(self):
+        """
+        Update the default nvPairs with the following default values
+        if the playbook value of enable_trm is True:
+
+        L3VNI_MCAST_GROUP
+
+        We overwrite these later with the playbook values if they are present.
+
+        Caller: self._validate_merged_state_config()
+        """
+        if "enable_trm" not in self.config:
+            return
+        if self.config["enable_trm"] is False:
+            return
+        self._default_nv_pairs["L3VNI_MCAST_GROUP"] = "239.1.1.0"
+
     def _update_default_nv_pairs_use_link_local_false(self):
         """
         Update the default nvPairs with the following default values
-        if the playbook value of use_link_local is False.
+        if the playbook value of use_link_local is False:
+        
+        V6_SUBNET_RANGE
+        V6_SUBNET_TARGET_MASK
+
         We overwrite these later with the playbook values if they are present.
 
         Caller: self._validate_merged_state_config()

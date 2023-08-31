@@ -191,6 +191,16 @@ def test_pvlan(print_payload=False):
     config["enable_pvlan"] = True
     validate_merged_state(config, test_name, print_payload)
 
+def test_trm(print_payload=False):
+    test_name = "trm"
+    config = {}
+    config["fabric_name"] = test_name
+    config["bgp_as"] = "65000.1"
+    config["enable_trm"] = True
+    config["multicast_group_subnet"] = "225.1.1.0/16"
+    config["l3vni_mcast_group"] = "225.1.1.1"
+    validate_merged_state(config, test_name, print_payload)
+
 def test_vrf_lite(print_payload=False):
     test_name = "vrf_lite"
     config = {}
@@ -215,7 +225,7 @@ test_aaa()
 test_bfd()
 test_bootstrap()
 test_bgp_auth()
-test_dhcp(True)
+test_dhcp()
 test_dns_server_ip_list()
 test_macsec_cipher_suite()
 test_mpls_handoff()
@@ -224,5 +234,6 @@ test_ngoam()
 test_nxapi()
 test_pbr()
 test_pvlan()
+test_trm(True)
 test_vrf_lite()
 test_queuing()

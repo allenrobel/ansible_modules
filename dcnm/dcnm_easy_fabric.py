@@ -567,6 +567,14 @@ options:
             type: bool
             required: false
             default: True
+        enable_trm:
+            description:
+            - Enable (True) or disable (False) Overlay Multicast Support In VXLAN Fabrics
+            - NDFC label, Enable Tenant Routed Multicast (TRM)
+            - NDFC tab, Replication
+            type: bool
+            required: false
+            default: False
         esr_option:
             description:
             - Choose between Policy-Based Routing (PBR) or Enhanced PBR (ePBR)
@@ -599,6 +607,16 @@ options:
             type: str
             required: False
             default: Disable
+        l3vni_mcast_group:
+            description:
+            - Default Underlay Multicast group IP assigned for every overlay VRF
+            - Valid values: ipv4 multicast address
+            - Default value is applied if enable_trm is True if not set in the playbook.
+            - Default: 239.1.1.0
+            - NDFC label, Default MDT Address for TRM VRFs
+            - NDFC tab, Replication
+            type: str
+            required: False
         loopback0_ipv6_range:
             description:
             - Underlay Routing Loopback IPv6 Range
@@ -776,6 +794,15 @@ options:
             - NDFC tab, Advanced
             type: str
             required: When stp_root_option is "mst"
+        multicast_group_subnet:
+            description:
+            - Multicast pool prefix between 8 to 30. A multicast group IP from this pool is used for BUM traffic for each overlay network.
+            - l3vni_mcast_group must reside within this pool.
+            - NDFC label, Multicast Group Subnet
+            - NDFC tab, Advanced
+            default: 239.1.1.0/25
+            type: str
+            required: False
         ntp_server_ip_list:
             description:
             - List of NTP servers used by switches within the fabric
@@ -1416,6 +1443,7 @@ class DcnmFabric:
         params_spec.update(enable_pbr=dict(required=False, type="bool", default=False))
         params_spec.update(enable_pvlan=dict(required=False, type="bool", default=False))
         params_spec.update(enable_tenant_dhcp=dict(required=False, type="bool", default=True))
+        params_spec.update(enable_trm=dict(required=False, type="bool", default=False))
         params_spec.update(
             esr_option=dict(
                 required=False,
@@ -1440,6 +1468,13 @@ class DcnmFabric:
                 type="str",
                 default="Disable",
                 choices=["Disable", "Enable"],
+            )
+        )
+        params_spec.update(
+            l3vni_mcast_group=dict(
+                required=False,
+                type="ipv4_mcast_address",
+                default="239.1.1.0",
             )
         )
         params_spec.update(
@@ -1547,6 +1582,13 @@ class DcnmFabric:
         )
         params_spec.update(
             mst_instance_range=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            multicast_group_subnet=dict(
                 required=False,
                 type="str",
                 default="",

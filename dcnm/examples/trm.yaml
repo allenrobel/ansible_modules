@@ -1,0 +1,12 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: TRM
+            bgp_as: 1
+            enable_trm: True
+            l3vni_mcast_group: 225.1.1.1
+            multicast_group_subnet: 225.1.1.0/24
