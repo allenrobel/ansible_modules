@@ -61,7 +61,7 @@ options:
         default: merged
     config:
         description:
-        - A dictionary of fabric configurations
+        - A list of fabric configuration dictionaries
         type: list
         elements: dict
         suboptions:
