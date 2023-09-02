@@ -65,935 +65,935 @@ options:
         type: list
         elements: dict
         suboptions:
-        aaa_remote_ip_enabled:
-            description:
-            - Enable (True) or disable (False) AAA IP Authorization
-            - Enable only when IP Authorization is enabled on the AAA Server
-            - NDFC label, Enable AAA IP Authorization
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: False
-        aaa_server_conf:
-            description:
-            - AAA Configurations
-            - NDFC label, AAA Freeform Config
-            - NDFC tab, Manageability
-            type: str
-            required: false
-            default: "2020.0000.00aa"
-        advertise_pip_bgp:
-            description:
-            - Enable (True) or disable (False) usage of Primary VTEP IP Advertisement As Next-Hop Of Prefix Routes
-            - NDFC label, vPC advertise-pip
-            - NDFC tab, VPC
-            type: bool
-            required: false
-            default: False
-        anycast_bgw_advertise_pip:
-            description:
-            - Enable (True) or disable (False) advertising Anycast Border Gateway PIP as VTEP.
-            - Effective after Recalculate Config on parent MSD fabric.
-            - NDFC label, Anycast Border Gateway advertise-pip
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: False
-        anycast_gw_mac:
-            description:
-            - Shared MAC address for all leafs (xx:xx:xx:xx:xx:xx, xxxx.xxxx.xxxx, etc)
-            - NDFC label, Anycast Gateway MAC
-            - NDFC tab, General Parameters
-            type: str
-            required: false
-            default: "2020.0000.00aa"
-        anycast_lb_id:
-            description:
-            - Underlay Anycast Loopback Id
-            - NDFC label, Underlay Anycast Loopback Id
-            - NDFC tab, Protocols
-            type: int
-            required: false
-            default: ""
-        anycast_rp_ip_range:
-            description:
-            - Anycast or Phantom RP IP Address Range
-            - NDFC label, Underlay RP Loopback IP Range
-            - NDFC tab, Resources
-            type: str
-            required: false
-            default: 10.254.254.0/24
-        auto_symmetric_default_vrf:
-            description:
-            - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on managed neighbor devices.
-            - If True, auto created VRF Lite IFC links will have 'Auto Deploy Default VRF for Peer' enabled.
-            - vrf_lite_autoconfig must be set to 1
-            - auto_symmetric_vrf_lite must be set to True
-            - auto_vrflite_ifc_default_vrf must be set to True
-            - NDFC label: Auto Deploy Default VRF for Peer
-            - NDFC tab: Resources
-            type: bool
-            required: false
-            default: False
-        auto_symmetric_vrf_lite:
-            description:
-            - Enable (True) or disable (False) auto generation of Whether to auto generate VRF LITE sub-interface and BGP peering configuration on managed neighbor devices.
-            - If True, auto created VRF Lite IFC links will have 'Auto Deploy for Peer' enabled.
-            - NDFC label, Auto Deploy for Peer
-            - NDFC tab, Resources
-            - vrf_lite_autoconfig must be set to 1
-            type: bool
-            required: false
-            default: False
-        auto_vrflite_ifc_default_vrf:
-            description:
-            - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on VRF LITE IFC auto deployment.
-            - If True, auto created VRF Lite IFC links will have 'Auto Deploy Default VRF' enabled.
-            - NDFC label, Auto Deploy Default VRF
-            - NDFC tab, Resources
-            - vrf_lite_autoconfig must be set to 1
-            type: bool
-            required: false
-            default: False
-        banner:
-            description:
-            - Message of the Day (motd) banner. Delimiter char (very first char is delimiter char) followed by message ending with delimiter
-            - NDFC label, Banner
-            - NDFC tab, Manageability
-            - Example: ^This is a banner^
-            type: str
-            required: false
-            default: ""
-            version_added: 12.1.3f
-        bfd_auth_enable:
-            description:
-            - Enable (True) or disable (False) BGP Authentication
-            - Valid for P2P Interfaces only
-            - NDFC label, Enable BFD Authentication
-            - NDFC tab, Protocols
-            type: bool
-            required: false
-            default: False
-        bfd_auth_key:
-            description:
-            - Encrypted SHA1 secret value
-            - NDFC label, BFD Authentication Key
-            - NDFC tab, Protocols
-            type: str
-            required: false
-        bfd_auth_key_id:
-            description:
-            - Encrypted SHA1 secret value
-            - NDFC label, BFD Authentication Key ID
-            - NDFC tab, Protocols
-            type: str
-            required: false
-        bfd_enable:
-            description:
-            - Enable (True) or disable (False) BFD
-            - Valid for IPv4 Underlay only
-            - NDFC label, Enable BFD
-            - NDFC tab, Protocols
-            type: bool
-            required: false
-            default: False
-        bfd_ibgp_enable:
-            description:
-            - Enable (True) or disable (False) BFD for iBGP
-            - Valid for IPv4 Underlay only
-            - NDFC label, Enable BFD For iBGP
-            - NDFC tab, Protocols
-            type: bool
-            required: false
-            default: False
-        bfd_isis_enable:
-            description:
-            - Enable (True) or disable (False) BFD for ISIS
-            - Valid for IPv4 Underlay only
-            - NDFC label, Enable BFD For ISIS
-            - NDFC tab, Protocols
-            type: bool
-            required: false
-            default: False
-        bfd_ospf_enable:
-            description:
-            - Enable (True) or disable (False) BFD for OSPF
-            - Valid for IPv4 Underlay only
-            - NDFC label, Enable BFD For OSPF
-            - NDFC tab, Protocols
-            type: bool
-            required: false
-            default: False
-        bfd_pim_enable:
-            description:
-            - Enable (True) or disable (False) BFD for PIM
-            - Valid for IPv4 Underlay only
-            - NDFC label, Enable BFD For PIM
-            - NDFC tab, Protocols
-            type: bool
-            required: false
-            default: False
-        bgp_as:
-            description:
-            - The fabric BGP Autonomous System number
-            - NDFC label, BGP ASN
-            - NDFC tab, General Parameters
-            type: str
-            required: true
-        bgp_auth_enable:
-            description:
-            - Enable (True) or disable (False) BGP Authentication
-            - NDFC label, Enable BGP Authentication
-            - NDFC tab, Protocols
-            type: bool
-            required: false
-            default: False
-        bgp_auth_key:
-            description:
-            - Encrypted BGP Authentication Key based on type
-            - NDFC label, BGP Authentication Key
-            - NDFC tab, Protocols
-            type: str
-            required: false
-        bgp_auth_key_type:
-            description:
-            - BGP Key Encryption Type: 3 - 3DES, 7 - Cisco
-            - NDFC label, BGP Authentication Key Encryption Type
-            - NDFC tab, Protocols
-            type: str
-            required: false
-        bgp_lb_id:
-            description:
-            - (Min:0, Max:1023)
-            - NDFC label, Underlay Routing Loopback Id
-            - NDFC tab, Protocols
-            type: int
-            required: false
-            default: 0
-        bgp_auth_enable:
-            description:
-            - Enable (True) or disable (False) Automatic IP Assignment For POAP
-            - NDFC label, Enable Bootstrap
-            - NDFC tab, Bootstrap
-            type: bool
-            required: false
-            default: False
-        bootstrap_conf:
-            description:
-            - Additional CLIs required during device bootup/login e.g. AAA/Radius
-            - NDFC label, Bootstrap Freeform Config
-            - NDFC tab, Bootstrap
-            type: str
-            required: false
-        bootstrap_enable:
-            description:
-            - Automatic IP Assignment For POAP
-            - NDFC label, Enable Bootstrap
-            - NDFC tab, Bootstrap
-            type: bool
-            required: false
-            default: False
-        bootstrap_multisubnet:
-            description:
-            - DHCPv4 Multi Subnet Scope
-            - lines with # prefix are ignored here
-            - Enter One Subnet Scope per line.
-            - Start_IP, End_IP, Gateway, Prefix
-            - e.g.
-            - 10.6.0.2, 10.6.0.9, 10.6.0.1, 24
-            - # This is a comment
-            - 10.7.0.2, 10.7.0.9, 10.7.0.1, 24
-            - NDFC label, DHCPv4 Multi Subnet Scope
-            - NDFC tab, Bootstrap
-            type: str
-            required: false
-            default: False
-        brfield_debug_flag:
-            description:
-            - Valid values: Disable, Enable
-            - NDFC label, ??
-            - NDFC tab, ??
-            type: str
-            required: False
-            default: Disable
-        brownfield_network_name_format:
-            description:
-            - Brownfield Overlay Network Name Format
-            - Generated network name should be < 64 characters
-            - NDFC label, Brownfield Overlay Network Name Format
-            - NDFC tab, Advanced
-            type: str
-            required: False
-            default: "Auto_Net_VNI$$VNI$$_VLAN$$VLAN_ID$$"
-        brownfield_skip_overlay_network_attachments:
-            description:
-            - Enable (True) or disable (False) skipping overlay network interface attachments for Brownfield and Host Port Resync cases
-            - NDFC label, Skip Overlay Network Interface Attachments
-            - NDFC tab, Advanced
-            type: bool
-            required: False
-            default: False
-        cdp_enable:
-            description:
-            - Enable (True) or disable (False) CDP on management interface 
-            - NDFC label, Enable CDP for Bootstrapped Switch
-            - NDFC tab, Advanced
-            type: bool
-            required: False
-            default: False
-        copp_policy:
-            description:
-            type: str
-            - Fabric Wide CoPP Policy
-            - Customized CoPP policy should be provided when 'manual' is selected 
-            - NDFC label, CoPP Profile
-            - NDFC tab, Advanced
-            required: False
-            default: strict
-            choices: dense, lenient, manual, moderate, strict
-        dci_subnet_range:
-            description:
-            - Address range to assign P2P Interfabric Connections
-            - NDFC label, VRF Lite Subnet IP Range
-            - NDFC tab, Resources
-            type: str
-            required: False
-            default: 10.33.0.0/16
-        dci_subnet_target_mask:
-            description:
-            - Prefix length for P2P Interfabric Connections
-            - Min:8, Max:31
-            - NDFC label, VRF Lite Subnet Mask
-            - NDFC tab, Resources
-            type: int
-            required: False
-            default: 30
-        default_pvlan_sec_network:
-            description:
-            - Default PVLAN Secondary Network Template
-            - NDFC label, PVLAN Secondary Network Template
-            - NDFC tab, Advanced
-            type: str
-            required: False
-            default: Pvlan_Secondary_Network
-        default_queuing_policy_cloudscale:
-            description:
-            - Queuing Policy for all 92xx, -EX, -FX, -FX2, -FX3, -GX series switches in the fabric
-            - NDFC label, N9K Cloud Scale Platform Queuing Policy
-            - NDFC tab, Advanced
-            type: str
-            required: False
-            choices: queuing_policy_default_8q_cloudscale, queuing_policy_default_4q_cloudscale
-        default_queuing_policy_other:
-            description:
-            - Queuing Policy for all other switches in the fabric
-            - NDFC label, Other N9K Platform Queuing Policy
-            - NDFC tab, Advanced
-            type: str
-            required: False
-            choices: queuing_policy_default_other
-        default_queuing_policy_r_series:
-            description:
-            - Queuing Policy for all R-Series switches in the fabric
-            - NDFC label, N9K R-Series Platform Queuing Policy
-            - NDFC tab, Advanced
-            type: str
-            required: False
-            choices: queuing_policy_default_r_series
-        default_vrf_redis_bgp_rmap:
-            description:
-            - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
-            - NDFC label, Redistribute BGP Route-map Name
-            - NDFC tab, Resources
-            type: str
-            required: false, unless auto_vrflite_ifc_default_vrf is set to True
-        deployment_freeze:
-            description:
-            - Enable (True) or disable (False) Fabric Deployment
-            - NDFC label, None
-            - NDFC tab, None
-            - Fabric deployment is enabled/disabled in the NDFC GUI by right-clicking on a fabric and selecting 'More... Deployment Enable/Disable'
-            type: bool
-            required: false
-            default: False
-        dhcp_enable:
-            description:
-            - Automatic IP Assignment For POAP From Local DHCP Server
-            - NDFC label, Enable Local DHCP Server
-            - NDFC tab, Bootstrap
-            type: bool
-            required: false
-            default: False
-        dhcp_end:
-            description:
-            - End Address For Switch POAP
-            - NDFC label, DHCP Scope End Address
-            - NDFC tab, Bootstrap
-            type: str
-            required: false
-            default: ""
-        dhcp_ipv6_enable:
-            description:
-            - The DHCP version to use when DHCP is enabled
-            - This has nothing to do with ipv6 and is not a boolean
-            - Valid value: DHCPv4
-            - NDFC label, DHCP Version
-            - NDFC tab, Bootstrap
-            type: str
-            required: false
-            default: ""
-        dhcp_start:
-            description:
-            - Start Address For Switch POAP
-            - NDFC label, DHCP Scope Start Address
-            - NDFC tab, Bootstrap
-            type: str
-            required: false
-            default: ""
-        dns_server_ip_list:
-            description:
-            - List of DNS servers used by switches within the fabric
-            - Comma separated list of ipv4/ipv6 addresses
-            - Example "10.4.0.1,2001::1"
-            - NDFC label, DNS Server IPs
-            - NDFC tab, Manageability
-            type: str
-            required: false
-            default: ""
-        dns_server_vrf:
-            description:
-            - List of VRFs in which the DNS server(s) in dns_server_ip_list reside
-            - Comma separated list of VRF names
-            - If a single VRF is specified, it will be used for all DNS servers, else the number of VRFs must match the number of DNS servers
-            - NDFC label, DNS Server VRFs
-            - NDFC tab, Manageability
-            type: str
-            required: false
-            default: ""
-        enable_aaa:
-            description:
-            - Include AAA configs from Manageability tab during device bootup
-            - NDFC label, Enable AAA Config
-            - NDFC tab, Bootstrap
-            type: bool
-            required: false
-            default: False
-        enable_agent:
-            description:
-            - ??
-            - NDFC label, ??
-            - NDFC tab, ??
-            type: bool
-            required: false
-            default: False
-        enable_default_queuing_policy:
-            description:
-            - Enable (True) or disable (False) Default Queuing Policies
-            - NDFC label, Enable Default Queuing Policies
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: False
-        enable_fabric_vpc_domain_id:
-            description:
-            - Enable (True) or disable (False) the same vPC Domain Id for all vPC Pairs
-            - Not recommended
-            - NDFC label, Enable the same vPC Domain Id for all vPC Pairs
-            - NDFC tab, vPC
-            type: bool
-            required: false
-            default: True
-        enable_macsec:
-            description:
-            - Enable (True) or disable (False) MACsec in the fabric
-            - NDFC label, Enable MACsec
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: False
-        enable_netflow:
-            description:
-            - Enable (True) or disable (False) Netflow on VTEPs
-            - NDFC label, Enable Netflow
-            - NDFC tab, Flow Monitor
-            type: bool
-            required: false
-            default: False
-        enable_ngoam:
-            description:
-            - Enable (True) or disable (False) the Next Generation (NG) OAM feature for all switches in the fabric to aid in trouble-shooting VXLAN EVPN fabrics
-            - NDFC label, Enable VXLAN OAM
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: True
-        enable_nxapi:
-            description:
-            - Enable (True) or disable (False) HTTPS NX-API
-            - NDFC label, Enable NX-API
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: True
-        enable_nxapi_http:
-            description:
-            - Enable (True) or disable (False) HTTP NX-API
-            - NDFC label, Enable HTTP NX-API
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: True
-        enable_pbr:
-            description:
-            - Enable (True) or disable (False) PBR or ePBR
-            - NDFC label, Enable Policy-Based Routing (PBR)/Enhanced PBR (ePBR)
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: False
-        enable_pvlan:
-            description:
-            - Enable (True) or disable (False) Private VLAN (PVLAN) Enable PVLAN on switches except spines and super spines
-            - NDFC label, Enable Private VLAN (PVLAN)
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: False
-        enable_tenant_dhcp:
-            description:
-            - Enable (True) or disable (False) Tenant DHCP
-            - NDFC label, Enable Tenant DHCP
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: True
-        enable_trm:
-            description:
-            - Enable (True) or disable (False) Overlay Multicast Support In VXLAN Fabrics
-            - NDFC label, Enable Tenant Routed Multicast (TRM)
-            - NDFC tab, Replication
-            type: bool
-            required: false
-            default: False
-        esr_option:
-            description:
-            - Choose between Policy-Based Routing (PBR) or Enhanced PBR (ePBR)
-            - Determines whether PBR or ePBR is used when enable_pbr is True
-            - NDFC label, Elastic Services Re-direction (ESR) Options
-            - NDFC tab, Advanced
-            - Valid values: PBR, ePBR
-            type: str
-            required: false
-            default: PBR
-        fabric_name:
-            description:
-            - The name of the fabric
-            type: str
-            required: true
-        fabric_vpc_domain_id:
-            description:
-            - vPC Domain Id to be used on all vPC pairs
-            - NDFC label, vPC Domain Id
-            - NDFC tab, vPC
-            - Min:1, Max:1000
-            type: str
-            required: true
-        grfield_debug_flag:
-            description:
-            - Switch Cleanup Without Reload When PreserveConfig=no
-            - Valid values: Disable, Enable
-            - NDFC label, Greenfield Cleanup Option
-            - NDFC tab, Advanced
-            type: str
-            required: False
-            default: Disable
-        l3vni_mcast_group:
-            description:
-            - Default Underlay Multicast group IP assigned for every overlay VRF
-            - Valid values: ipv4 multicast address
-            - Default value is applied if enable_trm is True if not set in the playbook.
-            - Default: 239.1.1.0
-            - NDFC label, Default MDT Address for TRM VRFs
-            - NDFC tab, Replication
-            type: str
-            required: False
-        loopback0_ipv6_range:
-            description:
-            - Underlay Routing Loopback IPv6 Range
-            - Valid values: ipv6 network with prefix
-            - Default: fd00::a02:0/119
-            - NDFC label, Underlay Routing Loopback IPv6 Range
-            - NDFC tab, Resources
-            type: str
-            required: False
-        loopback1_ipv6_range:
-            description:
-            - Underlay VTEP Loopback IPv6 Range
-            - Typically Loopback1 and Anycast Loopback IPv6 Address Range
-            - Valid values: ipv6 network with prefix
-            - Default: fd00::a03:0/118
-            - NDFC label, Underlay VTEP Loopback IPv6 Range
-            - NDFC tab, Resources
-            type: str
-            required: False
-        macsec_algorithm:
-            - Configure Cipher Suite
-            - Valid values:
-              - 1 AES_128_CMAC
-              - 2 AES_256_CMAC
-            - NDFC label, MACsec Primary Cryptographic Algorithm
-            - NDFC tab, Advanced
-            type: int
-            required: When enable_macsec is True
-            default: ""
-        macsec_cipher_suite:
-            - Configure Cipher Suite
-            - Valid values:
-              - 1 GCM-AES-128
-              - 2 GCM-AES-256
-              - 3 GCM-AES-XPN-128
-              - 4 GCM-AES-XPN-256
-            - NDFC label, MACsec Cipher Suite
-            - NDFC tab, Advanced
-            type: int
-            required: When enable_macsec is True
-            default: ""
-        macsec_fallback_algorithm:
-            - Configure Cipher Suite
-            - Valid values:
-              - 1 AES_128_CMAC
-              - 2 AES_256_CMAC
-            - NDFC label, MACsec Fallback Cryptographic Algorithm
-            - NDFC tab, Advanced
-            type: int
-            required: When enable_macsec is True
-            default: ""
-        macsec_fallback_key_string:
-            - Cisco Type 7 Encrypted Octet String
-            - Must be 66 hex characters for AES_128_CMAC algorithm
-            - Must be 130 hex characters for AES_256_CMAC algorithm
-            - NDFC label, MACsec Fallback Key String
-            - NDFC tab, Advanced
-            type: str
-            required: When enable_macsec is True
-            default: ""
-        macsec_key_string:
-            - Cisco Type 7 Encrypted Octet String
-            - Must be 66 hex characters for AES_128_CMAC algorithm
-            - Must be 130 hex characters for AES_256_CMAC algorithm
-            - NDFC label, MACsec Primary Key String
-            - NDFC tab, Advanced
-            type: str
-            required: When enable_macsec is True
-            default: ""
-        macsec_report_timer:
-            - MACsec Operational Status periodic report timer in minutes
-            - Valid values: 5-60
-            - NDFC label, MACsec Status Report Timer
-            - NDFC tab, Advanced
-            type: int
-            required: When enable_macsec is True
-            default: ""
-        netflow_exporter_list:
-            description:
-            - List of dictionaries containing Netflow Exporter details
-            - NDFC label, Netflow Exporter
-            - NDFC tab, Flow Monitor
-            - Dictionary keys:
-                - EXPORTER_NAME: The name of the exporter
-                - IP: The IP address of the exporter
-                - VRF: The VRF in which the exporter resides
-                - UDP_PORT: The UDP port used by the exporter
-            type: list of dict
-            required: When enable_netflow is True
-        netflow_record_list:
-            description:
-            - List of dictionaries containing Netflow Record details
-            - NDFC label, Netflow Record
-            - NDFC tab, Flow Monitor
-            - Dictionary keys:
-                - RECORD_NAME: The name of the record
-                - RECORD_TEMPLATE: The template to use for the record
-                - LAYER2_RECORD: True or False.  If True, this is a layer-2 record.
-            type: list of dict
-            required: When enable_netflow is True
-        netflow_monitor_list:
-            description:
-            - List of dictionaries containing Netflow Exporter details
-            - NDFC label, Netflow Exporter
-            - NDFC tab, Flow Monitor
-            - Dictionary keys:
-                - MONITOR_NAME: The name of the monitor
-                - RECORD_NAME: The name of the netflow record. Must match RECORD_NAME in netflow_record_list.
-                - EXPORTER1: The name of the exporter for this monitor. Must match EXPORTER_NAME in netflow_exporter_list.
-            type: list of dict
-            required: When enable_netflow is True
-        nxapi_https_port:
-            description:
-            - HTTPS Port Number For NX-API
-            - Default 443
-            - NDFC label, NX-API HTTPS Port Number
-            - NDFC tab, Advanced
-            type: int
-            required: false
-        nxapi_http_port:
-            description:
-            - HTTPS Port Number For NX-API
-            - Default 80
-            - NDFC label, NX-API HTTP Port Number
-            - NDFC tab, Advanced
-            type: int
-            required: false
-        mgmt_gw:
-            description:
-            - Default Gateway For Management VRF On The Switch
-            - NDFC label, Switch Mgmt Default Gateway
-            - NDFC tab, Bootstrap
-            type: str
-            required: false
-        mgmt_prefix:
-            description:
-            - Min:8, Max:30
-            - NDFC label, Switch Mgmt IP Subnet Prefix
-            - NDFC tab, Bootstrap
-            type: int
-            required: false
-        mpls_handoff:
-            description:
-            - Enable (True) or disable (False) VXLAN to MPLS SR/LDP Handoff
-            - NDFC label, Enable MPLS Handoff
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: False
-        mpls_lb_id:
-            description:
-            - Min:0, Max:1023
-            - NDFC label, Underlay MPLS Loopback Id
-            - NDFC tab, Advanced
-            type: int
-            required: When mpls_handoff is True
-        mpls_loopback_ip_range:
-            description:
-            - Used for VXLAN to MPLS SR/LDP Handoff
-            - NDFC label, Underlay MPLS Loopback IP Range
-            - NDFC tab, Resources
-            type: str
-            required: When mpls_handoff is True
-        # TODO: Check if these are ND vs NDFC
-        # mso_connectivity_deployed:
-        # mso_controler_id:
-        # mso_site_group_name:
-        # mso_site_id:
-        mst_instance_range:
-            description:
-            - Vlan range for multi-instance spanning tree (mst).
-            - Example "0-3,5,7-9"
-            - Default No default via API ("0" via the NDFC GUI)
-            - NDFC label, MST Instance Range
-            - NDFC tab, Advanced
-            type: str
-            required: When stp_root_option is "mst"
-        multicast_group_subnet:
-            description:
-            - Multicast pool prefix between 8 to 30. A multicast group IP from this pool is used for BUM traffic for each overlay network.
-            - l3vni_mcast_group must reside within this pool.
-            - NDFC label, Multicast Group Subnet
-            - NDFC tab, Advanced
-            default: 239.1.1.0/25
-            type: str
-            required: False
-        ntp_server_ip_list:
-            description:
-            - List of NTP servers used by switches within the fabric
-            - Comma separated list of ipv4/ipv6 addresses
-            - Example "10.4.0.1,2001::1"
-            - NDFC label, NTP Server IPs
-            - NDFC tab, Manageability
-            type: str
-            required: false
-            default: ""
-        ntp_server_vrf:
-            description:
-            - List of VRFs in which the NTP server(s) in ntp_server_ip_list reside
-            - Comma separated list of VRF names
-            - If a single VRF is specified, it will be used for all NTP servers, else the number of VRFs must match the number of NTP servers
-            - NDFC label, NTP Server VRFs
-            - NDFC tab, Manageability
-            type: str
-            required: false
-            default: ""
-        pm_enable:
-            description:
-            - Enable (True) or disable (False) fabric performance monitoring
-            - NDFC label, Enable Performance Monitoring
-            - NDFC tab, General Parameters
-            type: bool
-            required: false
-            default: False
-        replication_mode:
-            description:
-            - Replication Mode for BUM Traffic
-            - NDFC label, Replication Mode
-            - NDFC tab, Replication
-            type: str
-            required: False
-            choices:
-            - Ingress
-            - Multicast
-            default: Multicast
-        router_id_range:
-            description:
-            - BGP Router ID Range for IPv6 Underlay
-            - NDFC label, BGP Router ID Range for IPv6 Underlay
-            - NDFC tab, Resources
-            - Default: 10.2.0.0/23
-            type: str
-            required: False
-        stp_bridge_priority:
-            description:
-            - Bridge priority for the spanning tree in increments of 4096.
-            - NDFC label, Spanning Tree Bridge Priority
-            - NDFC tab, Advanced
-            type: int
-            required: false
-            choices: [0, 4096, 8192, 12288, 16384, 20480, 24576, 28672, 32768, 36864, 40960, 45056, 49152, 53248, 57344, 61440]
-        stp_root_option:
-            description:
-            - Which protocol to use for configuring root bridge.
-            - NDFC label, Spanning Tree Root Bridge Protocol
-            - NDFC tab, Advanced
-            type: str
-            required: false
-            default: 0
-            choices:
-            - "mst" Multiple Spanning Tree
-            - "rpvst+" Rapid Per-VLAN Spanning Tree
-            - "unmanaged" (default) STP Root not managed by NDFC
-        stp_vlan_range:
-            description:
-            - Vlan range for rpvst+ spanning tree.
-            - Example "1,3-5,7,9-11"
-            - No default via API ("1-3967" via the NDFC GUI)
-            - NDFC label, Spanning Tree VLAN Range
-            - NDFC tab, Advanced
-            type: str
-            required: When stp_root_option is "rpvst+"
-        strict_cc_mode:
-            description:
-            - Enable (True) or disable (False) bi-directional compliance checks to flag additional configs in the running config that are not in the intent/expected config
-            - NDFC label, Enable Strict Config Compliance
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: False
-        subinterface_range:
-            description:
-            - Per Border Dot1q Range For VRF Lite Connectivity
-            - Min 2, Max 4093
-            - Example "2-511"
-            - NDFC label, Subinterface Dot1q Range
-            - NDFC tab, Resources
-            type: str
-        subnet_range:
-            description:
-            - Address range to assign Numbered and Peer Link SVI IPs
-            - Example "10.4.0.0/16"
-            - NDFC label, Underlay Subnet IP Range
-            - NDFC tab, Resources
-            type: str
-        subnet_target_mask:
-            description:
-            - Mask (prefix) for Underlay Subnet IP Range
-            - Min: 30, Max 31
-            - Default 30
-            - Example 31
-            - NDFC label, Underlay Subnet IP Mask
-            - NDFC tab, General Parameters
-            type: int
-        syslog_server_ip_list:
-            description:
-            - Comma separated list of IP Addresses(v4/v6)
-            - Example "10.4.0.1,2001::1"
-            - NDFC label, Syslog Server IPs
-            - NDFC tab, Manageability
-            type: str
-        syslog_server_vrf:
-            description:
-            - List of VRFs in which the Syslog server(s) in syslog_server_ip_list reside
-            - Comma separated list of VRF names
-            - If a single VRF is specified, it will be used for all Syslog servers, else the number of VRFs must match the number of Syslog servers
-            - Example "management,default"
-            - NDFC label, Syslog Server VRFs
-            - NDFC tab, Manageability
-            type: str
-        syslog_sev:
-            description:
-            - Comma separated list of Syslog severity values, one per Syslog server
-            - Min:0, Max:7
-            - Example "0,4,7"
-            - NDFC label, Syslog Server Severity
-            - NDFC tab, Manageability
-            type: str
-        tcam_allocation:
-            description:
-            - Enable (True) or disable (False) auto-generation of TCAM commands for VxLAN and vPC Fabric Peering
-            - NDFC label, Enable TCAM Allocation
-            - NDFC tab, Advanced
-            type: bool
-            required: false
-            default: True
-        underlay_is_v6:
-            description:
-            - Enable (True) or disable (False) IpV6 Underlay Addressing
-            - NDFC label, Enable IPv6 Underlay
-            - NDFC tab, General Parameters
-            type: bool
-            required: false
-            default: False
-        use_link_local:
-            description:
-            - Enable (True) or disable (False) IPv6 link-local addressing for Spine-Leaf interfaces
-            - NDFC label, Enable IPv6 Link-Local Address
-            - NDFC tab, General Parameters
-            type: bool
-            required: false
-            default: True (when underlay_is_v6 is True)
-        v6_subnet_range:
-            description:
-            - IPv6 Address range to assign Numbered and Peer Link SVI IPs
-            - Valid values: ipv6 network with prefix
-            - Default: fd00::a03:0/118 (when use_link_local is True)
-            - Default: fd00::a04:0/112 (when use_link_local is False)
-            - NDFC label, Underlay Subnet IPv6 Range
-            - NDFC tab, Resources
-            type: str
-            required: False
-        v6_subnet_target_mask:
-            description:
-            - Mask (prefix) for IPv6 Underlay Subnet
-            - Min: 126, Max 127
-            - Default 126
-            - Example 127
-            - NDFC label, Underlay Subnet IPv6 Mask
-            - NDFC tab, General Parameters
-            type: int
-            required: False
-        vrf_lite_autoconfig:
-            description:
-            - VRF Lite Inter-Fabric Connection Deployment Options.
-            - If (0), VRF Lite configuration is Manual.
-            - If (1), VRF Lite IFCs are auto created between border devices of two Easy Fabrics
-            - If (1), VRF Lite IFCs are auto created between border devices in Easy Fabric and edge routers in External Fabric.
-            - The IP address is taken from the 'VRF Lite Subnet IP Range' pool.
-            - NDFC label, VRF Lite Deployment
-            - NDFC tab, Resources
-            type: int
-            required: false
-            default: 0
-            choices:
-            - 0
-            - 1
+            aaa_remote_ip_enabled:
+                description:
+                - Enable (True) or disable (False) AAA IP Authorization
+                - Enable only when IP Authorization is enabled on the AAA Server
+                - NDFC label, Enable AAA IP Authorization
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: False
+            aaa_server_conf:
+                description:
+                - AAA Configurations
+                - NDFC label, AAA Freeform Config
+                - NDFC tab, Manageability
+                type: str
+                required: false
+                default: "2020.0000.00aa"
+            advertise_pip_bgp:
+                description:
+                - Enable (True) or disable (False) usage of Primary VTEP IP Advertisement As Next-Hop Of Prefix Routes
+                - NDFC label, vPC advertise-pip
+                - NDFC tab, VPC
+                type: bool
+                required: false
+                default: False
+            anycast_bgw_advertise_pip:
+                description:
+                - Enable (True) or disable (False) advertising Anycast Border Gateway PIP as VTEP.
+                - Effective after Recalculate Config on parent MSD fabric.
+                - NDFC label, Anycast Border Gateway advertise-pip
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: False
+            anycast_gw_mac:
+                description:
+                - Shared MAC address for all leafs (xx:xx:xx:xx:xx:xx, xxxx.xxxx.xxxx, etc)
+                - NDFC label, Anycast Gateway MAC
+                - NDFC tab, General Parameters
+                type: str
+                required: false
+                default: "2020.0000.00aa"
+            anycast_lb_id:
+                description:
+                - Underlay Anycast Loopback Id
+                - NDFC label, Underlay Anycast Loopback Id
+                - NDFC tab, Protocols
+                type: int
+                required: false
+                default: ""
+            anycast_rp_ip_range:
+                description:
+                - Anycast or Phantom RP IP Address Range
+                - NDFC label, Underlay RP Loopback IP Range
+                - NDFC tab, Resources
+                type: str
+                required: false
+                default: 10.254.254.0/24
+            auto_symmetric_default_vrf:
+                description:
+                - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on managed neighbor devices.
+                - If True, auto created VRF Lite IFC links will have 'Auto Deploy Default VRF for Peer' enabled.
+                - vrf_lite_autoconfig must be set to 1
+                - auto_symmetric_vrf_lite must be set to True
+                - auto_vrflite_ifc_default_vrf must be set to True
+                - NDFC label: Auto Deploy Default VRF for Peer
+                - NDFC tab: Resources
+                type: bool
+                required: false
+                default: False
+            auto_symmetric_vrf_lite:
+                description:
+                - Enable (True) or disable (False) auto generation of Whether to auto generate VRF LITE sub-interface and BGP peering configuration on managed neighbor devices.
+                - If True, auto created VRF Lite IFC links will have 'Auto Deploy for Peer' enabled.
+                - NDFC label, Auto Deploy for Peer
+                - NDFC tab, Resources
+                - vrf_lite_autoconfig must be set to 1
+                type: bool
+                required: false
+                default: False
+            auto_vrflite_ifc_default_vrf:
+                description:
+                - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on VRF LITE IFC auto deployment.
+                - If True, auto created VRF Lite IFC links will have 'Auto Deploy Default VRF' enabled.
+                - NDFC label, Auto Deploy Default VRF
+                - NDFC tab, Resources
+                - vrf_lite_autoconfig must be set to 1
+                type: bool
+                required: false
+                default: False
+            banner:
+                description:
+                - Message of the Day (motd) banner. Delimiter char (very first char is delimiter char) followed by message ending with delimiter
+                - NDFC label, Banner
+                - NDFC tab, Manageability
+                - Example: ^This is a banner^
+                type: str
+                required: false
+                default: ""
+                version_added: 12.1.3f
+            bfd_auth_enable:
+                description:
+                - Enable (True) or disable (False) BGP Authentication
+                - Valid for P2P Interfaces only
+                - NDFC label, Enable BFD Authentication
+                - NDFC tab, Protocols
+                type: bool
+                required: false
+                default: False
+            bfd_auth_key:
+                description:
+                - Encrypted SHA1 secret value
+                - NDFC label, BFD Authentication Key
+                - NDFC tab, Protocols
+                type: str
+                required: false
+            bfd_auth_key_id:
+                description:
+                - Encrypted SHA1 secret value
+                - NDFC label, BFD Authentication Key ID
+                - NDFC tab, Protocols
+                type: str
+                required: false
+            bfd_enable:
+                description:
+                - Enable (True) or disable (False) BFD
+                - Valid for IPv4 Underlay only
+                - NDFC label, Enable BFD
+                - NDFC tab, Protocols
+                type: bool
+                required: false
+                default: False
+            bfd_ibgp_enable:
+                description:
+                - Enable (True) or disable (False) BFD for iBGP
+                - Valid for IPv4 Underlay only
+                - NDFC label, Enable BFD For iBGP
+                - NDFC tab, Protocols
+                type: bool
+                required: false
+                default: False
+            bfd_isis_enable:
+                description:
+                - Enable (True) or disable (False) BFD for ISIS
+                - Valid for IPv4 Underlay only
+                - NDFC label, Enable BFD For ISIS
+                - NDFC tab, Protocols
+                type: bool
+                required: false
+                default: False
+            bfd_ospf_enable:
+                description:
+                - Enable (True) or disable (False) BFD for OSPF
+                - Valid for IPv4 Underlay only
+                - NDFC label, Enable BFD For OSPF
+                - NDFC tab, Protocols
+                type: bool
+                required: false
+                default: False
+            bfd_pim_enable:
+                description:
+                - Enable (True) or disable (False) BFD for PIM
+                - Valid for IPv4 Underlay only
+                - NDFC label, Enable BFD For PIM
+                - NDFC tab, Protocols
+                type: bool
+                required: false
+                default: False
+            bgp_as:
+                description:
+                - The fabric BGP Autonomous System number
+                - NDFC label, BGP ASN
+                - NDFC tab, General Parameters
+                type: str
+                required: true
+            bgp_auth_enable:
+                description:
+                - Enable (True) or disable (False) BGP Authentication
+                - NDFC label, Enable BGP Authentication
+                - NDFC tab, Protocols
+                type: bool
+                required: false
+                default: False
+            bgp_auth_key:
+                description:
+                - Encrypted BGP Authentication Key based on type
+                - NDFC label, BGP Authentication Key
+                - NDFC tab, Protocols
+                type: str
+                required: false
+            bgp_auth_key_type:
+                description:
+                - BGP Key Encryption Type: 3 - 3DES, 7 - Cisco
+                - NDFC label, BGP Authentication Key Encryption Type
+                - NDFC tab, Protocols
+                type: str
+                required: false
+            bgp_lb_id:
+                description:
+                - (Min:0, Max:1023)
+                - NDFC label, Underlay Routing Loopback Id
+                - NDFC tab, Protocols
+                type: int
+                required: false
+                default: 0
+            bgp_auth_enable:
+                description:
+                - Enable (True) or disable (False) Automatic IP Assignment For POAP
+                - NDFC label, Enable Bootstrap
+                - NDFC tab, Bootstrap
+                type: bool
+                required: false
+                default: False
+            bootstrap_conf:
+                description:
+                - Additional CLIs required during device bootup/login e.g. AAA/Radius
+                - NDFC label, Bootstrap Freeform Config
+                - NDFC tab, Bootstrap
+                type: str
+                required: false
+            bootstrap_enable:
+                description:
+                - Automatic IP Assignment For POAP
+                - NDFC label, Enable Bootstrap
+                - NDFC tab, Bootstrap
+                type: bool
+                required: false
+                default: False
+            bootstrap_multisubnet:
+                description:
+                - DHCPv4 Multi Subnet Scope
+                - lines with # prefix are ignored here
+                - Enter One Subnet Scope per line.
+                - Start_IP, End_IP, Gateway, Prefix
+                - e.g.
+                - 10.6.0.2, 10.6.0.9, 10.6.0.1, 24
+                - # This is a comment
+                - 10.7.0.2, 10.7.0.9, 10.7.0.1, 24
+                - NDFC label, DHCPv4 Multi Subnet Scope
+                - NDFC tab, Bootstrap
+                type: str
+                required: false
+                default: False
+            brfield_debug_flag:
+                description:
+                - Valid values: Disable, Enable
+                - NDFC label, ??
+                - NDFC tab, ??
+                type: str
+                required: False
+                default: Disable
+            brownfield_network_name_format:
+                description:
+                - Brownfield Overlay Network Name Format
+                - Generated network name should be < 64 characters
+                - NDFC label, Brownfield Overlay Network Name Format
+                - NDFC tab, Advanced
+                type: str
+                required: False
+                default: "Auto_Net_VNI$$VNI$$_VLAN$$VLAN_ID$$"
+            brownfield_skip_overlay_network_attachments:
+                description:
+                - Enable (True) or disable (False) skipping overlay network interface attachments for Brownfield and Host Port Resync cases
+                - NDFC label, Skip Overlay Network Interface Attachments
+                - NDFC tab, Advanced
+                type: bool
+                required: False
+                default: False
+            cdp_enable:
+                description:
+                - Enable (True) or disable (False) CDP on management interface 
+                - NDFC label, Enable CDP for Bootstrapped Switch
+                - NDFC tab, Advanced
+                type: bool
+                required: False
+                default: False
+            copp_policy:
+                description:
+                type: str
+                - Fabric Wide CoPP Policy
+                - Customized CoPP policy should be provided when 'manual' is selected 
+                - NDFC label, CoPP Profile
+                - NDFC tab, Advanced
+                required: False
+                default: strict
+                choices: dense, lenient, manual, moderate, strict
+            dci_subnet_range:
+                description:
+                - Address range to assign P2P Interfabric Connections
+                - NDFC label, VRF Lite Subnet IP Range
+                - NDFC tab, Resources
+                type: str
+                required: False
+                default: 10.33.0.0/16
+            dci_subnet_target_mask:
+                description:
+                - Prefix length for P2P Interfabric Connections
+                - Min:8, Max:31
+                - NDFC label, VRF Lite Subnet Mask
+                - NDFC tab, Resources
+                type: int
+                required: False
+                default: 30
+            default_pvlan_sec_network:
+                description:
+                - Default PVLAN Secondary Network Template
+                - NDFC label, PVLAN Secondary Network Template
+                - NDFC tab, Advanced
+                type: str
+                required: False
+                default: Pvlan_Secondary_Network
+            default_queuing_policy_cloudscale:
+                description:
+                - Queuing Policy for all 92xx, -EX, -FX, -FX2, -FX3, -GX series switches in the fabric
+                - NDFC label, N9K Cloud Scale Platform Queuing Policy
+                - NDFC tab, Advanced
+                type: str
+                required: False
+                choices: queuing_policy_default_8q_cloudscale, queuing_policy_default_4q_cloudscale
+            default_queuing_policy_other:
+                description:
+                - Queuing Policy for all other switches in the fabric
+                - NDFC label, Other N9K Platform Queuing Policy
+                - NDFC tab, Advanced
+                type: str
+                required: False
+                choices: queuing_policy_default_other
+            default_queuing_policy_r_series:
+                description:
+                - Queuing Policy for all R-Series switches in the fabric
+                - NDFC label, N9K R-Series Platform Queuing Policy
+                - NDFC tab, Advanced
+                type: str
+                required: False
+                choices: queuing_policy_default_r_series
+            default_vrf_redis_bgp_rmap:
+                description:
+                - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
+                - NDFC label, Redistribute BGP Route-map Name
+                - NDFC tab, Resources
+                type: str
+                required: false, unless auto_vrflite_ifc_default_vrf is set to True
+            deployment_freeze:
+                description:
+                - Enable (True) or disable (False) Fabric Deployment
+                - NDFC label, None
+                - NDFC tab, None
+                - Fabric deployment is enabled/disabled in the NDFC GUI by right-clicking on a fabric and selecting 'More... Deployment Enable/Disable'
+                type: bool
+                required: false
+                default: False
+            dhcp_enable:
+                description:
+                - Automatic IP Assignment For POAP From Local DHCP Server
+                - NDFC label, Enable Local DHCP Server
+                - NDFC tab, Bootstrap
+                type: bool
+                required: false
+                default: False
+            dhcp_end:
+                description:
+                - End Address For Switch POAP
+                - NDFC label, DHCP Scope End Address
+                - NDFC tab, Bootstrap
+                type: str
+                required: false
+                default: ""
+            dhcp_ipv6_enable:
+                description:
+                - The DHCP version to use when DHCP is enabled
+                - This has nothing to do with ipv6 and is not a boolean
+                - Valid value: DHCPv4
+                - NDFC label, DHCP Version
+                - NDFC tab, Bootstrap
+                type: str
+                required: false
+                default: ""
+            dhcp_start:
+                description:
+                - Start Address For Switch POAP
+                - NDFC label, DHCP Scope Start Address
+                - NDFC tab, Bootstrap
+                type: str
+                required: false
+                default: ""
+            dns_server_ip_list:
+                description:
+                - List of DNS servers used by switches within the fabric
+                - Comma separated list of ipv4/ipv6 addresses
+                - Example "10.4.0.1,2001::1"
+                - NDFC label, DNS Server IPs
+                - NDFC tab, Manageability
+                type: str
+                required: false
+                default: ""
+            dns_server_vrf:
+                description:
+                - List of VRFs in which the DNS server(s) in dns_server_ip_list reside
+                - Comma separated list of VRF names
+                - If a single VRF is specified, it will be used for all DNS servers, else the number of VRFs must match the number of DNS servers
+                - NDFC label, DNS Server VRFs
+                - NDFC tab, Manageability
+                type: str
+                required: false
+                default: ""
+            enable_aaa:
+                description:
+                - Include AAA configs from Manageability tab during device bootup
+                - NDFC label, Enable AAA Config
+                - NDFC tab, Bootstrap
+                type: bool
+                required: false
+                default: False
+            enable_agent:
+                description:
+                - ??
+                - NDFC label, ??
+                - NDFC tab, ??
+                type: bool
+                required: false
+                default: False
+            enable_default_queuing_policy:
+                description:
+                - Enable (True) or disable (False) Default Queuing Policies
+                - NDFC label, Enable Default Queuing Policies
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: False
+            enable_fabric_vpc_domain_id:
+                description:
+                - Enable (True) or disable (False) the same vPC Domain Id for all vPC Pairs
+                - Not recommended
+                - NDFC label, Enable the same vPC Domain Id for all vPC Pairs
+                - NDFC tab, vPC
+                type: bool
+                required: false
+                default: True
+            enable_macsec:
+                description:
+                - Enable (True) or disable (False) MACsec in the fabric
+                - NDFC label, Enable MACsec
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: False
+            enable_netflow:
+                description:
+                - Enable (True) or disable (False) Netflow on VTEPs
+                - NDFC label, Enable Netflow
+                - NDFC tab, Flow Monitor
+                type: bool
+                required: false
+                default: False
+            enable_ngoam:
+                description:
+                - Enable (True) or disable (False) the Next Generation (NG) OAM feature for all switches in the fabric to aid in trouble-shooting VXLAN EVPN fabrics
+                - NDFC label, Enable VXLAN OAM
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: True
+            enable_nxapi:
+                description:
+                - Enable (True) or disable (False) HTTPS NX-API
+                - NDFC label, Enable NX-API
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: True
+            enable_nxapi_http:
+                description:
+                - Enable (True) or disable (False) HTTP NX-API
+                - NDFC label, Enable HTTP NX-API
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: True
+            enable_pbr:
+                description:
+                - Enable (True) or disable (False) PBR or ePBR
+                - NDFC label, Enable Policy-Based Routing (PBR)/Enhanced PBR (ePBR)
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: False
+            enable_pvlan:
+                description:
+                - Enable (True) or disable (False) Private VLAN (PVLAN) Enable PVLAN on switches except spines and super spines
+                - NDFC label, Enable Private VLAN (PVLAN)
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: False
+            enable_tenant_dhcp:
+                description:
+                - Enable (True) or disable (False) Tenant DHCP
+                - NDFC label, Enable Tenant DHCP
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: True
+            enable_trm:
+                description:
+                - Enable (True) or disable (False) Overlay Multicast Support In VXLAN Fabrics
+                - NDFC label, Enable Tenant Routed Multicast (TRM)
+                - NDFC tab, Replication
+                type: bool
+                required: false
+                default: False
+            esr_option:
+                description:
+                - Choose between Policy-Based Routing (PBR) or Enhanced PBR (ePBR)
+                - Determines whether PBR or ePBR is used when enable_pbr is True
+                - NDFC label, Elastic Services Re-direction (ESR) Options
+                - NDFC tab, Advanced
+                - Valid values: PBR, ePBR
+                type: str
+                required: false
+                default: PBR
+            fabric_name:
+                description:
+                - The name of the fabric
+                type: str
+                required: true
+            fabric_vpc_domain_id:
+                description:
+                - vPC Domain Id to be used on all vPC pairs
+                - NDFC label, vPC Domain Id
+                - NDFC tab, vPC
+                - Min:1, Max:1000
+                type: str
+                required: true
+            grfield_debug_flag:
+                description:
+                - Switch Cleanup Without Reload When PreserveConfig=no
+                - Valid values: Disable, Enable
+                - NDFC label, Greenfield Cleanup Option
+                - NDFC tab, Advanced
+                type: str
+                required: False
+                default: Disable
+            l3vni_mcast_group:
+                description:
+                - Default Underlay Multicast group IP assigned for every overlay VRF
+                - Valid values: ipv4 multicast address
+                - Default value is applied if enable_trm is True if not set in the playbook.
+                - Default: 239.1.1.0
+                - NDFC label, Default MDT Address for TRM VRFs
+                - NDFC tab, Replication
+                type: str
+                required: False
+            loopback0_ipv6_range:
+                description:
+                - Underlay Routing Loopback IPv6 Range
+                - Valid values: ipv6 network with prefix
+                - Default: fd00::a02:0/119
+                - NDFC label, Underlay Routing Loopback IPv6 Range
+                - NDFC tab, Resources
+                type: str
+                required: False
+            loopback1_ipv6_range:
+                description:
+                - Underlay VTEP Loopback IPv6 Range
+                - Typically Loopback1 and Anycast Loopback IPv6 Address Range
+                - Valid values: ipv6 network with prefix
+                - Default: fd00::a03:0/118
+                - NDFC label, Underlay VTEP Loopback IPv6 Range
+                - NDFC tab, Resources
+                type: str
+                required: False
+            macsec_algorithm:
+                - Configure Cipher Suite
+                - Valid values:
+                - 1 AES_128_CMAC
+                - 2 AES_256_CMAC
+                - NDFC label, MACsec Primary Cryptographic Algorithm
+                - NDFC tab, Advanced
+                type: int
+                required: When enable_macsec is True
+                default: ""
+            macsec_cipher_suite:
+                - Configure Cipher Suite
+                - Valid values:
+                - 1 GCM-AES-128
+                - 2 GCM-AES-256
+                - 3 GCM-AES-XPN-128
+                - 4 GCM-AES-XPN-256
+                - NDFC label, MACsec Cipher Suite
+                - NDFC tab, Advanced
+                type: int
+                required: When enable_macsec is True
+                default: ""
+            macsec_fallback_algorithm:
+                - Configure Cipher Suite
+                - Valid values:
+                - 1 AES_128_CMAC
+                - 2 AES_256_CMAC
+                - NDFC label, MACsec Fallback Cryptographic Algorithm
+                - NDFC tab, Advanced
+                type: int
+                required: When enable_macsec is True
+                default: ""
+            macsec_fallback_key_string:
+                - Cisco Type 7 Encrypted Octet String
+                - Must be 66 hex characters for AES_128_CMAC algorithm
+                - Must be 130 hex characters for AES_256_CMAC algorithm
+                - NDFC label, MACsec Fallback Key String
+                - NDFC tab, Advanced
+                type: str
+                required: When enable_macsec is True
+                default: ""
+            macsec_key_string:
+                - Cisco Type 7 Encrypted Octet String
+                - Must be 66 hex characters for AES_128_CMAC algorithm
+                - Must be 130 hex characters for AES_256_CMAC algorithm
+                - NDFC label, MACsec Primary Key String
+                - NDFC tab, Advanced
+                type: str
+                required: When enable_macsec is True
+                default: ""
+            macsec_report_timer:
+                - MACsec Operational Status periodic report timer in minutes
+                - Valid values: 5-60
+                - NDFC label, MACsec Status Report Timer
+                - NDFC tab, Advanced
+                type: int
+                required: When enable_macsec is True
+                default: ""
+            netflow_exporter_list:
+                description:
+                - List of dictionaries containing Netflow Exporter details
+                - NDFC label, Netflow Exporter
+                - NDFC tab, Flow Monitor
+                - Dictionary keys:
+                    - EXPORTER_NAME: The name of the exporter
+                    - IP: The IP address of the exporter
+                    - VRF: The VRF in which the exporter resides
+                    - UDP_PORT: The UDP port used by the exporter
+                type: list of dict
+                required: When enable_netflow is True
+            netflow_record_list:
+                description:
+                - List of dictionaries containing Netflow Record details
+                - NDFC label, Netflow Record
+                - NDFC tab, Flow Monitor
+                - Dictionary keys:
+                    - RECORD_NAME: The name of the record
+                    - RECORD_TEMPLATE: The template to use for the record
+                    - LAYER2_RECORD: True or False.  If True, this is a layer-2 record.
+                type: list of dict
+                required: When enable_netflow is True
+            netflow_monitor_list:
+                description:
+                - List of dictionaries containing Netflow Exporter details
+                - NDFC label, Netflow Exporter
+                - NDFC tab, Flow Monitor
+                - Dictionary keys:
+                    - MONITOR_NAME: The name of the monitor
+                    - RECORD_NAME: The name of the netflow record. Must match RECORD_NAME in netflow_record_list.
+                    - EXPORTER1: The name of the exporter for this monitor. Must match EXPORTER_NAME in netflow_exporter_list.
+                type: list of dict
+                required: When enable_netflow is True
+            nxapi_https_port:
+                description:
+                - HTTPS Port Number For NX-API
+                - Default 443
+                - NDFC label, NX-API HTTPS Port Number
+                - NDFC tab, Advanced
+                type: int
+                required: false
+            nxapi_http_port:
+                description:
+                - HTTPS Port Number For NX-API
+                - Default 80
+                - NDFC label, NX-API HTTP Port Number
+                - NDFC tab, Advanced
+                type: int
+                required: false
+            mgmt_gw:
+                description:
+                - Default Gateway For Management VRF On The Switch
+                - NDFC label, Switch Mgmt Default Gateway
+                - NDFC tab, Bootstrap
+                type: str
+                required: false
+            mgmt_prefix:
+                description:
+                - Min:8, Max:30
+                - NDFC label, Switch Mgmt IP Subnet Prefix
+                - NDFC tab, Bootstrap
+                type: int
+                required: false
+            mpls_handoff:
+                description:
+                - Enable (True) or disable (False) VXLAN to MPLS SR/LDP Handoff
+                - NDFC label, Enable MPLS Handoff
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: False
+            mpls_lb_id:
+                description:
+                - Min:0, Max:1023
+                - NDFC label, Underlay MPLS Loopback Id
+                - NDFC tab, Advanced
+                type: int
+                required: When mpls_handoff is True
+            mpls_loopback_ip_range:
+                description:
+                - Used for VXLAN to MPLS SR/LDP Handoff
+                - NDFC label, Underlay MPLS Loopback IP Range
+                - NDFC tab, Resources
+                type: str
+                required: When mpls_handoff is True
+            # TODO: Check if these are ND vs NDFC
+            # mso_connectivity_deployed:
+            # mso_controler_id:
+            # mso_site_group_name:
+            # mso_site_id:
+            mst_instance_range:
+                description:
+                - Vlan range for multi-instance spanning tree (mst).
+                - Example "0-3,5,7-9"
+                - Default No default via API ("0" via the NDFC GUI)
+                - NDFC label, MST Instance Range
+                - NDFC tab, Advanced
+                type: str
+                required: When stp_root_option is "mst"
+            multicast_group_subnet:
+                description:
+                - Multicast pool prefix between 8 to 30. A multicast group IP from this pool is used for BUM traffic for each overlay network.
+                - l3vni_mcast_group must reside within this pool.
+                - NDFC label, Multicast Group Subnet
+                - NDFC tab, Advanced
+                default: 239.1.1.0/25
+                type: str
+                required: False
+            ntp_server_ip_list:
+                description:
+                - List of NTP servers used by switches within the fabric
+                - Comma separated list of ipv4/ipv6 addresses
+                - Example "10.4.0.1,2001::1"
+                - NDFC label, NTP Server IPs
+                - NDFC tab, Manageability
+                type: str
+                required: false
+                default: ""
+            ntp_server_vrf:
+                description:
+                - List of VRFs in which the NTP server(s) in ntp_server_ip_list reside
+                - Comma separated list of VRF names
+                - If a single VRF is specified, it will be used for all NTP servers, else the number of VRFs must match the number of NTP servers
+                - NDFC label, NTP Server VRFs
+                - NDFC tab, Manageability
+                type: str
+                required: false
+                default: ""
+            pm_enable:
+                description:
+                - Enable (True) or disable (False) fabric performance monitoring
+                - NDFC label, Enable Performance Monitoring
+                - NDFC tab, General Parameters
+                type: bool
+                required: false
+                default: False
+            replication_mode:
+                description:
+                - Replication Mode for BUM Traffic
+                - NDFC label, Replication Mode
+                - NDFC tab, Replication
+                type: str
+                required: False
+                choices:
+                - Ingress
+                - Multicast
+                default: Multicast
+            router_id_range:
+                description:
+                - BGP Router ID Range for IPv6 Underlay
+                - NDFC label, BGP Router ID Range for IPv6 Underlay
+                - NDFC tab, Resources
+                - Default: 10.2.0.0/23
+                type: str
+                required: False
+            stp_bridge_priority:
+                description:
+                - Bridge priority for the spanning tree in increments of 4096.
+                - NDFC label, Spanning Tree Bridge Priority
+                - NDFC tab, Advanced
+                type: int
+                required: false
+                choices: [0, 4096, 8192, 12288, 16384, 20480, 24576, 28672, 32768, 36864, 40960, 45056, 49152, 53248, 57344, 61440]
+            stp_root_option:
+                description:
+                - Which protocol to use for configuring root bridge.
+                - NDFC label, Spanning Tree Root Bridge Protocol
+                - NDFC tab, Advanced
+                type: str
+                required: false
+                default: 0
+                choices:
+                - "mst" Multiple Spanning Tree
+                - "rpvst+" Rapid Per-VLAN Spanning Tree
+                - "unmanaged" (default) STP Root not managed by NDFC
+            stp_vlan_range:
+                description:
+                - Vlan range for rpvst+ spanning tree.
+                - Example "1,3-5,7,9-11"
+                - No default via API ("1-3967" via the NDFC GUI)
+                - NDFC label, Spanning Tree VLAN Range
+                - NDFC tab, Advanced
+                type: str
+                required: When stp_root_option is "rpvst+"
+            strict_cc_mode:
+                description:
+                - Enable (True) or disable (False) bi-directional compliance checks to flag additional configs in the running config that are not in the intent/expected config
+                - NDFC label, Enable Strict Config Compliance
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: False
+            subinterface_range:
+                description:
+                - Per Border Dot1q Range For VRF Lite Connectivity
+                - Min 2, Max 4093
+                - Example "2-511"
+                - NDFC label, Subinterface Dot1q Range
+                - NDFC tab, Resources
+                type: str
+            subnet_range:
+                description:
+                - Address range to assign Numbered and Peer Link SVI IPs
+                - Example "10.4.0.0/16"
+                - NDFC label, Underlay Subnet IP Range
+                - NDFC tab, Resources
+                type: str
+            subnet_target_mask:
+                description:
+                - Mask (prefix) for Underlay Subnet IP Range
+                - Min: 30, Max 31
+                - Default 30
+                - Example 31
+                - NDFC label, Underlay Subnet IP Mask
+                - NDFC tab, General Parameters
+                type: int
+            syslog_server_ip_list:
+                description:
+                - Comma separated list of IP Addresses(v4/v6)
+                - Example "10.4.0.1,2001::1"
+                - NDFC label, Syslog Server IPs
+                - NDFC tab, Manageability
+                type: str
+            syslog_server_vrf:
+                description:
+                - List of VRFs in which the Syslog server(s) in syslog_server_ip_list reside
+                - Comma separated list of VRF names
+                - If a single VRF is specified, it will be used for all Syslog servers, else the number of VRFs must match the number of Syslog servers
+                - Example "management,default"
+                - NDFC label, Syslog Server VRFs
+                - NDFC tab, Manageability
+                type: str
+            syslog_sev:
+                description:
+                - Comma separated list of Syslog severity values, one per Syslog server
+                - Min:0, Max:7
+                - Example "0,4,7"
+                - NDFC label, Syslog Server Severity
+                - NDFC tab, Manageability
+                type: str
+            tcam_allocation:
+                description:
+                - Enable (True) or disable (False) auto-generation of TCAM commands for VxLAN and vPC Fabric Peering
+                - NDFC label, Enable TCAM Allocation
+                - NDFC tab, Advanced
+                type: bool
+                required: false
+                default: True
+            underlay_is_v6:
+                description:
+                - Enable (True) or disable (False) IpV6 Underlay Addressing
+                - NDFC label, Enable IPv6 Underlay
+                - NDFC tab, General Parameters
+                type: bool
+                required: false
+                default: False
+            use_link_local:
+                description:
+                - Enable (True) or disable (False) IPv6 link-local addressing for Spine-Leaf interfaces
+                - NDFC label, Enable IPv6 Link-Local Address
+                - NDFC tab, General Parameters
+                type: bool
+                required: false
+                default: True (when underlay_is_v6 is True)
+            v6_subnet_range:
+                description:
+                - IPv6 Address range to assign Numbered and Peer Link SVI IPs
+                - Valid values: ipv6 network with prefix
+                - Default: fd00::a03:0/118 (when use_link_local is True)
+                - Default: fd00::a04:0/112 (when use_link_local is False)
+                - NDFC label, Underlay Subnet IPv6 Range
+                - NDFC tab, Resources
+                type: str
+                required: False
+            v6_subnet_target_mask:
+                description:
+                - Mask (prefix) for IPv6 Underlay Subnet
+                - Min: 126, Max 127
+                - Default 126
+                - Example 127
+                - NDFC label, Underlay Subnet IPv6 Mask
+                - NDFC tab, General Parameters
+                type: int
+                required: False
+            vrf_lite_autoconfig:
+                description:
+                - VRF Lite Inter-Fabric Connection Deployment Options.
+                - If (0), VRF Lite configuration is Manual.
+                - If (1), VRF Lite IFCs are auto created between border devices of two Easy Fabrics
+                - If (1), VRF Lite IFCs are auto created between border devices in Easy Fabric and edge routers in External Fabric.
+                - The IP address is taken from the 'VRF Lite Subnet IP Range' pool.
+                - NDFC label, VRF Lite Deployment
+                - NDFC tab, Resources
+                type: int
+                required: false
+                default: 0
+                choices:
+                - 0
+                - 1
 
 """
 
