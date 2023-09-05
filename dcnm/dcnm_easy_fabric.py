@@ -669,6 +669,26 @@ options:
                 ndfc_gui_section: Advanced
                 required: false
                 type: str
+            fabric_interface_type:
+                choices:
+                - p2p
+                - unnumbered
+                default: p2p
+                description:
+                - Numbered(Point-to-Point) or Unnumbered
+                ndfc_gui_label: Fabric Interface Numbering
+                required: true
+                type: str
+            fabric_mtu:
+                default: 9216
+                description:
+                - (Min:576, Max:9216). Must be an even number
+                max: 9216
+                min: 576
+                ndfc_gui_label: Intra Fabric Interface MTU
+                ndfc_gui_section: Advanced
+                required: true
+                type: int
             fabric_name:
                 description:
                 - The name of the fabric
@@ -1563,10 +1583,27 @@ class DcnmFabric:
                 choices=["ePBR", "PBR"],
             )
         )
-        params_spec.update(extra_conf_intra_links=dict(required=True, type="str"))
-        params_spec.update(extra_conf_leaf=dict(required=True, type="str"))
-        params_spec.update(extra_conf_spine=dict(required=True, type="str"))
-        params_spec.update(extra_conf_tor=dict(required=True, type="str"))
+        params_spec.update(extra_conf_intra_links=dict(required=False, type="str"))
+        params_spec.update(extra_conf_leaf=dict(required=False, type="str"))
+        params_spec.update(extra_conf_spine=dict(required=False, type="str"))
+        params_spec.update(extra_conf_tor=dict(required=False, type="str"))
+        params_spec.update(
+            fabric_interface_type=dict(
+                required=False,
+                type="str",
+                default="p2p",
+                choices=["p2p", "unnumbered"],
+            )
+        )
+        params_spec.update(
+            fabric_mtu=dict(
+                required=False,
+                type="int",
+                default="",
+                range_min=576,
+                range_max=9216,
+            )
+        )
         params_spec.update(fabric_name=dict(required=True, type="str"))
         params_spec.update(
             fabric_vpc_domain_id=dict(

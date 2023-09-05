@@ -219,6 +219,23 @@ class VerifyFabricParams:
             raise ipaddress.AddressValueError(msg)
 
     @staticmethod
+    def _validate_mtu(param):
+        """
+        raise TypeError if param is not an integer
+        raise ValueError if param is not an even integer between 576 and 9216
+        """
+        if not isinstance(param, int):
+            msg = f"validate_mtu: expected integer, got {param}"
+            raise TypeError(msg)
+        if param < 576 or param > 9216:
+            msg = f"validate_mtu: expected integer between 576 and 9216, got {param}"
+            raise ValueError(msg)
+        if param % 2 == 0:
+            return
+        msg = f"validate_mtu: expected even integer, got {param}"
+        raise ValueError(msg)
+
+    @staticmethod
     def _validate_ipv4_multicast_subnet(param):
         """
         Raise AddressValueError if param is not an IPv4 multicast subnet
@@ -656,6 +673,16 @@ class VerifyFabricParams:
                     msg = f"invalid {key} {self.config[key]}"
                     self._append_msg(msg)
                     return
+
+        if "fabric_mtu" in self.config:
+            try:
+                self._validate_mtu(self.config["fabric_mtu"])
+            except (TypeError, ValueError) as err:
+                self.result = False
+                msg = f"invalid fabric_mtu {self.config['fabric_mtu']}. "
+                msg += f"error detail: {err}"
+                self._append_msg(msg)
+                return
 
         self._validate_macsec()
         if self.result is False:

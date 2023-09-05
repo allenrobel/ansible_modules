@@ -1,0 +1,11 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: Fabric_Config
+            bgp_as: 1
+            fabric_interface_type: unnumbered
+            fabric_mtu: 9214
