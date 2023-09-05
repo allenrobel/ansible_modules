@@ -183,12 +183,33 @@ def test_pbr(print_payload=False):
     config["esr_option"] = "ePBR"
     validate_merged_state(config, test_name, print_payload)
 
+def test_ptp(print_payload=False):
+    test_name = "ptp"
+    config = {}
+    config["fabric_name"] = test_name
+    config["bgp_as"] = "65000.1"
+    config["feature_ptp"] = True
+    config["ptp_domain_id"] = 127
+    config["ptp_lb_id"] = 1023
+    validate_merged_state(config, test_name, print_payload)
+
 def test_pvlan(print_payload=False):
     test_name = "pvlan"
     config = {}
     config["fabric_name"] = test_name
     config["bgp_as"] = "65000.1"
     config["enable_pvlan"] = True
+    validate_merged_state(config, test_name, print_payload)
+
+def test_queuing(print_payload=False):
+    test_name = "queuing"
+    config = {}
+    config["fabric_name"] = "foo"
+    config["bgp_as"] = "65000.869"
+    config["enable_default_queuing_policy"] = True
+    config["default_queuing_policy_cloudscale"] = "queuing_policy_default_4q_cloudscale"
+    config["default_queuing_policy_other"] = "queuing_policy_default_other"
+    config["default_queuing_policy_r_series"] = "queuing_policy_default_r_series"
     validate_merged_state(config, test_name, print_payload)
 
 def test_trm(print_payload=False):
@@ -210,16 +231,6 @@ def test_vrf_lite(print_payload=False):
     config["vrf_lite_autoconfig"] = 1
     validate_merged_state(config, test_name, print_payload)
 
-def test_queuing(print_payload=False):
-    test_name = "queuing"
-    config = {}
-    config["fabric_name"] = "foo"
-    config["bgp_as"] = "65000.869"
-    config["enable_default_queuing_policy"] = True
-    config["default_queuing_policy_cloudscale"] = "queuing_policy_default_4q_cloudscale"
-    config["default_queuing_policy_other"] = "queuing_policy_default_other"
-    config["default_queuing_policy_r_series"] = "queuing_policy_default_r_series"
-    validate_merged_state(config, test_name, print_payload)
 
 test_aaa()
 test_bfd()
@@ -233,7 +244,8 @@ test_netflow()
 test_ngoam()
 test_nxapi()
 test_pbr()
+test_ptp(True)
 test_pvlan()
-test_trm(True)
+test_trm()
 test_vrf_lite()
 test_queuing()

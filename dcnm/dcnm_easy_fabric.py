@@ -702,6 +702,30 @@ options:
                 - Min:1, Max:1000
                 type: str
                 required: true
+            fabric_vpc_qos:
+                default: False
+                description:
+                - Qos on spines for guaranteed delivery of vPC Fabric Peering communication
+                ndfc_gui_label: Enable Qos for Fabric vPC-Peering
+                ndfc_gui_section: vPC
+                required: false
+                type: bool
+            fabric_vpc_qos_policy_name:
+                default: spine_qos_for_fabric_vpc_peering
+                description:
+                - Qos Policy name should be same on all spines
+                ndfc_gui_label: Qos Policy Name
+                ndfc_gui_section: vPC
+                required: true
+                type: str
+            feature_ptp:
+                default: False
+                description:
+                - Enable (True) or Disable (False) Precision Time Protocol (PTP)
+                ndfc_gui_label: Enable Precision Time Protocol (PTP)
+                ndfc_gui_section: Advanced
+                required: false
+                type: bool
             grfield_debug_flag:
                 description:
                 - Switch Cleanup Without Reload When PreserveConfig=no
@@ -935,6 +959,27 @@ options:
                 type: bool
                 required: false
                 default: False
+            ptp_domain_id:
+                default: 0
+                description:
+                - Multiple Independent PTP Clocking Subdomains on a Single Network
+                    (Min:0, Max:127)
+                max: 127
+                min: 0
+                ndfc_gui_label: PTP Domain Id
+                ndfc_gui_section: Advanced
+                required: true
+                type: int
+            ptp_lb_id:
+                default: 0
+                description:
+                - (Min:0, Max:1023)
+                max: 1023
+                min: 0
+                ndfc_gui_label: PTP Source Loopback Id
+                ndfc_gui_section: Advanced
+                required: true
+                type: int
             replication_mode:
                 description:
                 - Replication Mode for BUM Traffic
@@ -1615,6 +1660,27 @@ class DcnmFabric:
             )
         )
         params_spec.update(
+            fabric_vpc_qos=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
+        params_spec.update(
+            fabric_vpc_qos_policy_name=dict(
+                required=False,
+                type="str",
+                default="fabric_vpc_qos_policy_name",
+            )
+        )
+        params_spec.update(
+            feature_ptp=dict(
+                required=False,
+                type="bool",
+                default=False,
+            )
+        )
+        params_spec.update(
             grfield_debug_flag=dict(
                 required=False,
                 type="str",
@@ -1796,6 +1862,24 @@ class DcnmFabric:
             )
         )
         params_spec.update(pm_enable=dict(required=False, type="bool", default=False))
+        params_spec.update(
+            ptp_domain_id=dict(
+                required=False,
+                type="int",
+                range_min=0,
+                range_max=127,
+                default=0,
+            )
+        )
+        params_spec.update(
+            ptp_lb_id=dict(
+                required=False,
+                type="int",
+                range_min=0,
+                range_max=1023,
+                default=0,
+            )
+        )
         params_spec.update(
             replication_mode=dict(
                 required=False,

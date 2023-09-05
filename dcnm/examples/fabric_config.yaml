@@ -7,5 +7,5 @@
         config:
         -   fabric_name: Fabric_Config
             bgp_as: 1
-            fabric_interface_type: unnumbered
-            fabric_mtu: 9214
+            fabric_interface_type: p2p
+            fabric_mtu: 9216

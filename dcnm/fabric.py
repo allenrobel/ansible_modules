@@ -185,7 +185,7 @@ class VerifyFabricParams:
     def _validate_ipv4_address_within_subnet(param, subnet):
         """
         Raise ipaddress.AddressValueError if param is not
-        contained within subnet.
+        contained within subnet, or if host bits are set.
         """
         try:
             if (ipaddress.ip_address(param) not in 
@@ -193,11 +193,10 @@ class VerifyFabricParams:
                 msg = f"address {param} must be contained within "
                 msg += f"network {subnet}"
                 raise ipaddress.AddressValueError(msg)
-        except ipaddress.AddressValueError as err:
+        except (ipaddress.AddressValueError, ValueError) as err:
             msg = f"invalid address {param} or subnet {subnet}. "
             msg += f"error detail: {err}"
             raise ipaddress.AddressValueError(msg)
-
 
     @staticmethod
     def _validate_ipv4_multicast_address(param):
@@ -1703,6 +1702,17 @@ class VerifyFabricParams:
                         "enable_nxapi": True,
                         "nxapi_https_port": None,
                         "nxapi_http_port": None,
+                    },
+                }
+            }
+        )
+        self._mandatory_params.update(
+            {
+                "feature_ptp": {
+                    "value": True,
+                    "mandatory": {
+                        "ptp_domain_id": None,
+                        "ptp_lb_id": None,
                     },
                 }
             }
