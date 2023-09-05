@@ -645,6 +645,8 @@ class VerifyFabricParams:
         self._update_default_nv_pairs_enable_trm_true()
         # Update default nvPairs if underlay_is_v6 is True
         self._update_default_nv_pairs_ipv6()
+        # Update default nvPairs based on value of stp_root_option
+        self._update_default_nv_pairs_stp_root_option()
         # Update default nvPairs if use_link_local is False
         self._update_default_nv_pairs_use_link_local_false()
 
@@ -1198,6 +1200,23 @@ class VerifyFabricParams:
             return
         self._default_nv_pairs["L3VNI_MCAST_GROUP"] = "239.1.1.0"
 
+
+    def _update_default_nv_pairs_stp_root_option(self):
+        """
+        Update the default nvPairs with the following default values
+        based on the value of stp_root_option:
+        
+        We overwrite these later with the playbook values if they are present.
+
+        Caller: self._validate_merged_state_config()
+        """
+        if "stp_root_option" not in self.config:
+            return
+        if self.config["stp_root_option"] == "mst":
+            self._default_nv_pairs["MST_INSTANCE_RANGE"] = "0"
+        if self.config["stp_root_option"] == "rpvst+":
+            self._default_nv_pairs["STP_VLAN_RANGE"] = "1-3967"
+
     def _update_default_nv_pairs_use_link_local_false(self):
         """
         Update the default nvPairs with the following default values
@@ -1746,42 +1765,6 @@ class VerifyFabricParams:
                         "enable_nxapi": True,
                         "enable_nxapi_http": True,
                         "nxapi_https_port": None,
-                    },
-                }
-            }
-        )
-        # While NDFC has a default for mst_instance_range,
-        # i.e. 0, and the GUI does display this default
-        # if it's not set via the API, the fabric will be in
-        # error state if the user doesn't set it via the API
-        # (until the user manually edits the fabric in the GUI
-        # and clicks Save).
-        # Hence, we force the user to set it here.
-        # TODO:3 We can fix this in the same way we handle underlay_is_v6.
-        self._mandatory_params.update(
-            {
-                "stp_root_option": {
-                    "value": "mst",
-                    "mandatory": {
-                        "mst_instance_range": None,
-                    },
-                }
-            }
-        )
-        # While NDFC has a default for stp_vlan_range,
-        # i.e. 1-3967, and the GUI does display this default
-        # if it's not set via the API, the fabric will be in
-        # error state if the user doesn't set it via the API
-        # (until the user manually edits the fabric in the GUI
-        # and clicks Save).
-        # Hence, we force the user to set it here.
-        # TODO:3 We can fix this in the same way we handle underlay_is_v6.
-        self._mandatory_params.update(
-            {
-                "stp_root_option": {
-                    "value": "rpvst+",
-                    "mandatory": {
-                        "stp_vlan_range": None,
                     },
                 }
             }
