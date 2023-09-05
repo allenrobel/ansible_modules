@@ -1,0 +1,21 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: EXTRA_CONF
+            bgp_as: 1
+            extra_conf_intra_links: |
+                no switchport
+                no shutdown
+            extra_conf_leaf: |
+                interface Ethernet1/1
+                  beacon
+            extra_conf_spine: |
+                interface Ethernet1/2
+                  beacon
+            extra_conf_tor: |
+                interface Ethernet1/2
+                  beacon

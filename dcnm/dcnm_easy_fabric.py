@@ -592,6 +592,21 @@ options:
                 type: bool
                 required: false
                 default: False
+            enable_real_time_backup:
+                description:
+                - Backup hourly only if there is any config deployment since last
+                    backup
+                ndfc_gui_label: Hourly Fabric Backup
+                ndfc_gui_section: Configuration Backup
+                required: false
+                type: bool
+            enable_scheduled_backup:
+                description:
+                - Backup at the specified time
+                ndfc_gui_label: Scheduled Fabric Backup
+                ndfc_gui_section: Configuration Backup
+                required: false
+                type: bool
             enable_tenant_dhcp:
                 description:
                 - Enable (True) or disable (False) Tenant DHCP
@@ -608,6 +623,14 @@ options:
                 type: bool
                 required: false
                 default: False
+        -   enable_vpc_peer_link_native_vlan:
+                default: False
+                description:
+                - unknown
+                ndfc_gui_label: Make vPC Peer Link VLAN as Native VLAN
+                ndfc_gui_section: vPC
+                required: false
+                type: bool
             esr_option:
                 description:
                 - Choose between Policy-Based Routing (PBR) or Enhanced PBR (ePBR)
@@ -618,6 +641,34 @@ options:
                 type: str
                 required: false
                 default: PBR
+            extra_conf_intra_links:
+                description:
+                - Additional CLIs For All Intra-Fabric Links
+                ndfc_gui_label: Intra-fabric Links Additional Config
+                ndfc_gui_section: Advanced
+                required: false
+                type: str
+            extra_conf_leaf:
+                description:
+                - Additional CLIs For All Leafs As Captured From Show Running Configuration
+                ndfc_gui_label: Leaf Freeform Config
+                ndfc_gui_section: Advanced
+                required: false
+                type: str
+            extra_conf_spine:
+                description:
+                - Additional CLIs For All Spines As Captured From Show Running Configuration
+                ndfc_gui_label: Spine Freeform Config
+                ndfc_gui_section: Advanced
+                required: false
+                type: str
+            extra_conf_tor:
+                description:
+                - Additional CLIs For All ToRs As Captured From Show Running Configuration
+                ndfc_gui_label: ToR Freeform Config
+                ndfc_gui_section: Advanced
+                required: false
+                type: str
             fabric_name:
                 description:
                 - The name of the fabric
@@ -1295,6 +1346,7 @@ class DcnmFabric:
                 default="",
             )
         )
+        # TODO:2 remove this param if we don't need it
         params_spec.update(
             brfield_debug_flag=dict(
                 required=False,
@@ -1447,6 +1499,7 @@ class DcnmFabric:
                 default=False,
             )
         )
+        # TODO:2 remove this param if we don't need it
         params_spec.update(
             enable_agent=dict(
                 required=False,
@@ -1497,8 +1550,11 @@ class DcnmFabric:
         params_spec.update(enable_nxapi=dict(required=False, type="bool", default=True))
         params_spec.update(enable_pbr=dict(required=False, type="bool", default=False))
         params_spec.update(enable_pvlan=dict(required=False, type="bool", default=False))
+        params_spec.update(enable_real_time_backup=dict(required=False, type="bool", default=False))
+        params_spec.update(enable_scheduled_backup=dict(required=False, type="bool", default=False))
         params_spec.update(enable_tenant_dhcp=dict(required=False, type="bool", default=True))
         params_spec.update(enable_trm=dict(required=False, type="bool", default=False))
+        params_spec.update(enable_vpc_peer_link_native_vlan=dict(required=False, type="bool", default=False))
         params_spec.update(
             esr_option=dict(
                 required=False,
@@ -1507,6 +1563,10 @@ class DcnmFabric:
                 choices=["ePBR", "PBR"],
             )
         )
+        params_spec.update(extra_conf_intra_links=dict(required=True, type="str"))
+        params_spec.update(extra_conf_leaf=dict(required=True, type="str"))
+        params_spec.update(extra_conf_spine=dict(required=True, type="str"))
+        params_spec.update(extra_conf_tor=dict(required=True, type="str"))
         params_spec.update(fabric_name=dict(required=True, type="str"))
         params_spec.update(
             fabric_vpc_domain_id=dict(
