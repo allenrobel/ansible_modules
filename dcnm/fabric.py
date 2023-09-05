@@ -182,6 +182,76 @@ class VerifyFabricParams:
             self._validate_merged_state_config()
 
     @staticmethod
+    def _validate_integer_range(params):
+        """
+        Given a string with format "X-Y" where:
+            X is convertable to integer, e.g. "1", "1532"
+            Y is convertable to integer
+        Verify the following:
+            int(X) >= params["min"]
+            int(Y) <= params["max"]
+            int(X) < int(Y)
+        raise KeyError if params does not contain all expected keys
+        raise ValueError if any of the above verifications fail
+        raise ValueError if params["value"] is not of format "digits-digits"
+        raise TypeError if params["min"] or params["max"] are not type int
+
+        Example params:
+
+        params = {
+            "value": "15-26000",
+            "min": 1,
+            "max": 28740
+        }
+        """
+        if not isinstance(params, dict):
+            msg = f"expected dict, got type {type(params).__name__} "
+            msg += f"with value {params}"
+            raise TypeError(msg)
+        mandatory_keys = {"value", "min", "max"}
+        if not mandatory_keys.issubset(params):
+            msg = "missing expected key. "
+            msg += f"expected {mandatory_keys}, got {params.keys()}"
+            raise KeyError(msg)
+        if not isinstance(params["max"], int):
+            msg = f"expected type int for max, got {params['max']}."
+            raise TypeError(msg)
+        if not isinstance(params["min"], int):
+            msg = f"expected type int for min, got {params['min']}."
+            raise TypeError(msg)
+        try:
+            _match = re.search(r"^(\d+)-(\d+)$", params["value"])
+        except TypeError as err:
+            msg = f"expected string with format X-Y. Got {params['value']} "
+            msg += f"(type {type(params['value']).__name__}). "
+            msg += f"Error detail: {err}"
+            raise ValueError(msg) from err
+        if not _match:
+            msg = "expected string with format X-Y, where X "
+            msg += f"and Y are digits.  Got {params['value']}"
+            raise ValueError(msg)
+        try:
+            _lower = int(_match.group(1))
+            _upper = int(_match.group(2))
+        except ValueError as err:
+            msg = "integer range values are not convertable "
+            msg += "to int().  expected integer-integer, got "
+            msg += f"{params['value']}"
+            raise ValueError(msg) from err
+        if not _lower >= params["min"]:
+            msg = f"expected X-Y, where X >= {params['min']}. "
+            msg += f"got X {_lower}"
+            raise ValueError(msg)
+        if not _upper <= params["max"]:
+            msg = f"expected X-Y, where Y <= {params['max']}. "
+            msg += f"got Y {_upper}"
+            raise ValueError(msg)
+        if _lower >= _upper:
+            msg = "expected X-Y, X < Y. "
+            msg += f"got X {_lower}, Y {_upper}"
+            raise ValueError(msg)
+
+    @staticmethod
     def _validate_ipv4_address_within_subnet(param, subnet):
         """
         Raise ipaddress.AddressValueError if param is not
@@ -763,6 +833,21 @@ class VerifyFabricParams:
                 msg += f"{self._default_nv_pairs['MULTICAST_GROUP_SUBNET']}. "
                 msg += f"error detail: {err}"
                 self._append_msg(msg)
+                return
+
+        if "route_map_sequence_number_range" in self.config:
+            rmap_params = {}
+            rmap_params["value"] = self.config["route_map_sequence_number_range"]
+            rmap_params["min"] = 1
+            rmap_params["max"] = 65534
+            try:
+                self._validate_integer_range(rmap_params)
+            except (ValueError, TypeError, KeyError) as err:
+                msg = "invalid route_map_sequence_number_range "
+                msg += f"{self.config['route_map_sequence_number_range']}. "
+                msg += f"error detail: {err}"
+                self._append_msg(msg)
+                self.result = False
                 return
 
         if "syslog_sev" in self.config:

@@ -212,13 +212,21 @@ def test_queuing(print_payload=False):
     config["default_queuing_policy_r_series"] = "queuing_policy_default_r_series"
     validate_merged_state(config, test_name, print_payload)
 
+def test_route_map_sequence_number_range(print_payload=False):
+    test_name = "rmap_seq_num_range"
+    config = {}
+    config["fabric_name"] = "foo"
+    config["bgp_as"] = 1
+    config["route_map_sequence_number_range"] = "5-800"
+    validate_merged_state(config, test_name, print_payload)
+
 def test_trm(print_payload=False):
     test_name = "trm"
     config = {}
     config["fabric_name"] = test_name
     config["bgp_as"] = "65000.1"
     config["enable_trm"] = True
-    config["multicast_group_subnet"] = "225.1.1.0/16"
+    config["multicast_group_subnet"] = "225.1.0.0/16"
     config["l3vni_mcast_group"] = "225.1.1.1"
     validate_merged_state(config, test_name, print_payload)
 
@@ -244,8 +252,9 @@ test_netflow()
 test_ngoam()
 test_nxapi()
 test_pbr()
-test_ptp(True)
+test_ptp()
 test_pvlan()
+test_route_map_sequence_number_range()
 test_trm()
 test_vrf_lite()
 test_queuing()

@@ -917,7 +917,7 @@ options:
                 description:
                 - Vlan range for multi-instance spanning tree (mst).
                 - Example "0-3,5,7-9"
-                - Default No default via API ("0" via the NDFC GUI)
+                - default "0"
                 - NDFC label, MST Instance Range
                 - NDFC tab, Advanced
                 type: str
@@ -991,6 +991,16 @@ options:
                 - Ingress
                 - Multicast
                 default: Multicast
+        -   route_map_sequence_number_range:
+                default: 1-65534
+                description:
+                - (Min:1, Max:65534)
+                max: 65534
+                min: 1
+                ndfc_gui_label: Route Map Sequence Number Range
+                ndfc_gui_section: Resources
+                required: true
+                type: integerRange
             router_id_range:
                 description:
                 - BGP Router ID Range for IPv6 Underlay
@@ -1023,7 +1033,7 @@ options:
                 description:
                 - Vlan range for rpvst+ spanning tree.
                 - Example "1,3-5,7,9-11"
-                - No default via API ("1-3967" via the NDFC GUI)
+                - default: "1-3967"
                 - NDFC label, Spanning Tree VLAN Range
                 - NDFC tab, Advanced
                 type: str
@@ -1886,6 +1896,13 @@ class DcnmFabric:
                 type="str",
                 default="Multicast",
                 choices=["Ingress", "Multicast"],
+            )
+        )
+        params_spec.update(
+            route_map_sequence_number_range=dict(
+                required=False,
+                type="str",
+                default="1-65534",
             )
         )
         params_spec.update(
