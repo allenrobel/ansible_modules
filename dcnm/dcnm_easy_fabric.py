@@ -90,6 +90,15 @@ options:
                 type: bool
                 required: false
                 default: False
+            advertise_pip_on_border:
+                default: True
+                description:
+                - Enable advertise-pip on vPC borders and border gateways only. Applicable
+                    only when vPC advertise-pip is not enabled
+                ndfc_gui_label: vPC advertise-pip on Border only
+                ndfc_gui_section: vPC
+                required: false
+                type: bool
             anycast_bgw_advertise_pip:
                 description:
                 - Enable (True) or disable (False) advertising Anycast Border Gateway PIP as VTEP.
@@ -145,6 +154,17 @@ options:
                 type: bool
                 required: false
                 default: False
+            auto_unique_vrf_lite_ip_prefix:
+                default: False
+                description:
+                - When enabled, IP prefix allocated to the VRF LITE IFC is not reused
+                    on VRF extension over VRF LITE IFC. Instead, unique IP Subnet
+                    is allocated for each VRF extension over VRF LITE IFC.
+                ndfc_gui_label: Auto Allocation of Unique IP on VRF Extension over
+                    VRF Lite IFC
+                ndfc_gui_section: Resources
+                required: false
+                type: bool
             auto_vrflite_ifc_default_vrf:
                 description:
                 - Enable (True) or disable (False) auto generation of Default VRF interface and BGP peering configuration on VRF LITE IFC auto deployment.
@@ -270,14 +290,6 @@ options:
                 type: int
                 required: false
                 default: 0
-            bgp_auth_enable:
-                description:
-                - Enable (True) or disable (False) Automatic IP Assignment For POAP
-                - NDFC label, Enable Bootstrap
-                - NDFC tab, Bootstrap
-                type: bool
-                required: false
-                default: False
             bootstrap_conf:
                 description:
                 - Additional CLIs required during device bootup/login e.g. AAA/Radius
@@ -368,6 +380,17 @@ options:
                 type: int
                 required: False
                 default: 30
+            default_network:
+                choices:
+                - Default_Network_Universal
+                - Service_Network_Universal
+                default: Default_Network_Universal
+                description:
+                - Default Overlay Network Template For Leafs
+                ndfc_gui_label: Network Template
+                ndfc_gui_section: Advanced
+                required: true
+                type: str
             default_pvlan_sec_network:
                 description:
                 - Default PVLAN Secondary Network Template
@@ -400,6 +423,16 @@ options:
                 type: str
                 required: False
                 choices: queuing_policy_default_r_series
+            default_vrf:
+                choices:
+                - Default_VRF_Universal
+                default: Default_VRF_Universal
+                description:
+                - Default Overlay VRF Template For Leafs
+                ndfc_gui_label: VRF Template
+                ndfc_gui_section: Advanced
+                required: true
+                type: str
             default_vrf_redis_bgp_rmap:
                 description:
                 - Route Map used to redistribute BGP routes to IGP in default vrf in auto created VRF Lite IFC links
@@ -1172,6 +1205,9 @@ class DcnmFabric:
         )
         # TODO:6 agent_intf (add if needed)
         params_spec.update(
+            advertise_pip_on_border=dict(required=False, type="bool", default=True)
+        )
+        params_spec.update(
             anycast_bgw_advertise_pip=dict(required=False, type="bool", default=False)
         )
         params_spec.update(
@@ -1192,6 +1228,9 @@ class DcnmFabric:
         )
         params_spec.update(
             auto_symmetric_vrf_lite=dict(required=False, type="bool", default=False)
+        )
+        params_spec.update(
+            auto_unique_vrf_lite_ip_prefix=dict(required=False, type="bool", default=False)
         )
         params_spec.update(
             auto_vrflite_ifc_default_vrf=dict(
@@ -1310,6 +1349,14 @@ class DcnmFabric:
             )
         )
         params_spec.update(
+            default_network=dict(
+                required=False,
+                type="str",
+                default="Default_Network_Universal",
+                choices=["Default_Network_Universal", "Service_Network_Universal"],
+            )
+        )
+        params_spec.update(
             default_queuing_policy_cloudscale=dict(
                 required=False,
                 type="str",
@@ -1331,6 +1378,14 @@ class DcnmFabric:
                 type="str",
                 default="",
                 choices=["queuing_policy_default_r_series"],
+            )
+        )
+        params_spec.update(
+            default_vrf=dict(
+                required=False,
+                type="str",
+                default="",
+                choices=["Default_VRF_Universal"],
             )
         )
         params_spec.update(
