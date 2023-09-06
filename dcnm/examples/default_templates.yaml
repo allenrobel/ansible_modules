@@ -1,0 +1,16 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: Default
+            bgp_as: 1
+            default_network: Service_Network_Universal
+            default_pvlan_sec_network: Pvlan_Secondary_Network
+            default_vrf: Default_VRF_Universal
+            enable_default_queuing_policy: True
+            default_queuing_policy_cloudscale: queuing_policy_default_8q_cloudscale
+            default_queuing_policy_other: queuing_policy_default_other
+            default_queuing_policy_r_series: queuing_policy_default_r_series
