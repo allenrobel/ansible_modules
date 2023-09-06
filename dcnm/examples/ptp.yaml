@@ -1,0 +1,12 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: PTP
+            bgp_as: 1
+            feature_ptp: True
+            ptp_domain_id: 127
+            ptp_lb_id: 1023
