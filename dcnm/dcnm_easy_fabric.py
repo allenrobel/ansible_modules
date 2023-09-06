@@ -735,6 +735,42 @@ options:
                 type: str
                 required: False
                 default: Disable
+            hd_time:
+                default: 180
+                description:
+                - NVE Source Inteface HoldDown Time (Min:1, Max:1500) in seconds
+                max: 1500
+                min: 1
+                ndfc_gui_label: VTEP HoldDown Time
+                ndfc_gui_section: Advanced
+                required: false
+                type: int
+        -   host_intf_admin_state:
+                default: True
+                description:
+                - Enable (True) or disable (False) UP Administrative State of Host Interfaces
+                ndfc_gui_label: Unshut Host Interfaces by Default
+                ndfc_gui_section: Advanced
+                required: false
+                type: bool
+        -   ibgp_peer_template:
+                description:
+                - Specifies the iBGP Peer-Template config used for RR and spines
+                    with border role.
+                ndfc_gui_label: iBGP Peer-Template Config
+                ndfc_gui_section: Protocols
+                required: false
+                type: str
+        -   ibgp_peer_template_leaf:
+                description:
+                - Specifies the config used for leaf, border or border gateway. If
+                    this field is empty, the peer template defined in ibgp_peer_template
+                    is used on all BGP enabled devices (RRs,leafs, border or border gateway
+                    roles.
+                ndfc_gui_label: 'Leaf/Border/Border Gateway iBGP Peer-Template Config '
+                ndfc_gui_section: Protocols
+                required: false
+                type: str
             l3vni_mcast_group:
                 description:
                 - Default Underlay Multicast group IP assigned for every overlay VRF
@@ -1696,6 +1732,36 @@ class DcnmFabric:
                 type="str",
                 default="Disable",
                 choices=["Disable", "Enable"],
+            )
+        )
+        params_spec.update(
+            hd_time=dict(
+                required=False,
+                type="int",
+                default=180,
+                range_min=1,
+                range_max=1500,
+            )
+        )
+        params_spec.update(
+            host_intf_admin_state=dict(
+                required=False,
+                type="bool",
+                default=True,
+            )
+        )
+        params_spec.update(
+            ibgp_peer_template=dict(
+                required=False,
+                type="str",
+                default="",
+            )
+        )
+        params_spec.update(
+            ibgp_peer_template_leaf=dict(
+                required=False,
+                type="str",
+                default="",
             )
         )
         params_spec.update(

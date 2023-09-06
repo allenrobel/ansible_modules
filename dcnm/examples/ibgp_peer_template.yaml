@@ -1,0 +1,51 @@
+---
+#Example for iBGP template parameters
+# ibgp_peer_template
+# ibgp_peer_template_leaf
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+        - cisco.dcnm.dcnm_easy_fabric:
+            state: merged
+            config:
+            -   fabric_name: IBGP
+                bgp_as: 1
+                # These require that all lines be indented by at least 2 spaces
+                # (this needs to look like the running-config on the switch)
+                # Since these follow "router bgp <ASN>" in the switch config,
+                # we need to indent them two spaces more than "router bgp".
+                #
+                # To accomplish this, we use the literal scalar indicator "|2"
+                # which indicates that the YAML lines following this indicator
+                # are indented by 2.  Then we indent the first line by 2 more
+                # spaces to get the desired NX-OS indentation.  The lines
+                # following the first line are indented per NX-OS configuration
+                # indentation rules.
+                #
+                # For VXLAN EVPN fabrics, the following line is mandatory:
+                #     address-family l2vpn evpn
+                ibgp_peer_template: |2
+                    template peer LEAF
+                      description LEAF_PEERS
+                      remote-as 1
+                      address-family l2vpn evpn
+                      address-family ipv4 unicast
+                        maximum-peers 32
+                ibgp_peer_template_leaf: |2
+                    template peer SPINE
+                      description SPINE_PEERS
+                      remote-as 1
+                      address-family l2vpn evpn
+                      address-family ipv4 unicast
+                        maximum-peers 8
+                # Or you can use the lookup plugin to read the template from a file.
+                # In this case, you need only indent the lines 2 spaces.
+                # So, for example, ibgp_template.txt would look like this:
+                #  template peer LEAF
+                #   description LEAF_PEERS
+                #   remote-as 1
+                #   address-family l2vpn evpn
+                #   address-family ipv4 unicast
+                #     maximum-peers 32
+                #ibgp_peer_template: "{{lookup('ansible.builtin.file', '/tmp/ibgp_template.txt')}}"
+                #ibgp_peer_template_leaf: "{{lookup('ansible.builtin.file', '/tmp/ibgp_template_leaf.txt')}}"

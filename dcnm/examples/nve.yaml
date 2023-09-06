@@ -5,8 +5,6 @@
     - cisco.dcnm.dcnm_easy_fabric:
         state: merged
         config:
-        -   fabric_name: Fabric_Config
+        -   fabric_name: NVE
             bgp_as: 1
-            fabric_interface_type: p2p
-            fabric_mtu: 9216
-            host_intf_admin_state: False
+            hd_time: 60
