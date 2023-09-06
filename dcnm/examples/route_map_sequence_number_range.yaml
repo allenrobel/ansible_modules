@@ -1,0 +1,10 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: RMAP
+            bgp_as: 1
+            route_map_sequence_number_range: 1-15565
