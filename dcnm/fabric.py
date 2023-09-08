@@ -15,7 +15,7 @@
 # limitations under the License.
 """
 Classes and methods to verify NDFC Data Center VXLAN EVPN Fabric parameters.
-This should go in:
+For now, this should go in:
 ansible_collections/cisco/dcnm/plugins/module_utils/fabric/fabric.py
 
 Example Usage:
@@ -99,7 +99,6 @@ class VerifyFabricParams:
 
         self.msg = None
         self.payload = {}
-        self._default_fabric_params = {}
         self._default_nv_pairs = {}
         # See self._build_parameter_aliases
         self._parameter_aliases = {}
@@ -123,7 +122,6 @@ class VerifyFabricParams:
         self._translated_nv_pairs = {}
         self._valid_states = {"merged"}
         self._minimum_mandatory_keys = {"fabric_name", "bgp_as"}
-        self._build_default_fabric_params()
         self._build_default_nv_pairs()
         self._add_default_nv_pairs_12_1_3b()
         self._build_parameter_aliases()
@@ -709,6 +707,8 @@ class VerifyFabricParams:
             self._append_msg(msg)
             return
 
+        # Update default nvPairs if dhcp_enable is True
+        self._update_default_nv_pairs_dhcp_enable_true()
         # Update default nvPairs if enable_pvlan is True
         self._update_default_nv_pairs_enable_pvlan_true()
         # Update default nvPairs if enable_trm is True
@@ -1045,8 +1045,8 @@ class VerifyFabricParams:
         self._default_nv_pairs["ISIS_AUTH_KEYCHAIN_NAME"] = ""
         self._default_nv_pairs["ISIS_LEVEL"] = ""
         self._default_nv_pairs["ISIS_OVERLOAD_ELAPSE_TIME"] = ""
-        self._default_nv_pairs["ISIS_OVERLOAD_ENABLE"] = False
-        self._default_nv_pairs["ISIS_P2P_ENABLE"] = False
+        self._default_nv_pairs["ISIS_OVERLOAD_ENABLE"] = ""
+        self._default_nv_pairs["ISIS_P2P_ENABLE"] = ""
         self._default_nv_pairs["L2_HOST_INTF_MTU"] = "9216"
         self._default_nv_pairs["L2_HOST_INTF_MTU_PREV"] = "9216"
         self._default_nv_pairs["L2_SEGMENT_ID_RANGE"] = "30000-49000"
@@ -1138,7 +1138,7 @@ class VerifyFabricParams:
         self._default_nv_pairs["UNNUM_DHCP_END_INTERNAL"] = ""
         self._default_nv_pairs["UNNUM_DHCP_START"] = ""
         self._default_nv_pairs["UNNUM_DHCP_START_INTERNAL"] = ""
-        self._default_nv_pairs["USE_LINK_LOCAL"] = False
+        self._default_nv_pairs["USE_LINK_LOCAL"] = ""
         self._default_nv_pairs["V6_SUBNET_RANGE"] = ""
         self._default_nv_pairs["V6_SUBNET_TARGET_MASK"] = ""
         self._default_nv_pairs["VPC_AUTO_RECOVERY_TIME"] = "360"
@@ -1203,34 +1203,22 @@ class VerifyFabricParams:
             "vrf_extension_template"
         ] = "Default_VRF_Extension_Universal"
 
-    def _build_default_fabric_params(self):
+    def _update_default_nv_pairs_dhcp_enable_true(self):
         """
-        Caller: __init__()
+        Update the default nvPairs with the following default values
+        if the playbook value of dhcp_enable is True:
 
-        Initialize default NDFC top-level parameters
-        See also: self._build_default_nv_pairs()
+        DHCP_IPV6_ENABLE
+
+        We overwrite these later with the playbook values if they are present.
+
+        Caller: self._validate_merged_state_config()
         """
-        # TODO:3 We may need translation methods for these as well. See the
-        #   method for nvPair transation: _translate_to_ndfc_nv_pairs
-        self._default_fabric_params = {}
-        self._default_fabric_params["deviceType"] = "n9k"
-        self._default_fabric_params["fabricTechnology"] = "VXLANFabric"
-        self._default_fabric_params["fabricTechnologyFriendly"] = "VXLAN Fabric"
-        self._default_fabric_params["fabricType"] = "Switch_Fabric"
-        self._default_fabric_params["fabricTypeFriendly"] = "Switch Fabric"
-        self._default_fabric_params[
-            "networkExtensionTemplate"
-        ] = "Default_Network_Extension_Universal"
-        value = "Default_Network_Universal"
-        self._default_fabric_params["networkTemplate"] = value
-        self._default_fabric_params["provisionMode"] = "DCNMTopDown"
-        self._default_fabric_params["replicationMode"] = "Multicast"
-        self._default_fabric_params["siteId"] = ""
-        self._default_fabric_params["templateName"] = "Easy_Fabric"
-        self._default_fabric_params[
-            "vrfExtensionTemplate"
-        ] = "Default_VRF_Extension_Universal"
-        self._default_fabric_params["vrfTemplate"] = "Default_VRF_Universal"
+        if "dhcp_enable" not in self.config:
+            return
+        if self.config["dhcp_enable"] is False:
+            return
+        self._default_nv_pairs["DHCP_IPV6_ENABLE"] = "DHCPv4"
 
     def _update_default_nv_pairs_ipv6(self):
         """
@@ -1385,7 +1373,6 @@ class VerifyFabricParams:
         self._default_nv_pairs["AUTO_UNIQUE_VRF_LITE_IP_PREFIX"] = False
         self._default_nv_pairs["AUTO_UNIQUE_VRF_LITE_IP_PREFIX_PREV"] = False
         self._default_nv_pairs["BANNER"] = ""
-        self._default_nv_pairs["DOMAIN_NAME_INTERNAL"] = ""
         self._default_nv_pairs["ESR_OPTION"] = "PBR"
         self._default_nv_pairs["EXT_FABRIC_TYPE"] = ""
         self._default_nv_pairs["NXAPI_HTTPS_PORT"] = 443
@@ -2099,17 +2086,14 @@ class VerifyFabricParams:
         Build the payload to create the fabric specified in self.config
         Caller: self._validate_merged_state_config()
         """
-        self.payload = self._default_fabric_params
-        self.payload["fabricName"] = self.config["fabric_name"]
-        self.payload["asn"] = self.config["bgp_as"]
-        self.payload["nvPairs"] = self._default_nv_pairs
+        self.payload = self._default_nv_pairs
         self._translate_to_ndfc_nv_pairs(self.config)
         for key, value in self._translated_nv_pairs.items():
-            self.payload["nvPairs"][key] = value
+            self.payload[key] = value
         # TODO:4 clean this netflow stuff up.  It works, but it's messy.
         netflow_list_keys = ["NETFLOW_EXPORTER_LIST", "NETFLOW_RECORD_LIST", "NETFLOW_MONITOR_LIST"]
         for key in netflow_list_keys:
-            if key not in self.payload["nvPairs"]:
+            if key not in self.payload:
                 continue
             # The default values for these keys are empty strings (i.e. if
             # the fabric is created manually using NDFC GUI). But NDFC 12.1.3b
@@ -2117,12 +2101,13 @@ class VerifyFabricParams:
             # via REST (12.1.2e was fine with this).  So, we delete these keys
             # if the user hasn't set them.
             # TODO:1 Verify absence of these keys with 12.1.2e
-            if not isinstance(self.payload["nvPairs"][key], list):
-                self.payload["nvPairs"].pop(key, None)
+            if not isinstance(self.payload[key], list):
+                self.payload.pop(key, None)
                 continue
             tmp_dict = {}
-            tmp_dict[key] = self.payload["nvPairs"][key]
-            self.payload["nvPairs"][key] = json.dumps(tmp_dict)
+            tmp_dict[key] = self.payload[key]
+            self.payload[key] = json.dumps(tmp_dict)
+
             
     @property
     def config(self):
