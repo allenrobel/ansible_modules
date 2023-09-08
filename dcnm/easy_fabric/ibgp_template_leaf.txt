@@ -1,0 +1,6 @@
+  template peer SPINE
+    description SPINE_PEERS
+    remote-as 1
+    address-family l2vpn evpn
+    address-family ipv4 unicast
+      maximum-peers 16
