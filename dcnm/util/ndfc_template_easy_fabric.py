@@ -32,42 +32,6 @@ class NdfcTemplateEasyFabric(NdfcTemplate):
         """
         self._properties["template_all"] = value
 
-    def is_internal(self, item):
-        """
-        Return True if item["annotations"]["IsInternal"] is True
-        Return False otherwise
-        """
-        if not item.get("annotations", None):
-            return False
-        if not item["annotations"].get("IsInternal", None):
-            return False
-        return self.make_bool(item["annotations"]["IsInternal"])
-
-    def is_mandatory(self, item):
-        """
-        Return True if item["annotations"]["IsMandatory"] is True
-        Return False otherwise
-        """
-        if not item.get("annotations", None):
-            return False
-        if not item["annotations"].get("IsMandatory", None):
-            return False
-        return self.make_bool(item["annotations"]["IsMandatory"])
-
-    @staticmethod
-    def is_hidden(item):
-        """
-        Return True if item["annotations"]["Section"] is "Hidden"
-        Return False otherwise
-        """
-        if not item.get("annotations", None):
-            return False
-        if not item["annotations"].get("Section", None):
-            return False
-        if "Hidden" in item["annotations"]["Section"]:
-            return True
-        return False
-
     def init_translation(self):
         """
         All parameters in the playbook are lowercase dunder, while
@@ -114,164 +78,52 @@ class NdfcTemplateEasyFabric(NdfcTemplate):
                 continue
             if self.is_hidden(item):
                 continue
-            if not item.get('name', None):
+            name = self.get_name(item)
+            if not name:
                 continue
-            if item['name'] in typo_keys:
-                self.translation[item['name']] = typo_keys[item['name']]
+            if name in typo_keys:
+                self.translation[name] = typo_keys[name]
                 continue
-            if item['name'] in camel_keys:
-                self.translation[item['name']] = camel_keys[item['name']]
+            if name in camel_keys:
+                self.translation[name] = camel_keys[name]
                 continue
-            if item['name'] in other_keys:
-                self.translation[item['name']] = other_keys[item['name']]
+            if name in other_keys:
+                self.translation[name] = other_keys[name]
                 continue
-            if re.search(re_uppercase_dunder, item['name']):
-                self.translation[item['name']] = item['name'].lower()
+            if re.search(re_uppercase_dunder, name):
+                self.translation[name] = name.lower()
 
-    def default(self, item):
+    def validate_base_prerequisites(self):
         """
-        Return the default value for item, i.e.:
-        item["metaProperties"]["defaultValue"]
-        """
-        if "metaProperties" not in item:
-            return None
-        if "defaultValue" not in item["metaProperties"]:
-            return None
-        default = self.make_bool(item["metaProperties"]["defaultValue"])
-        try:
-            default = int(default)
-        except ValueError:
-            pass
-        return default
-
-    def choices(self, item):
-        """
-        Return the choices for an item as a list(), i.e.:
-        item["annotations"]["Enum"]
-        """
-        if "annotations" not in item:
-            return []
-        if "Enum" not in item["annotations"]:
-            return []
-        choices = self.clean_string(item["annotations"]["Enum"])
-        choices = choices.split(",")
-        try:
-            choices = [int(x) for x in choices]
-        except ValueError:
-            pass
-        return choices
-
-    def description(self, item):
-        """
-        Return the description of an item, i.e.:
-        item['annotations']['Description']
-        """
-        try:
-            description = item['annotations']['Description']
-        except KeyError:
-            description = "unknown"
-        return self.clean_string(description)
-
-    @staticmethod
-    def param_type(item):
-        """
-        Return the parameter type of an item, i.e.:
-        item['parameterType']
-
-        This is translated to the Ansible type, e.g.
-        string -> str
-        boolean -> bool
-        ipV4Address -> ipv4
-        etc.
-        """
-        ndfc_type = item.get('parameterType', None)
-        if ndfc_type is None:
-            return None
-        if ndfc_type in ["STRING", "string", "str"]:
-            return "str"
-        if ndfc_type in ["INTEGER", "INT", "integer", "int"]:
-            return "int"
-        if ndfc_type in ["BOOLEAN", "boolean", "bool"]:
-            return "bool"
-        if ndfc_type in ["ipAddress", "ipV4Address"]:
-            return "ipv4"
-        if ndfc_type in ["ipV4AddressWithSubnet"]:
-            return "ipv4_subnet"
-        if ndfc_type in ["ipV6Address"]:
-            return "ipv6"
-        if ndfc_type in ["ipV6AddressWithSubnet"]:
-            return "ipv6_subnet"
-        return ndfc_type
-
-    def is_required(self,item):
-        """
-        Return the required status of an item, i.e.:
-        The inverse of item['optional']
-        """
-        optional = self.make_bool(item.get('optional', None))
-        if optional is True:
-            return False
-        if optional is False:
-            return True
-        return "unknown"
-
-    def min_max(self, item):
-        """
-        Return the min and max values of an item, i.e.:
-        If item['annotations']['Description'] contains
-        "(Min: X, Max: Y)" return int(X), and int(Y)
-        Otherwise return None, None
-        """
-        description = self.description(item)
-        # (Min:240, Max:3600)
-        m = re.search("\(Min:\s*(\d+),\s*Max:\s*(\d+)\)", description)
-        if m:
-            return int(m.group(1)), int(m.group(2))
-        return None, None
-
-    def label(self, item):
-        """
-        Return the NDFC GUI label for an item, i.e.:
-        item['annotations']['DisplayName']
-        """
-        label = item.get('annotations', {}).get('DisplayName', None)
-        if label is None:
-            return None
-        return self.clean_string(label)
-
-    def section(self, item):
-        """
-        Return the NDFC GUI section/tab for an item, i.e.:
-        item['annotations']['Section']
-        """
-        section = item.get('annotations', {}).get('Section', None)
-        if section is None:
-            return None
-        return self.clean_string(section)
-
-    def build_documentation(self):
-        """
-        Build the documentation for the EasyFabric template.
+        1. Validate that the prerequisites are met before proceeding.
+            Specifically:
+            - User has set self.template
+            - User has set self.template_all
+        2. Call self.init_translation() if self.translation is None
         """
         if self.template is None:
             msg = "exiting. call instance.load_template() first."
             print(f"{msg}")
             sys.exit(1)
+        if self.translation is None:
+            self.init_translation()
+
+    def build_documentation(self):
+        """
+        Build the documentation for the EasyFabric template.
+        """
+        self.validate_base_prerequisites()
         if self.template_all is None:
             msg = "exiting. call instance.template_all first."
             print(f"{msg}")
             sys.exit(1)
-        if self.translation is None:
-            self.init_translation()
         self.documentation = {}
         self.documentation["module"] = "dcnm_easy_fabric"
         self.documentation["author"] = "Cisco Systems, Inc."
         self.documentation["description"] = []
-        try:
-            description = self.template['description'].strip()
-            self.documentation["description"].append(description)
-        except KeyError:
-            self.documentation["description"].append("unknown")
+        self.documentation["description"].append(
+            self.get_template_description(self.template)
+        )
         self.documentation["options"] = {}
         self.documentation["options"]["state"] = {}
         self.documentation["options"]["state"]["description"] = []
@@ -304,33 +156,116 @@ class NdfcTemplateEasyFabric(NdfcTemplate):
                 continue
             suboptions[name] = {}
             suboptions[name]["description"] = []
-            suboptions[name]["description"].append(self.description(item))
-            suboptions[name]["type"] = self.param_type(item)
+            suboptions[name]["description"].append(self.get_description(item))
+            suboptions[name]["type"] = self.get_parameter_type(item)
             suboptions[name]["required"] = self.is_required(item)
-            default = self.default(item)
+            default = self.get_default_value(item)
             if default is not None:
                 suboptions[name]["default"] = default
-            choices  = self.choices(item)
+            choices  = self.get_enum(item)
             if len(choices) > 0:
                 if "TEMPLATES" in str(choices[0]):
                     tag = str(choices[0]).split(".")[1]
                     choices = self.template_all.get_templates_by_tag(tag)
                 suboptions[name]["choices"] = choices
-            min_value, max_value = self.min_max(item)
+            min_value, max_value = self.get_min_max(item)
             if min_value is not None:
                 suboptions[name]["min"] = min_value
             if max_value is not None:
                 suboptions[name]["max"] = max_value
-            ndfc_label = self.label(item)
+            ndfc_label = self.get_display_name(item)
             if ndfc_label is not None:
                 suboptions[name]["ndfc_gui_label"] = ndfc_label
-            ndfc_section = self.section(item)
+            ndfc_section = self.get_section(item)
             if ndfc_section is not None:
                 suboptions[name]["ndfc_gui_section"] = ndfc_section
 
         self.documentation["options"]["config"]["suboptions"] = []
         for key in sorted(suboptions.keys()):
             self.documentation["options"]["config"]["suboptions"].append({key: suboptions[key]})
+
+    def build_ruleset(self):
+        """
+        Build the ruleset for the EasyFabric template, based on 
+        annotations.IsShow in each parameter dictionary.
+
+        The ruleset is keyed on parameter name, with values being set of
+        rules that determine whether a given parameter is mandatory, based
+        on the state of other parameters.
+
+        Usage:
+
+        template.build_ruleset()
+        parameter = "unnum_dhcp_end"
+        try:
+            result = eval(template.ruleset[parameter])
+        except:
+            result = False
+        if result is True:
+            print(f"{parameter} is mandatory")
+        """
+        self.validate_base_prerequisites()
+        self.ruleset = {}
+        for item in self.template.get("parameters"):
+            if self.is_internal(item):
+                continue
+            if self.is_hidden(item):
+                continue
+            if not item.get('name', None):
+                continue
+            name = self.translation.get(item['name'], None)
+            if name is None:
+                print(f"WARNING: skipping {item['name']}")
+                continue
+            self.ruleset[name] = item.get("annotations", {}).get("IsShow", None)
+        self.ruleset = self.pythonize_ruleset(self.ruleset)
+
+    def pythonize_ruleset(self, ruleset):
+        mixed_rules = {}
+        for key in ruleset:
+            rule = ruleset[key]
+            if rule is None:
+                continue
+            # print(f"PRE1 : key {key}, RULE: {rule}")
+            rule = rule.replace("$$", "")
+            rule = rule.replace("&&", " and ")
+            rule = rule.replace(r"\"", "")
+            rule = rule.replace(r"\'", "")
+            rule = rule.replace("||", " or ")
+            rule = rule.replace("==", " == ")
+            rule = rule.replace("!=", " != ")
+            rule = rule.replace("(", " ( ")
+            rule = rule.replace(")", " ) ")
+            rule = rule.replace("true", " True")
+            rule = rule.replace("false", " False")
+            rule = re.sub(r"\s+", " ", rule)
+            if "and" in rule and "or" in rule:
+                mixed_rules[key] = rule
+                continue
+            if "and" in rule and "or" not in rule:
+                rule = rule.split("and")
+                rule = [x.strip() for x in rule]
+                rule = [re.sub(r"\s{2}+", " ", x) for x in rule]
+                #print(f"POST1: key {key}, len {len(rule)} rule: {rule}")
+                rule = [re.sub(r"\"", "", x) for x in rule]
+                rule = [re.sub(r"\'", "", x) for x in rule]
+                #rule = [re.sub(r"\s{2}+", " ", x) for x in rule]
+                #print(f"POST2: key {key}, len {len(rule)} rule: {rule}")
+                new_rule = []
+                for item in rule:
+                    lhs,op,rhs = item.split(" ")
+                    rhs = rhs.replace("\"", "")
+                    rhs = rhs.replace("\'", "")
+                    if rhs not in ["True", "False", True, False]:
+                        rhs = f"\"{rhs}\""
+                    lhs = self.translation.get(lhs, lhs)
+                    # print(f"POST3: key {key}: lhs: {lhs}, op: {op}, rhs: {rhs}")
+                    new_rule.append(f"{lhs} {op} {rhs}")
+                new_rule = " and ".join(new_rule)
+                # print(f"POST4: key {key}: {new_rule}")
+                ruleset[key] = new_rule
+        return ruleset
+          
 
     def documentation_yaml(self):
         """
