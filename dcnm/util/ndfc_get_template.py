@@ -9,15 +9,15 @@ Supported templates are:
     easy_fabric - Easy Fabric Template
     templates - All Templates
 """
-import json
 import sys
 
 class NdfcGetTemplate:
     def __init__(self):
         self._properties = {}
-        self._urls = {}
-        self._urls["easy_fabric"] = "/appcenter/cisco/ndfc/api/v1/configtemplate/rest/config/templates/Easy_Fabric"
-        self._urls["templates"] = "/appcenter/cisco/ndfc/api/v1/configtemplate/rest/config/templates"
+        self._properties["ndfc"] = None
+        self._properties["template"] = None
+        self._properties["filename"] = None
+        self._url_base = "/appcenter/cisco/ndfc/api/v1/configtemplate/rest/config/templates"
 
     @property
     def ndfc(self):
@@ -40,19 +40,21 @@ class NdfcGetTemplate:
     def filename(self, value):
         self._properties["filename"] = value
 
-    def get_url(self, template):
-        if template not in self._urls:
-            msg = f"Exiting. Invalid template: {template}. "
-            msg += f"Valid templates are: {sorted(self._urls.keys())}"
-            self.ndfc.log.error(msg)
-        url_base = f"https://{self.ndfc.ip4}"
-        return f"{url_base}{self._urls[template]}"
-
-    def get_template(self):
+    def get_url(self):
         if self.ndfc == None:
             print("Exiting. ndfc property is not set")
             sys.exit(1)
-        url = self.get_url(self.template)
+        if self.template == None:
+            print("Exiting. template property is not set")
+            sys.exit(1)
+        if self.template == "templates":
+            url = f"https://{self.ndfc.ip4}/{self._url_base}"
+        else:
+            url = f"https://{self.ndfc.ip4}/{self._url_base}/{self.template}"
+        return url
+
+    def get_template(self):
+        url = self.get_url()
         self.ndfc.get(url, self.ndfc.make_headers())
         if self.ndfc.response.status_code != 200:
             msg = f"exiting. got non-200 status code {self.ndfc.response.status_code} "
