@@ -745,7 +745,7 @@ options:
                 ndfc_gui_section: Advanced
                 required: false
                 type: int
-        -   host_intf_admin_state:
+            host_intf_admin_state:
                 default: True
                 description:
                 - Enable (True) or disable (False) UP Administrative State of Host Interfaces
@@ -753,7 +753,7 @@ options:
                 ndfc_gui_section: Advanced
                 required: false
                 type: bool
-        -   ibgp_peer_template:
+            ibgp_peer_template:
                 description:
                 - Specifies the iBGP Peer-Template config used for RR and spines
                     with border role.
@@ -761,7 +761,7 @@ options:
                 ndfc_gui_section: Protocols
                 required: false
                 type: str
-        -   ibgp_peer_template_leaf:
+            ibgp_peer_template_leaf:
                 description:
                 - Specifies the config used for leaf, border or border gateway. If
                     this field is empty, the peer template defined in ibgp_peer_template
@@ -771,6 +771,13 @@ options:
                 ndfc_gui_section: Protocols
                 required: false
                 type: str
+            inband_dhcp_servers:
+                description:
+                - Comma separated list of IPv4 Addresses (Max 3)
+                ndfc_gui_label: External DHCP Server IP Addresses
+                ndfc_gui_section: Bootstrap
+                required: true
+                type: ipAddressList
             l3vni_mcast_group:
                 description:
                 - Default Underlay Multicast group IP assigned for every overlay VRF
@@ -1281,12 +1288,12 @@ class DcnmFabric:
             # self.inventory_data[fabric] = get_fabric_inventory_details(
             #     self.module, fabric
             # )
-
         fabrics_exist = set()
         for fabric in self.fabric_details:
             path = f"/rest/control/fabrics/{fabric}"
             if self.nd:
                 path = self.nd_prefix + path
+            self.log_msg(f"get_have() path {path}")
             fabric_info = dcnm_send(self.module, "GET", path)
             result = self._handle_get_response(fabric_info)
             if result["found"]:
@@ -2155,16 +2162,16 @@ class DcnmFabric:
         Build and send the payload to create the
         fabrics specified in the playbook.
         """
-        path = "/rest/control/fabrics"
-        if self.nd:
-            path = self.nd_prefix + path
 
         for item in self.want_create:
             fabric = item["fabric_name"]
+            path = f"/rest/control/fabrics/{item['fabric_name']}/Easy_Fabric"
+            if self.nd:
+                path = self.nd_prefix + path
 
             payload = self.payloads[fabric]
-            self.log_msg(f"create_fabrics: payload {payload}")
             response = dcnm_send(self.module, "POST", path, data=json.dumps(payload))
+            self.log_msg(f"create_fabrics: error_msg {response['DATA']}")
             result = self._handle_post_put_response(response, "POST")
 
             if not result["success"]:
@@ -2199,6 +2206,7 @@ class DcnmFabric:
         #         'path': '/rest/control/fabrics/IR-Fabric'
         #     }
         # }
+        self.log_msg(f"_handle_get_response: response {response}")
         result = {}
         success_return_codes = {200, 404}
         if (
