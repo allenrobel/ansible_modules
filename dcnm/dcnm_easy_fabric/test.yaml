@@ -1,0 +1,17 @@
+---
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    - cisco.dcnm.dcnm_easy_fabric:
+        state: merged
+        config:
+        -   fabric_name: IPv6
+            bgp_as: 1
+            anycast_lb_id: 200
+            loopback0_ipv6_range: fd00::a12:0/119
+            loopback1_ipv6_range: fd00::a13:0/118
+            router_id_range: 10.2.128.0/23
+            underlay_is_v6: True
+            use_link_local: False
+            v6_subnet_range: fd00::a14:0/112
+            v6_subnet_target_mask: 127
