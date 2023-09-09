@@ -1,0 +1,19 @@
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    -   name: stage/upgrade devices
+        cisco.dcnm.dcnm_image_upgrade:
+            state: merged
+            config:
+                policy: NR3F                  # mandatory, policy name to which switch is attached
+                stage: true                   # optional, default is true, trigger stage image if the image is not staged
+                upgrade: true                 # optional, default is true, trigger upgrade if image is staged
+                switches:                     # mandatory, list of dict, config per switch override the global config
+                    -   ip_address: 172.22.150.103
+                        policy: NR3F
+                        stage: true
+                        upgrade: false
+                    # - ip_address: 192.168.123.102
+                    #   policy: NR3F
+                    #   stage: true
+                    #   upgrade: true
