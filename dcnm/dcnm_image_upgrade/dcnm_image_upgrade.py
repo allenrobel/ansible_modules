@@ -26,7 +26,6 @@ from __future__ import absolute_import, division, print_function
 
 import copy
 import json
-
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm import (
     dcnm_send,
@@ -37,9 +36,6 @@ from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm impor
 __metaclass__ = type
 __author__ = "Cisco Systems, Inc."
 
-# NOTE: Going forward, add an "version_added" field for each
-# parameter that contains the version of NDFC that first
-# introduced the parameter.
 DOCUMENTATION = """
 ---
 module: dcnm_image_upgrade
@@ -47,7 +43,7 @@ short_description: Attach, detach, and query device image policies.
 version_added: "0.9.0"
 description:
     - Attach, detach, and query device image policies.
-author: Allen Robel
+author: Cisco Systems, Inc.
 options:
     state:
         description:
@@ -174,9 +170,13 @@ EXAMPLES = """
                 -   ip_address: 192.168.1.2
 
 """
-class DcnmBase:
+
+class DcnmImageUpgradeCommon:
     """
-    Base class for dcnm_image_upgrade
+    Base class for the following classes in this file:
+
+    DcnmImageUpgrade()
+
     """
     def __init__(self, module):
         self.module = module
@@ -187,42 +187,53 @@ class DcnmBase:
         self._init_endpoints()
 
     def _init_endpoints(self):
-        self.endpoint_policymgnt = "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt"
+        self.endpoint_image_management = "/appcenter/cisco/ndfc/api/v1/imagemanagement"
+        self.endpoint_image_upgrade = f"{self.endpoint_image_management}/rest/imageupgrade"
+        self.endpoint_package_mgnt = f"{self.endpoint_image_management}/rest/packagemgnt"
+        self.endpoint_policy_mgnt = f"{self.endpoint_image_management}/rest/policymgnt"
         self.endpoint_lan_fabric = "/appcenter/cisco/ndfc/api/v1/lan-fabric"
         self.endpoints = {}
         self.endpoints["attach_policy"] = {}
+        self.endpoints["attached_policies"] = {}
         self.endpoints["create_policy"] = {}
         self.endpoints["detach_policy"] = {}
         self.endpoints["query_all_policies"] = {}
         self.endpoints["query_all_switches"] = {}
         self.endpoints["query_one_policy"] = {}
-        self.endpoints["attached_policies"] = {}
+        self.endpoints["query_issu"] = {}
+        self.endpoints["upgrade_image"] = {}
         
-        self.endpoints["attached_policies"]["path"] = f"{self.endpoint_policymgnt}/all-attached-policies"
+        self.endpoints["attached_policies"]["path"] = f"{self.endpoint_policy_mgnt}/all-attached-policies"
         self.endpoints["attached_policies"]["verb"] = "GET"
 
-        self.endpoints["attach_policy"]["path"] = f"{self.endpoint_policymgnt}/attach-policy"
+        self.endpoints["attach_policy"]["path"] = f"{self.endpoint_policy_mgnt}/attach-policy"
         self.endpoints["attach_policy"]["verb"] = "POST"
 
-        self.endpoints["create_policy"]["path"] = f"{self.endpoint_policymgnt}/platform-policy"
+        self.endpoints["create_policy"]["path"] = f"{self.endpoint_policy_mgnt}/platform-policy"
         self.endpoints["create_policy"]["verb"] = "POST"
 
-        self.endpoints["detach_policy"]["path"] = f"{self.endpoint_policymgnt}/detach-policy"
+        self.endpoints["detach_policy"]["path"] = f"{self.endpoint_policy_mgnt}/detach-policy"
         self.endpoints["detach_policy"]["verb"] = "DELETE"
 
-        self.endpoints["attached_policies"]["path"] = f"{self.endpoint_policymgnt}/all-attached-policies" 
+        self.endpoints["attached_policies"]["path"] = f"{self.endpoint_policy_mgnt}/all-attached-policies"
         self.endpoints["attached_policies"]["verb"] = "GET"
 
-        self.endpoints["query_all_policies"]["path"] = f"{self.endpoint_policymgnt}/policies" 
+        self.endpoints["query_all_policies"]["path"] = f"{self.endpoint_policy_mgnt}/policies"
         self.endpoints["query_all_policies"]["verb"] = "GET"
 
         # Replace __POLICY_NAME__ with the policy_name to query
         # e.g. path.replace("__POLICY_NAME__", "NR1F")
-        self.endpoints["query_one_policy"]["path"] = f"{self.endpoint_policymgnt}/edit-policy-get/__POLICY_NAME__" 
+        self.endpoints["query_one_policy"]["path"] = f"{self.endpoint_policy_mgnt}/edit-policy-get/__POLICY_NAME__"
         self.endpoints["query_one_policy"]["verb"] = "GET"
 
         self.endpoints["query_all_switches"]["path"] = f"{self.endpoint_lan_fabric}/rest/inventory/allswitches"
         self.endpoints["query_all_switches"]["verb"] = "GET"
+
+        self.endpoints["query_issu"]["path"] = f"{self.endpoint_package_mgnt}/issu"
+        self.endpoints["query_issu"]["verb"] = "GET"
+
+        self.endpoints["upgrade_image"]["path"] = f"{self.endpoint_image_upgrade}/upgrade-image"
+        self.endpoints["upgrade_image"]["verb"] = "POST"
 
     def _handle_get_response(self, response):
         """
@@ -310,256 +321,7 @@ class DcnmBase:
         self.fd.write("\n")
         self.fd.flush()
 
-class SwitchDetails(DcnmBase):
-    def __init__(self, module):
-        super().__init__(module)
-        self._init_properties()
-        self.refresh()
-
-    def _init_properties(self):
-        self.properties = {}
-        self.properties["ip_address"] = None
-
-    def refresh(self):
-        """
-        Caller: __init__()
-
-        Get switch details from NDFC
-        """
-        path = self.endpoints["query_all_switches"]["path"]
-        verb = self.endpoints["query_all_switches"]["verb"]
-        switch_details = dcnm_send(self.module, verb, path)
-        result = self._handle_get_response(switch_details)
-        if not result["success"]:
-            msg = "Unable to retrieve switch information from NDFC"
-            self.module.fail_json(msg=msg)
-
-        self.switch_details = {}
-        data = switch_details.get("DATA")
-        for switch in data:
-            self.switch_details[switch["ipAddress"]] = switch
-
-    def _get(self, item):
-        if self.ip_address is None:
-            msg = f"{self.__class__.__name__}: set instance.ip_address "
-            msg += "before accessing properties."
-            self.module.fail_json(msg=msg)
-        return self.switch_details[self.ip_address].get(item)
-
-    @property
-    def ip_address(self):
-        """
-        Set the ip_address of the switch to query.
-        
-        This needs to be set before accessing this class's properties.
-        """
-        return self.properties.get("ip_address")
-    @ip_address.setter
-    def ip_address(self, value):
-        self.properties["ip_address"] = value
-
-    @property
-    def switch_fabric_name(self):
-        """
-        Return the fabricName of the switch with ip_address, if it exists.
-        Return None otherwise
-        """
-        return self._get("fabricName")
-
-    @property
-    def switch_hostname(self):
-        """
-        Return the hostName of the switch with ip_address, if it exists.
-        Return None otherwise
-        """
-        return self._get("hostName")
-
-    @property
-    def switch_logical_name(self):
-        """
-        Return the logicalName of the switch with ip_address, if it exists.
-        Return None otherwise
-        """
-        return self._get("logicalName")
-
-    @property
-    def switch_model(self):
-        """
-        Return the model of the switch with ip_address, if it exists.
-        Return None otherwise
-        """
-        return self._get("model")
-
-    @property
-    def switch_platform(self):
-        """
-        Return the platform of the switch with ip_address, if it exists.
-        Return None otherwise
-        """
-        model = self._get("model")
-        if model is None:
-            return None
-        return model.split("-")[0]
-
-    @property
-    def switch_role(self):
-        """
-        Return the switchRole of the switch with ip_address, if it exists.
-        Return None otherwise
-        """
-        return self._get("switchRole")
-    
-    @property
-    def switch_serial_number(self):
-        """
-        Return the serialNumber of the switch with ip_address, if it exists.
-        Return None otherwise
-        """
-        return self._get("serialNumber")
-
-class ImagePolicies(DcnmBase):
-    def __init__(self, module):
-        super().__init__(module)
-        self._init_properties()
-        self.refresh()
-
-    def _init_properties(self):
-        self.properties = {}
-        self.properties["name"] = None
-
-    def refresh(self):
-        """
-        refresh image_policies with current image policies from NDFC
-        """
-        path = self.endpoints["query_all_policies"]["path"]
-        verb = self.endpoints["query_all_policies"]["verb"]
-        data = dcnm_send(self.module, verb, path)
-
-        result = self._handle_get_response(data)
-        if not result["success"]:
-            msg = "Unable to retrieve image policy information from NDFC"
-            self.module.fail_json(msg=msg)
-
-        self.image_policies = {}
-        policy_data = data.get("DATA").get("lastOperDataObject")
-        if policy_data is None:
-            self.module.fail_json(msg="Unable to retrieve image policy information from NDFC")
-        if len(policy_data) == 0:
-            self.module.fail_json(msg="NDFC has no defined image policies")
-        for policy in policy_data:
-            policy_name = policy.get("policyName")
-            if not policy_name:
-                self.module.fail_json(msg="Cannot parse NDFC policy information")
-            self.image_policies[policy_name] = policy
-
-    def _get(self, item):
-        if self.name is None:
-            msg = f"{self.__class__.__name__}: instance.name must be set "
-            msg += "before accessing properties."
-            self.module.fail_json(msg=msg)
-        return self.image_policies[self.name].get(item)
-
-    @property
-    def name(self):
-        """
-        Return the name of the policy with policy_name, if it exists.
-        Return None otherwise
-        """
-        return self.properties.get("name")
-    @name.setter
-    def name(self, value):
-        self.properties["name"] = value
-
-    @property
-    def policy_type(self):
-        """
-        Return the policyType of the policy with self.name, if it exists.
-        Return None otherwise
-        """
-        return self._get("policyType")
-
-    @property
-    def nxos_version(self):
-        """
-        Return the nxosVersion of the policy with self.name, if it exists.
-        Return None otherwise
-        """
-        return self._get("nxosVersion")
-
-    @property
-    def package_name(self):
-        """
-        Return the packageName of the policy with self.name, if it exists.
-        Return None otherwise
-        """
-        return self._get("nxosVersion")
-
-    @property
-    def policy_name(self):
-        """
-        Return the name of the policy with self.name, if it exists.
-        Return None otherwise
-        """
-        return self._get("policyName")
-
-    @property
-    def platform(self):
-        """
-        Return the platform of the policy with self.name, if it exists.
-        Return None otherwise
-        """
-        return self._get("platform")
-
-    @property
-    def description(self):
-        """
-        Return the policyDescr of the policy with self.name, if it exists.
-        Return None otherwise
-        """
-        return self._get("policyDescr")
-
-    @property
-    def platform_policies(self):
-        """
-        Return the platformPolicies of the policy with self.name, if it exists.
-        Return None otherwise
-        """
-        return self._get("platformPolicies")
-
-    @property
-    def epld_image_name(self):
-        """
-        Return the epldImgName of the policy with self.name, if it exists.
-        Return None otherwise
-        """
-        return self._get("epldImgName")
-
-    @property
-    def rpm_images(self):
-        """
-        Return the rpmimages of the policy with self.name, if it exists.
-        Return None otherwise
-        """
-        return self._get("rpmimages")
-
-    @property
-    def image_name(self):
-        """
-        Return the imageName of the policy with self.name, if it exists.
-        Return None otherwise
-        """
-        return self._get("imageName")
-
-    @property
-    def agnostic(self):
-        """
-        Return the value of agnostic for the policy with self.name,
-        if it exists.
-        Return None otherwise
-        """
-        return self._get("agnostic")
-
-class DcnmImageUpgrade(DcnmBase):
+class DcnmImageUpgrade(DcnmImageUpgradeCommon):
     """
     Ansible support for image policy attach, detach, and query.
     """
@@ -605,8 +367,8 @@ class DcnmImageUpgrade(DcnmBase):
 
         self._init_defaults()
 
-        self.switch_details = SwitchDetails(self.module)
-        self.image_policies = ImagePolicies(self.module)
+        self.switch_details = DcnmSwitchDetails(self.module)
+        self.image_policies = DcnmImagePolicies(self.module)
 
     def _init_defaults(self):
         self.defaults = {}
@@ -794,24 +556,24 @@ class DcnmImageUpgrade(DcnmBase):
         self.payloads = []
         for switch in self.switch_configs:
             self.switch_details.ip_address = switch.get('ip_address')
-            self.image_policies.name = switch.get('policy')
+            self.image_policies.policy_name = switch.get('policy')
 
-            if self.image_policies.policy_name is None:
+            if self.image_policies.name is None:
                 msg = f"policy {switch.get('policy')} does not exist on NDFC"
                 self.module.fail_json(msg=msg)
 
-            if self.switch_details.switch_platform not in self.image_policies.platform:
+            if self.switch_details.platform not in self.image_policies.platform:
                 msg = f"policy {switch.get('policy')} does not support platform "
-                msg += f"{self.switch_details.switch_platform}. {switch.get('policy')} "
+                msg += f"{self.switch_details.platform}. {switch.get('policy')} "
                 msg += f"supports the following platform(s): {self.image_policies.platform}"
                 self.module.fail_json(msg=msg)
 
             payload = {}
-            payload["policyName"] = self.image_policies.policy_name
-            payload["hostName"] = self.switch_details.switch_hostname
+            payload["policyName"] = self.image_policies.name
+            payload["hostName"] = self.switch_details.hostname
             payload["ipAddr"] = self.switch_details.ip_address
-            payload["platform"] = self.switch_details.switch_platform
-            payload["serialNumber"] = self.switch_details.switch_serial_number
+            payload["platform"] = self.switch_details.platform
+            payload["serialNumber"] = self.switch_details.serial_number
             #payload["bootstrapMode"] = switch.get('bootstrap_mode')
 
             for item in payload:
@@ -863,6 +625,647 @@ class DcnmImageUpgrade(DcnmBase):
                 res.update({"DATA": data})
 
         self.module.fail_json(msg=res)
+
+
+
+class DcnmSwitchDetails(DcnmImageUpgradeCommon):
+    """
+    Retrieve switch details from NDFC and provide property accessors
+    for the switch attributes.
+
+    Usage (where module is an instance of AnsibleModule):
+
+    instance = DcnmSwitchDetails(module)
+    instance.ip_address = 10.1.1.1
+    fabric_name = instance.fabric_name
+    serial_number = instance.serial_number
+    etc...
+
+    Switch details are retrieved on instantiation of this class.
+    Switch details can be refreshed by calling instance.refresh().
+
+    Endpoint:
+    /appcenter/cisco/ndfc/api/v1/lan-fabric/rest/inventory/allswitches
+    """
+    def __init__(self, module):
+        super().__init__(module)
+        self._init_properties()
+        self.refresh()
+
+    def _init_properties(self):
+        self.properties = {}
+        self.properties["ip_address"] = None
+
+    def refresh(self):
+        """
+        Caller: __init__()
+
+        Refresh switch_details with current switch details from NDFC
+        """
+        path = self.endpoints["query_all_switches"]["path"]
+        verb = self.endpoints["query_all_switches"]["verb"]
+        response = dcnm_send(self.module, verb, path)
+        result = self._handle_get_response(response)
+        if not result["success"]:
+            msg = "Unable to retrieve switch information from NDFC"
+            self.module.fail_json(msg=msg)
+
+        data = response.get("DATA")
+        self.data = {}
+        for switch in data:
+            self.data[switch["ipAddress"]] = switch
+
+    def _get(self, item):
+        if self.ip_address is None:
+            msg = f"{self.__class__.__name__}: set instance.ip_address "
+            msg += f"before accessing property {item}."
+            self.module.fail_json(msg=msg)
+        return self.data[self.ip_address].get(item)
+
+    @property
+    def ip_address(self):
+        """
+        Set the ip_address of the switch to query.
+        
+        This needs to be set before accessing this class's properties.
+        """
+        return self.properties.get("ip_address")
+    @ip_address.setter
+    def ip_address(self, value):
+        self.properties["ip_address"] = value
+
+    @property
+    def fabric_name(self):
+        """
+        Return the fabricName of the switch with ip_address, if it exists.
+        Return None otherwise
+        """
+        return self._get("fabricName")
+
+    @property
+    def hostname(self):
+        """
+        Return the hostName of the switch with ip_address, if it exists.
+        Return None otherwise
+        """
+        return self._get("hostName")
+
+    @property
+    def logical_name(self):
+        """
+        Return the logicalName of the switch with ip_address, if it exists.
+        Return None otherwise
+        """
+        return self._get("logicalName")
+
+    @property
+    def model(self):
+        """
+        Return the model of the switch with ip_address, if it exists.
+        Return None otherwise
+        """
+        return self._get("model")
+
+    @property
+    def platform(self):
+        """
+        Return the platform of the switch with ip_address, if it exists.
+        Return None otherwise
+        """
+        model = self._get("model")
+        if model is None:
+            return None
+        return model.split("-")[0]
+
+    @property
+    def role(self):
+        """
+        Return the switchRole of the switch with ip_address, if it exists.
+        Return None otherwise
+        """
+        return self._get("switchRole")
+    
+    @property
+    def serial_number(self):
+        """
+        Return the serialNumber of the switch with ip_address, if it exists.
+        Return None otherwise
+        """
+        return self._get("serialNumber")
+
+class DcnmImagePolicies(DcnmImageUpgradeCommon):
+    """
+    Retrieve image policy details from NDFC and provide property accessors
+    for the policy attributes.
+
+    Usage (where module is an instance of AnsibleModule):
+
+    instance = DcnmImagePolicies(module)
+    instance.policy_name = "NR3F"
+    if instance.name is None:
+        print("policy NR3F does not exist on NDFC")
+        exit(1)
+    policy_name = instance.name
+    platform = instance.platform
+    epd_image_name = instance.epld_image_name
+    etc...
+
+    Policies are retrieved on instantiation of this class.
+    Policies can be refreshed by calling instance.refresh().
+
+    Endpoint:
+    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/policies
+    """
+    def __init__(self, module):
+        super().__init__(module)
+        self._init_properties()
+        self.refresh()
+
+    def _init_properties(self):
+        self.properties = {}
+        self.properties["policy_name"] = None
+
+    def refresh(self):
+        """
+        Refresh self.image_policies with current image policies from NDFC
+        """
+        path = self.endpoints["query_all_policies"]["path"]
+        verb = self.endpoints["query_all_policies"]["verb"]
+        response = dcnm_send(self.module, verb, path)
+
+        result = self._handle_get_response(response)
+        if not result["success"]:
+            msg = "Unable to retrieve image policy information from NDFC"
+            self.module.fail_json(msg=msg)
+
+        data = response.get("DATA").get("lastOperDataObject")
+        if data is None:
+            msg = "Unable to retrieve image policy information from NDFC"
+            self.module.fail_json(msg=msg)
+        if len(data) == 0:
+            msg = "NDFC has no defined image policies"
+            self.module.fail_json(msg=msg)
+        self.data = {}
+        for policy in data:
+            policy_name = policy.get("policyName")
+            if not policy_name:
+                msg = "Cannot parse NDFC policy information"
+                self.module.fail_json(msg=msg)
+            self.data[policy_name] = policy
+
+    def _get(self, item):
+        if self.policy_name is None:
+            msg = f"{self.__class__.__name__}: instance.policy_name must "
+            msg += f"be set before accessing property {item}."
+            self.module.fail_json(msg=msg)
+        return self.data[self.policy_name].get(item)
+
+    @property
+    def policy_name(self):
+        """
+        Set the name of the policy to query.
+        """
+        return self.properties.get("policy_name")
+    @policy_name.setter
+    def policy_name(self, value):
+        self.properties["policy_name"] = value
+
+    @property
+    def policy_type(self):
+        """
+        Return the policyType of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("policyType")
+
+    @property
+    def nxos_version(self):
+        """
+        Return the nxosVersion of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("nxosVersion")
+
+    @property
+    def package_name(self):
+        """
+        Return the packageName of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("nxosVersion")
+
+    @property
+    def name(self):
+        """
+        Return the name of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("policyName")
+
+    @property
+    def platform(self):
+        """
+        Return the platform of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("platform")
+
+    @property
+    def description(self):
+        """
+        Return the policyDescr of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("policyDescr")
+
+    @property
+    def platform_policies(self):
+        """
+        Return the platformPolicies of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("platformPolicies")
+
+    @property
+    def epld_image_name(self):
+        """
+        Return the epldImgName of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("epldImgName")
+
+    @property
+    def rpm_images(self):
+        """
+        Return the rpmimages of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("rpmimages")
+
+    @property
+    def image_name(self):
+        """
+        Return the imageName of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("imageName")
+
+    @property
+    def agnostic(self):
+        """
+        Return the value of agnostic for the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("agnostic")
+
+
+class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
+    """
+    Retrieve switch issu details from NDFC and provide property accessors
+    for the switch attributes.
+
+    Usage (where module is an instance of AnsibleModule):
+
+    instance = DcnmSwitchIssuDetails(module)
+    instance.ip_address = 10.1.1.1
+    image_staged = instance.image_staged
+    image_upgraded = instance.image_upgraded
+    serial_number = instance.serial_number
+    etc...
+
+    Switch details are retrieved on instantiation of this class.
+    Switch details can be refreshed by calling instance.refresh().
+
+    Endpoint:
+    /appcenter/cisco/ndfc/api/v1/lan-fabric/rest/inventory/allswitches
+
+{
+    "status": "SUCCESS",
+    "lastOperDataObject": [
+        {
+            "serialNumber": "FDO211218GC",
+            "deviceName": "cvd-1312-leaf",
+            "fabric": "fff",
+            "version": "10.3(2)",
+            "policy": "NR3F",
+            "status": "In-Sync",
+            "reason": "Compliance",
+            "imageStaged": "Success",
+            "validated": "None",
+            "upgrade": "None",
+            "upgGroups": "None",
+            "mode": "Normal",
+            "systemMode": "Normal",
+            "vpcRole": null,
+            "vpcPeer": null,
+            "role": "leaf",
+            "lastUpgAction": "Never",
+            "model": "N9K-C93180YC-EX",
+            "ipAddress": "172.22.150.103",
+            "issuAllowed": "",
+            "statusPercent": 100,
+            "imageStagedPercent": 100,
+            "validatedPercent": 0,
+            "upgradePercent": 0,
+            "modelType": 0,
+            "vdcId": 0,
+            "ethswitchid": 8430,
+            "platform": "N9K",
+            "vpc_role": null,
+            "ip_address": "172.22.150.103",
+            "peer": null,
+            "vdc_id": -1,
+            "sys_name": "cvd-1312-leaf",
+            "id": 3,
+            "group": "fff",
+            "fcoEEnabled": false,
+            "mds": false
+        },
+    
+    """
+    def __init__(self, module):
+        super().__init__(module)
+        self._init_properties()
+        self.refresh()
+
+    def _init_properties(self):
+        self.properties = {}
+        self.properties["ip_address"] = None
+
+    def refresh(self):
+        """
+        Caller: __init__()
+
+        Refresh switch_details with current switch details from NDFC
+        """
+        path = self.endpoints["query_all_switches"]["path"]
+        verb = self.endpoints["query_all_switches"]["verb"]
+        response = dcnm_send(self.module, verb, path)
+        result = self._handle_get_response(response)
+        if not result["success"]:
+            msg = "Unable to retrieve switch information from NDFC"
+            self.module.fail_json(msg=msg)
+
+        data = response.get("DATA")
+        self.data = {}
+        for switch in data:
+            self.data[switch["ipAddress"]] = switch
+
+    def _get(self, item):
+        if self.ip_address is None:
+            msg = f"{self.__class__.__name__}: set instance.ip_address "
+            msg += f"before accessing property {item}."
+            self.module.fail_json(msg=msg)
+        return self.data[self.ip_address].get(item)
+
+    @property
+    def ip_address(self):
+        """
+        Set the ip_address of the switch to query.
+        
+        This needs to be set before accessing this class's properties.
+        """
+        return self.properties.get("ip_address")
+    @ip_address.setter
+    def ip_address(self, value):
+        self.properties["ip_address"] = value
+
+    @property
+    def device_name(self):
+        """
+        Return the deviceName of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            device name, e.g. "cvd-1312-leaf"
+            None
+        """
+        return self._get("deviceName")
+
+    @property
+    def fabric(self):
+        """
+        Return the fabric of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            fabric name, e.g. "myfabric"
+            None
+        """
+        return self._get("fabric")
+
+    @property
+    def image_staged(self):
+        """
+        Return the imageStaged of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            Success
+            None
+        """
+        return self._get("imageStaged")
+
+    @property
+    def mode(self):
+        """
+        Return the ISSU mode of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            "Normal"
+            None
+        """
+        return self._get("mode")
+
+    @property
+    def model(self):
+        """
+        Return the model of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            model number e.g. "N9K-C93180YC-EX"
+            None
+        """
+        return self._get("model")
+
+    @property
+    def platform(self):
+        """
+        Return the platform of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            platform, e.g. "N9K"
+            None
+        """
+        return self._get("platform")
+
+    @property
+    def policy(self):
+        """
+        Return the policy attached to the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            policy name, e.g. "NR3F"
+            None
+        """
+        return self._get("policy")
+
+    @property
+    def reason(self):
+        """
+        Return the reason (?) of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            "Compliance"
+            None
+        """
+        return self._get("reason")
+
+    @property
+    def role(self):
+        """
+        Return the role of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            switch role, e.g. "leaf"
+            None
+        """
+        return self._get("role")
+    
+    @property
+    def serial_number(self):
+        """
+        Return the serialNumber of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            switch serial number, e.g. "AB1234567CD"
+            None
+        """
+        return self._get("serialNumber")
+
+    @property
+    def status(self):
+        """
+        Return the sync status of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            "In-Sync"
+            "Out-Of-Sync"
+        """
+        return self._get("status")
+
+    @property
+    def sys_name(self):
+        """
+        Return the system name of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            system name, e.g. "cvd-1312-leaf"
+            None
+        """
+        return self._get("sys_name")
+
+    @property
+    def system_mode(self):
+        """
+        Return the system mode of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            "Maintenance" (TODO:3 verify this)
+            "Normal"
+            None
+        """
+        return self._get("systemMode")
+
+    @property
+    def upgrade(self):
+        """
+        Return the upgrade status of the switch with ip_address,
+        if it exists.
+        Return None otherwise
+
+        Possible values:
+            Success
+            None
+        """
+        return self._get("upgrade")
+
+    @property
+    def upg_groups(self):
+        """
+        Return the upgGroups (upgrade groups) of the switch with ip_address,
+        if it exists.
+        Return None otherwise
+
+        Possible values:
+            upgrade group to which the switch belongs e.g. "LEAFS"
+            None
+        """
+        return self._get("upgGroups")
+
+    @property
+    def validated(self):
+        """
+        Return the validation status of the switch with ip_address,
+        if it exists.
+        Return None otherwise
+
+        Possible values:
+            Failure (TODO:3 verify this)
+            Success
+            None
+        """
+        return self._get("validated")
+
+    @property
+    def version(self):
+        """
+        Return the version of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            version, e.g. "10.3(2)"
+            None
+        """
+        return self._get("version")
+
+    @property
+    def vpc_role(self):
+        """
+        Return the vpcRole of the switch with ip_address, if it exists.
+        Return None otherwise
+
+        Possible values:
+            vpc role e.g.:
+                "primary"
+                "secondary"
+                "none"
+                "none established" (TODO:3 verify this)
+                "primary, operational secondary" (TODO:3 verify this)
+            None
+        """
+        return self._get("vpcRole")
 
 def main():
     """main entry point for module execution"""
