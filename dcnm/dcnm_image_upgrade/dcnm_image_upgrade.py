@@ -443,16 +443,15 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
         """
         self.have.ip_address = want["ip_address"]
 
+        want["policy_changed"] = True
         # The switch does not have an image policy attached
-        # Return the want item as-is
+        # Return the want item as-is with policy_changed = True
         if self.have.serial_number is None:
-            want["policy_changed"] = True
             return want
         # The switch has an image policy attached which is
         # different from the want policy.
-        # Return the want item as-is
+        # Return the want item as-is with policy_changed = True
         if want["policy"] != self.have.policy:
-            want["policy_changed"] = True
             return want
 
         idempotent_want = {}
@@ -1163,17 +1162,17 @@ class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
         """
         Caller: __init__()
 
-        Refresh switch_details with current switch details from NDFC
+        Refresh ip_address current issu details from NDFC
         """
-        path = self.endpoints["switches_info"]["path"]
-        verb = self.endpoints["switches_info"]["verb"]
+        path = self.endpoints["issu_info"]["path"]
+        verb = self.endpoints["issu_info"]["verb"]
         response = dcnm_send(self.module, verb, path)
         result = self._handle_get_response(response)
         if not result["success"]:
             msg = "Unable to retrieve switch information from NDFC"
             self.module.fail_json(msg=msg)
 
-        data = response.get("DATA")
+        data = response.get("DATA", {}).get("lastOperDataObject", [])
         self.data = {}
         for switch in data:
             self.data[switch["ipAddress"]] = switch
@@ -1184,6 +1183,26 @@ class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
             msg += f"before accessing property {item}."
             self.module.fail_json(msg=msg)
         return self.data[self.ip_address].get(item)
+    
+    @property
+    def raw_data(self):
+        """
+        Return the raw data retrieved from NDFC
+        """
+        return self.data
+
+    @property
+    def raw_switch_data(self):
+        """
+        Return the raw data for switch with ip_address retrieved from NDFC
+        """
+        if self.ip_address is None:
+            msg = f"{self.__class__.__name__}: set instance.ip_address "
+            msg += f"before accessing property raw_switch_data."
+            self.module.fail_json(msg=msg)
+        if self.ip_address not in self.data:
+            return {}
+        return self.data[self.ip_address]
 
     @property
     def ip_address(self):
@@ -1425,6 +1444,7 @@ class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
         Possible values:
             Compliance
             Validate
+            Upgrade
             None
         """
         return self._get("reason")
@@ -1520,6 +1540,7 @@ class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
 
         Possible values:
             Success
+            In-Progress
             None
         """
         return self._get("upgrade")
