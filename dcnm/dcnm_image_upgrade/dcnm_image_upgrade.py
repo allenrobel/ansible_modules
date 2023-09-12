@@ -196,6 +196,7 @@ class DcnmImageUpgradeCommon:
         self.endpoint_lan_fabric = "/appcenter/cisco/ndfc/api/v1/lan-fabric"
         self.endpoints = {}
         self.endpoints["bootflash_info"] = {}
+        self.endpoints["image_install_options"] = {}
         self.endpoints["image_stage"] = {}
         self.endpoints["image_upgrade"] = {}
         self.endpoints["image_validate"] = {}
@@ -211,6 +212,9 @@ class DcnmImageUpgradeCommon:
 
         self.endpoints["bootflash_info"]["path"] = f"{self.endpoint_bootflash}/bootflash-info"
         self.endpoints["bootflash_info"]["verb"] = "GET"
+
+        self.endpoints["image_install_options"]["path"] = f"{self.endpoint_image_upgrade}/install-options"
+        self.endpoints["image_install_options"]["verb"] = "POST"
 
         self.endpoints["image_stage"]["path"] = f"{self.endpoint_staging_management}/stage-image"
         self.endpoints["image_stage"]["verb"] = "POST"
@@ -412,13 +416,6 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
         Determine current switch ISSU state on NDFC
         """
         self.have = DcnmSwitchIssuDetails(self.module)
-        # path = self.endpoints["policies_info"]["path"]
-        # verb = self.endpoints["policies_info"]["verb"]
-        # self.have = dcnm_send(self.module, verb, path)
-        # result = self._handle_get_response(self.have)
-        # if not result["success"]:
-        #     msg = "Unable to retrieve image policy information from NDFC"
-        #     self.module.fail_json(msg=msg)
 
     def get_want(self):
         """
@@ -715,10 +712,91 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
 
     def _upgrade_images(self, serial_numbers):
         """
-        Upgrade the switch(es) to the currently-staged image
+        Upgrade the switch(es) to the currently-staged and validate image.
+
+        Endpoint:
+        /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade/upgrade-image
+
+        upgrade-image request body:
+
+            {
+                "devices": [
+                    {
+                        "serialNumber": "FDO2338082P",
+                        "policyName": "MyPolicy"
+                    }
+                ],
+                "issu": true,
+                "issuUpgradeOptions1": {
+                    "nonDisruptive": true,
+                    "forceNonDisruptive": false,
+                    "disruptive": false
+                },
+                "epldUpgrade": false,
+                "epldOptions": {
+                    "moduleNumber": "ALL",
+                    "golden": false
+                },
+                "pacakgeInstall": true,
+                "pacakgeUnInstall": false,
+                "reboot": false,
+                "rebootOptions": false
+            }
+
+        install-options request body:
+            {
+                "devices": [
+                    "FDO21332E6X",
+                    "FDO21351QGE"
+                ],
+                "issu": true,
+                "epld": true,
+                "packageInstall": false
+            }
+        install-options response body:
+        TODO:1 handle this in a class DcnmInstallOptions()
+            {
+                "compatibilityStatusList": [
+                    {
+                        "deviceName": "cvd-1313-leaf",
+                        "ipAddress": "172.22.150.104",
+                        "policyName": "NR1F",
+                        "platform": "N9K/N3K",
+                        "version": "10.3.2",
+                        "osType": "64bit",
+                        "status": "Success",
+                        "installOption": "non-disruptive",
+                        "compDisp": "[cli output for show install all impact nxos bootflash:nxos.10.3.2.bin]",
+                        "versionCheck": "cli output elided...",
+                        "preIssuLink": "Not Applicable",
+                        "repStatus": "skipped",
+                        "timestamp": "NA"
+                    }
+                ],
+                "epldModules": null,
+                "installPacakges": null,
+                "errMessage": ""
+            }
         """
         if len(serial_numbers) == 0:
             return
+        path = self.endpoints["image_install_options"]["path"]
+        verb = self.endpoints["image_install_options"]["verb"]
+
+        payload = {}
+        payload["devices"] = {}
+        payload["devices"][""] = serial_numbers
+        payload["issu"] = True
+        payload["epld"] = False
+        payload["packageInstall"] = False
+        self.log_msg(f"install-options payload: {json.dumps(payload)}")
+        response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
+        result = self._handle_post_put_response(response, "POST")
+        self.log_msg(f"install-options response: {response}")
+
+        if not result["success"]:
+            self._failure(response)
+
         path = self.endpoints["image_upgrade"]["path"]
         verb = self.endpoints["image_upgrade"]["verb"]
         payload = {}
@@ -740,15 +818,19 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
         self.build_policy_attach_payload()
         self.send_policy_attach_payload()
         stage_serial_numbers = []
-        upgrade_serial_numbers = []
+        upgrade_devices = []
         for switch in self.diff_create:
             self.switch_details.ip_address = switch.get('ip_address')
             if switch.get('stage') is not False:
                 stage_serial_numbers.append(self.switch_details.serial_number)
             if switch.get('upgrade') is not False:
-                upgrade_serial_numbers.append(self.switch_details.serial_number)
+                device = {}
+                device["serialNumber"] = self.switch_details.serial_number
+                device["policyName"] = self.switch_details.policy
+                upgrade_devices.append(device)
+
         self._stage_images(stage_serial_numbers)
-        self._upgrade_images(upgrade_serial_numbers)
+        self._upgrade_images(upgrade_devices)
 
     def _failure(self, resp):
         """
