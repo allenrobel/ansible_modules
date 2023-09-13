@@ -24,14 +24,15 @@ query: return image policy details for one or more devices
 """
 from __future__ import absolute_import, division, print_function
 
-import copy
-import json
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm import (
     dcnm_send,
     dcnm_version_supported,
     validate_list_of_dicts,
 )
+import copy
+import json
+from time import sleep
 
 __metaclass__ = type
 __author__ = "Cisco Systems, Inc."
@@ -196,7 +197,7 @@ class DcnmImageUpgradeCommon:
         self.endpoint_lan_fabric = "/appcenter/cisco/ndfc/api/v1/lan-fabric"
         self.endpoints = {}
         self.endpoints["bootflash_info"] = {}
-        self.endpoints["image_install_options"] = {}
+        self.endpoints["install_options"] = {}
         self.endpoints["image_stage"] = {}
         self.endpoints["image_upgrade"] = {}
         self.endpoints["image_validate"] = {}
@@ -213,8 +214,8 @@ class DcnmImageUpgradeCommon:
         self.endpoints["bootflash_info"]["path"] = f"{self.endpoint_bootflash}/bootflash-info"
         self.endpoints["bootflash_info"]["verb"] = "GET"
 
-        self.endpoints["image_install_options"]["path"] = f"{self.endpoint_image_upgrade}/install-options"
-        self.endpoints["image_install_options"]["verb"] = "POST"
+        self.endpoints["install_options"]["path"] = f"{self.endpoint_image_upgrade}/install-options"
+        self.endpoints["install_options"]["verb"] = "POST"
 
         self.endpoints["image_stage"]["path"] = f"{self.endpoint_staging_management}/stage-image"
         self.endpoints["image_stage"]["verb"] = "POST"
@@ -245,7 +246,7 @@ class DcnmImageUpgradeCommon:
 
         # Replace __POLICY_NAME__ with the policy_name to query
         # e.g. path.replace("__POLICY_NAME__", "NR1F")
-        self.endpoints["policy_info"]["path"] = f"{self.endpoint_policy_mgnt}/edit-policy-get/__POLICY_NAME__"
+        self.endpoints["policy_info"]["path"] = f"{self.endpoint_policy_mgnt}/image-policy/__POLICY_NAME__"
         self.endpoints["policy_info"]["verb"] = "GET"
 
         self.endpoints["stage_info"]["path"] = f"{self.endpoint_staging_management}/stage-info"
@@ -685,34 +686,94 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
         verb = self.endpoints["image_validate"]["verb"]
         payload = {}
         payload["serialNumbers"] = serial_numbers
+        payload["nonDisruptive"] = True
         response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
         result = self._handle_post_put_response(response, "POST")
 
         if not result["success"]:
             self._failure(response)
 
-    def _stage_images(self, serial_numbers):
+    def _stage_images(self, devices):
         """
         Stage the images to the switch(es)
         """
-        # bootflash = DcnmBootflashInfo(self.module)
-        # bootflash.serial_number = self.switch_details.serial_number
-        # bootflash.refresh()
+
+        if not isinstance(devices, list):
+            msg = f"expected list type for devices. "
+            msg += f"got {type(devices).__name__}"
+            self.module.fail_json(msg=msg)
+        serial_numbers = set()
+        for device in devices:
+            serial_numbers.add(device["serial_number"])
+
         if len(serial_numbers) == 0:
             return
-        path = self.endpoints["image_stage"]["path"]
-        verb = self.endpoints["image_stage"]["verb"]
-        payload = {}
-        payload["serialNumbers"] = serial_numbers
-        response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
-        result = self._handle_post_put_response(response, "POST")
 
-        if not result["success"]:
-            self._failure(response)
+        self.log_msg(f"serial_numbers pre-issu check: {serial_numbers}")
+        issu = DcnmSwitchIssuDetails(self.module)
+        for device in devices:
+            issu.ip_address = device["ip_address"]
+            issu.refresh()
+            if issu.image_staged == "Success":
+                msg = f"image already staged for "
+                msg += f"{issu.serial_number} / {issu.ip_address}"
+                self.log_msg(msg)
+                serial_numbers.remove(issu.serial_number)
+            if issu.image_staged == "Failed":
+                msg = f"image stage failed for "
+                msg += f"{issu.serial_number} / {issu.ip_address}"
+                self.log_msg(msg)
+            if issu.image_staged == "In Progress":
+                msg = f"image stage in progress for "
+                msg += f"{issu.serial_number} / {issu.ip_address}"
+                self.log_msg(msg)
+                serial_numbers.remove(issu.serial_number)
+            if issu.image_staged == None:
+                msg = f"image stage not started for "
+                msg += f"{issu.serial_number} / {issu.ip_address}"
+                self.log_msg(msg)
 
-    def _upgrade_images(self, serial_numbers):
+        self.log_msg(f"serial_numbers post-issu check: {serial_numbers}")
+
+        stage = DcnmImageStage(self.module)
+        stage.serial_numbers = list(serial_numbers)
+        stage.commit()
+        msg = f"TODO: stage data: {stage.data}"
+        self.log_msg(msg)
+
+        issu = DcnmSwitchIssuDetails(self.module)
+        results = set()
+        attempts = 20
+        while results != serial_numbers and attempts > 0:
+            msg = f"issu attempts remaining: {attempts} "
+            msg += f"results: {results} "
+            msg += f"serial_numbers: {serial_numbers}"
+            self.log_msg(msg)
+            for device in devices:
+                if device["serial_number"] in results:
+                    continue
+                issu.ip_address = device["ip_address"]
+                issu.refresh()
+                if issu.image_staged == "Success":
+                    msg = f"attempt {attempts} image staged for "
+                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    self.log_msg(msg)
+                    results.add(issu.serial_number)
+                if issu.image_staged == "Failed":
+                    msg = f"attempt {attempts} stage image failed for "
+                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    self.log_msg(msg)
+                if issu.image_staged == None or issu.image_staged == "In Progress": 
+                    msg = f"attempt {attempts} {issu.image_staged} image status for "
+                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    self.log_msg(msg)
+            sleep(5)
+            attempts -= 1
+
+    def _upgrade_images(self, devices):
         """
-        Upgrade the switch(es) to the currently-staged and validate image.
+        1. Verify image validation status
+        2. Upgrade the switch(es) to the currently-validated image
 
         Endpoint:
         /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade/upgrade-image
@@ -743,69 +804,29 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
                 "rebootOptions": false
             }
 
-        install-options request body:
-            {
-                "devices": [
-                    "FDO21332E6X",
-                    "FDO21351QGE"
-                ],
-                "issu": true,
-                "epld": true,
-                "packageInstall": false
-            }
-        install-options response body:
-        TODO:1 handle this in a class DcnmInstallOptions()
-            {
-                "compatibilityStatusList": [
-                    {
-                        "deviceName": "cvd-1313-leaf",
-                        "ipAddress": "172.22.150.104",
-                        "policyName": "NR1F",
-                        "platform": "N9K/N3K",
-                        "version": "10.3.2",
-                        "osType": "64bit",
-                        "status": "Success",
-                        "installOption": "non-disruptive",
-                        "compDisp": "[cli output for show install all impact nxos bootflash:nxos.10.3.2.bin]",
-                        "versionCheck": "cli output elided...",
-                        "preIssuLink": "Not Applicable",
-                        "repStatus": "skipped",
-                        "timestamp": "NA"
-                    }
-                ],
-                "epldModules": null,
-                "installPacakges": null,
-                "errMessage": ""
-            }
         """
-        if len(serial_numbers) == 0:
+        if len(devices) == 0:
             return
-        path = self.endpoints["image_install_options"]["path"]
-        verb = self.endpoints["image_install_options"]["verb"]
+        install_options = DcnmImageInstallOptions(self.module)
+        for device in devices:
+            install_options.serial_number = device["serial_number"]
+            install_options.policy_name = device["policy_name"]
+            install_options.refresh()
+            if install_options.status not in ["Success", "Skipped"]:
+                msg = f"Got install options status {install_options.status} "
+                msg += f"for device {device['serial_number']} "
+                msg += f"with ip_address {device['ip_address']}."
+                self.module.fail_json(msg=msg)
 
-        payload = {}
-        payload["devices"] = {}
-        payload["devices"][""] = serial_numbers
-        payload["issu"] = True
-        payload["epld"] = False
-        payload["packageInstall"] = False
-        self.log_msg(f"install-options payload: {json.dumps(payload)}")
-        response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
-        result = self._handle_post_put_response(response, "POST")
-        self.log_msg(f"install-options response: {response}")
+        # path = self.endpoints["image_upgrade"]["path"]
+        # verb = self.endpoints["image_upgrade"]["verb"]
+        # payload = {}
+        # payload["serialNumbers"] = serial_numbers
+        # response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
+        # result = self._handle_post_put_response(response, "POST")
 
-        if not result["success"]:
-            self._failure(response)
-
-        path = self.endpoints["image_upgrade"]["path"]
-        verb = self.endpoints["image_upgrade"]["verb"]
-        payload = {}
-        payload["serialNumbers"] = serial_numbers
-        response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
-        result = self._handle_post_put_response(response, "POST")
-
-        if not result["success"]:
-            self._failure(response)
+        # if not result["success"]:
+        #     self._failure(response)
 
     def handle_image_upgrades(self):
         """
@@ -817,19 +838,21 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
         """
         self.build_policy_attach_payload()
         self.send_policy_attach_payload()
-        stage_serial_numbers = []
+        stage_devices = []
         upgrade_devices = []
         for switch in self.diff_create:
             self.switch_details.ip_address = switch.get('ip_address')
+            device = {}
+            device["serial_number"] = self.switch_details.serial_number
+            self.have.ip_address = self.switch_details.ip_address
+            device["policy_name"] = self.have.policy
+            device["ip_address"] = self.switch_details.ip_address
             if switch.get('stage') is not False:
-                stage_serial_numbers.append(self.switch_details.serial_number)
+                stage_devices.append(device)
             if switch.get('upgrade') is not False:
-                device = {}
-                device["serialNumber"] = self.switch_details.serial_number
-                device["policyName"] = self.switch_details.policy
                 upgrade_devices.append(device)
 
-        self._stage_images(stage_serial_numbers)
+        self._stage_images(stage_devices)
         self._upgrade_images(upgrade_devices)
 
     def _failure(self, resp):
@@ -990,6 +1013,359 @@ class DcnmSwitchDetails(DcnmImageUpgradeCommon):
         """
         return self._get("serialNumber")
 
+class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
+    """
+    Retrieve install-options details for ONE switch from NDFC and
+    provide property accessors for the policy attributes.
+
+    Caveats:
+        -   This retrieves for a SINGLE switch only.
+        -   Set serial_number and policy_name and call refresh() for
+            each switch separately.
+
+    Usage (where module is an instance of AnsibleModule):
+
+    instance = DcnmImageInstallOptions(module)
+    # Mandatory
+    instance.policy_name = "NR3F"
+    instance.serial_number = "FDO211218GC"
+    # Optional
+    instance.epld = True
+    instance.package_install = True
+    instance.issu = True
+    # Retrieve install-options details from NDFC
+    instance.refresh()
+    if instance.device_name is None:
+        print("Cannot retrieve policy/serial_number combination from NDFC")
+        exit(1)
+    status = instance.status
+    platform = instance.platform
+    etc...
+
+    install-options are retrieved by calling instance.refresh().
+
+    Endpoint:
+    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade/install-options
+    Request body:
+    {
+        "devices": [
+            {
+                "serialNumber": "FDO211218HH",
+                "policyName": "NR1F"
+            },
+            {
+                "serialNumber": "FDO211218GC",
+                "policyName": "NR3F"
+            }
+        ],
+        "issu": true,
+        "epld": false,
+        "packageInstall": false
+    }
+    Response body:
+        install-options response body:
+        TODO:1 handle this in a class DcnmInstallOptions()
+            {
+                "compatibilityStatusList": [
+                    {
+                        "deviceName": "cvd-1313-leaf",
+                        "ipAddress": "172.22.150.104",
+                        "policyName": "NR1F",
+                        "platform": "N9K/N3K",
+                        "version": "10.3.2",
+                        "osType": "64bit",
+                        "status": "Success",
+                        "installOption": "non-disruptive",
+                        "compDisp": "[show install all impact nxos bootflash:nxos64-cs.10.3.2.F.bin non-disruptive cli output]",
+                        "versionCheck": "cli output elided...",
+                        "preIssuLink": "Not Applicable",
+                        "repStatus": "skipped",
+                        "timestamp": "NA"
+                    },
+                    {
+                        "deviceName": "cvd-1313-leaf",
+                        "ipAddress": "172.22.150.104",
+                        "policyName": "NR1F",
+                        "platform": "N9K/N3K",
+                        "version": "10.3.2",
+                        "osType": "64bit",
+                        "status": "Success",
+                        "installOption": "non-disruptive",
+                        "compDisp": "[cli output for show install all impact nxos bootflash:nxos.10.3.2.bin]",
+                        "versionCheck": "cli output elided...",
+                        "preIssuLink": "Not Applicable",
+                        "repStatus": "skipped",
+                        "timestamp": "NA"
+                    }
+                ],
+                "epldModules": null,
+                "installPacakges": null,
+                "errMessage": ""
+            }
+
+    """
+    def __init__(self, module):
+        super().__init__(module)
+        self._init_properties()
+
+    def _init_properties(self):
+        self.properties = {}
+        self.properties["policy_name"] = None
+        self.properties["serial_number"] = None
+        self.properties["issu"] = True
+        self.properties["epld"] = False
+        self.properties["package_install"] = False
+        self.response = None
+        self.result = None
+        self.data = None
+
+    def refresh(self):
+        """
+        Refresh self.data with current install-options from NDFC
+        """
+        if self.policy_name is None:
+            msg = f"{self.__class__.__name__}: instance.policy_name must "
+            msg += f"be set before calling refresh()"
+            self.module.fail_json(msg=msg)
+        if self.serial_number is None:
+            msg = f"{self.__class__.__name__}: instance.serial_number must "
+            msg += f"be set before calling refresh()"
+            self.module.fail_json(msg=msg)
+
+        path = self.endpoints["install_options"]["path"]
+        verb = self.endpoints["install_options"]["verb"]
+        self._build_payload()
+        self.log_msg(f"TODO: DcnmImageInstallOptions.refresh() payload: {json.dumps(self.payload)}")
+        self.response = dcnm_send(self.module, verb, path, data=json.dumps(self.payload))
+
+        self.result = self._handle_get_response(self.response)
+        if not self.result["success"]:
+            msg = "Unable to retrieve install-options information from NDFC"
+            self.module.fail_json(msg=msg)
+
+        data = self.response.get("DATA").get("compatibilityStatusList")
+        if data is None:
+            msg = "Unable to retrieve install-options information from NDFC"
+            self.module.fail_json(msg=msg)
+        if len(data) == 0:
+            msg = "NDFC has no defined install-options"
+            self.module.fail_json(msg=msg)
+        self.data = data[0]
+
+    def _build_payload(self):
+        """
+            {
+                "devices": [
+                    {
+                        "serialNumber": "FDO211218HH",
+                        "policyName": "NR1F"
+                    }
+                ],
+                "issu": true,
+                "epld": false,
+                "packageInstall": false
+            }
+        """
+        self.payload = {}
+        self.payload["devices"] = []
+        devices = {}
+        devices["serialNumber"] = self.serial_number
+        devices["policyName"] = self.policy_name
+        self.payload["devices"].append(devices)
+        self.payload["issu"] = self.issu
+        self.payload["epld"] = self.epld
+        self.payload["packageInstall"] = self.package_install
+
+    def _get(self, item):
+        return self.data.get(item)
+
+    # Mandatory properties
+    @property
+    def policy_name(self):
+        """
+        Set the policy_name of the policy to query.
+        """
+        return self.properties.get("policy_name")
+    @policy_name.setter
+    def policy_name(self, value):
+        self.properties["policy_name"] = value
+
+    @property
+    def serial_number(self):
+        """
+        Set the serial_number of the device to query.
+        """
+        return self.properties.get("serial_number")
+    @serial_number.setter
+    def serial_number(self, value):
+        self.properties["serial_number"] = value
+
+    # Optional properties
+    @property
+    def issu(self):
+        """
+        Enable (True) or disable (False) issu compatibility check.
+        Valid values:
+            True - Enable issu compatibility check
+            False - Disable issu compatibility check
+        Default: True
+        """
+        return self.properties.get("issu")
+    @issu.setter
+    def issu(self, value):
+        self.properties["issu"] = value
+
+    @property
+    def epld(self):
+        """
+        Enable (True) or disable (False) epld compatibility check.
+
+        Valid values:
+            True - Enable epld compatibility check
+            False - Disable epld compatibility check
+        Default: False
+        """
+        return self.properties.get("epld")
+    @epld.setter
+    def epld(self, value):
+        self.properties["epld"] = value
+    
+    @property
+    def package_install(self):
+        """
+        Enable (True) or disable (False) package_install compatibility check.
+        Valid values:
+            True - Enable package_install compatibility check
+            False - Disable package_install compatibility check
+        Default: False
+        """
+        return self.properties.get("package_install")
+    @package_install.setter
+    def package_install(self, value):
+        self.properties["package_install"] = value
+
+    # Retrievable properties
+    @property
+    def comp_disp(self):
+        """
+        Return the compDisp (CLI output from show install all status)
+        of the install-options response, if it exists.
+        Return None otherwise
+        """
+        return self._get("compDisp")
+    
+    @property
+    def device_name(self):
+        """
+        Return the deviceName of the install-options response,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("deviceName")
+
+    @property
+    def install_option(self):
+        """
+        Return the installOption of the install-options response,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("installOption")
+
+    @property
+    def ip_address(self):
+        """
+        Return the ipAddress of the install-options response,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("ipAddress")
+
+    @property
+    def os_type(self):
+        """
+        Return the osType of the install-options response,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("osType")
+
+    @property
+    def platform(self):
+        """
+        Return the platform of the install-options response,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("platform")
+
+    @property
+    def pre_issu_link(self):
+        """
+        Return the preIssuLink of the install-options response, if it exists.
+        Return None otherwise
+        """
+        return self._get("preIssuLink")
+
+    @property
+    def raw_data(self):
+        """
+        Return the raw data of the install-options response, if it exists.
+        """
+        return self.data
+
+    @property
+    def raw_response(self):
+        """
+        Return the raw response, if it exists.
+        """
+        return self.response
+
+    @property
+    def rep_status(self):
+        """
+        Return the repStatus of the install-options response, if it exists.
+        Return None otherwise
+        """
+        return self._get("repStatus")
+
+    @property
+    def status(self):
+        """
+        Return the status of the install-options response,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("status")
+
+    @property
+    def timestamp(self):
+        """
+        Return the timestamp of the install-options response,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("timestamp")
+
+    @property
+    def version(self):
+        """
+        Return the version of the install-options response,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("version")
+
+    @property
+    def version_check(self):
+        """
+        Return the versionCheck (version check CLI output)
+        of the install-options response, if it exists.
+        Return None otherwise
+        """
+        return self._get("versionCheck")
+
+
 class DcnmImagePolicies(DcnmImageUpgradeCommon):
     """
     Retrieve image policy details from NDFC and provide property accessors
@@ -1031,11 +1407,13 @@ class DcnmImagePolicies(DcnmImageUpgradeCommon):
         response = dcnm_send(self.module, verb, path)
 
         result = self._handle_get_response(response)
+        self.log_msg(f"TODO: DcnmImagePolicies.refresh() result: {result}")
         if not result["success"]:
             msg = "Unable to retrieve image policy information from NDFC"
             self.module.fail_json(msg=msg)
 
         data = response.get("DATA").get("lastOperDataObject")
+        self.log_msg(f"TODO: DcnmImagePolicies.refresh() data: {data}")
         if data is None:
             msg = "Unable to retrieve image policy information from NDFC"
             self.module.fail_json(msg=msg)
@@ -1061,6 +1439,8 @@ class DcnmImagePolicies(DcnmImageUpgradeCommon):
     def policy_name(self):
         """
         Set the name of the policy to query.
+
+        This must be set prior to accessing any other properties
         """
         return self.properties.get("policy_name")
     @policy_name.setter
@@ -1384,6 +1764,7 @@ class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
 
         Possible values:
             Success
+            Failed
             None
         """
         return self._get("imageStaged")
@@ -1776,6 +2157,134 @@ def main():
         dcnm_module.handle_image_upgrades()
 
     module.exit_json(**dcnm_module.result)
+
+class DcnmImageStage(DcnmImageUpgradeCommon):
+    """
+    Endpoint:
+        /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/stage-image
+
+    Usage (where module is an instance of AnsibleModule):
+
+    stage = DcnmImageStage(module)
+    stage.serial_numbers = ["FDO211218HH", "FDO211218GC"]
+    stage.commit()
+    data = stage.data
+
+    Request body:
+        {
+            "serialNumbers": [
+                "FDO211218HH",
+                "FDO211218GC"
+            ]
+        }
+    Response:
+        Unfortunately, the response does not contain consistent data.
+        Would be better if all responses contained serial numbers as keys so that
+        we could verify against a set() of serial numbers.  Sigh.  It is what it is.
+        {
+            'RETURN_CODE': 200,
+            'METHOD': 'POST',
+            'REQUEST_PATH': 'https: //172.22.150.244:443/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/stage-image',
+            'MESSAGE': 'OK',
+            'DATA': [
+                {
+                    'key': 'success',
+                    'value': ''
+                },
+                {
+                    'key': 'success',
+                    'value': ''
+                }
+            ]
+        }
+
+        Response when there are no files to stage:
+        [
+            {
+                "key": "FDO211218GC",
+                "value": "No files to stage"
+            },
+            {
+                "key": "FDO211218HH",
+                "value": "No files to stage"
+            }
+        ]
+    """
+    def __init__(self, module):
+        super().__init__(module)
+        self.class_name = self.__class__.__name__
+        self._init_properties()
+
+    def _init_properties(self):
+        self.properties = {}
+        self.properties["serial_numbers"] = None
+        self.properties["data"] = None
+        self.properties["ndfc_result"] = None
+        self.properties["ndfc_response"] = None
+
+    def commit(self):
+        """
+        Commit the image staging request to NDFC
+        """
+        if self.serial_numbers is None:
+            msg = f"{self.class_name}.commit() call instance.serial_numbers first."
+            self.module.fail_json(msg=msg)
+        path = self.endpoints["image_stage"]["path"]
+        verb = self.endpoints["image_stage"]["verb"]
+        payload = {}
+        payload["serialNumbers"] = self.serial_numbers
+        self.properties["ndfc_response"] = dcnm_send(self.module, verb, path, data=json.dumps(payload))
+        self.properties["ndfc_result"] = self._handle_post_put_response(self.ndfc_response, "POST")
+        self.log_msg(f"TODO: DcnmImageStage.commit() response: {self.ndfc_response}")
+        self.log_msg(f"TODO: DcnmImageStage.commit() result: {self.ndfc_result}")
+        if not self.ndfc_result["success"]:
+            msg = f"{self.class_name}.commit() failed: {self.ndfc_result}"
+            self.module.fail_json(self.ndfc_response)
+        self.properties["data"] = self.ndfc_response.get("DATA")
+
+    @property
+    def serial_numbers(self):
+        """
+        Set the serial numbers of the switches to stage.
+
+        This must be set before calling instance.commit()
+        """
+        return self.properties.get("serial_numbers")
+    @serial_numbers.setter
+    def serial_numbers(self, value):
+        if not isinstance(value, list):
+            msg = f"{self.__class__.__name__}: instance.serial_numbers must "
+            msg += f"be a python list of serial numbers."
+            self.module.fail_json(msg=msg)
+        if len(value) == 0:
+            msg = f"{self.__class__.__name__}: instance.serial_numbers must "
+            msg += f"contain at least one serial number."
+            self.module.fail_json(msg=msg)
+        self.properties["serial_numbers"] = value
+    
+    @property
+    def data(self):
+        """
+        Return the result of the image staging request
+        for serial_numbers.
+
+        instance.serial_numbers must be set first.
+        """
+        return self.properties.get("data")
+
+    @property
+    def ndfc_result(self):
+        """
+        Return the POST result from NDFC
+        """
+        return self.properties.get("ndfc_result")
+
+    @property
+    def ndfc_response(self):
+        """
+        Return the POST response from NDFC
+        """
+        return self.properties.get("ndfc_response")
 
 class DcnmImageStageInfo(DcnmImageUpgradeCommon):
     """
