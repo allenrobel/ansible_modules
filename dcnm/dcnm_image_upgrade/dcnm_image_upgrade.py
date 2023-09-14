@@ -24,15 +24,13 @@ query: return image policy details for one or more devices
 """
 from __future__ import absolute_import, division, print_function
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm import (
-    dcnm_send,
-    dcnm_version_supported,
-    validate_list_of_dicts,
-)
 import copy
 import json
 from time import sleep
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm import (
+    dcnm_send, dcnm_version_supported, validate_list_of_dicts)
 
 __metaclass__ = type
 __author__ = "Cisco Systems, Inc."
@@ -172,6 +170,7 @@ EXAMPLES = """
 
 """
 
+
 class DcnmImageUpgradeCommon:
     """
     Base class for the following classes in this file:
@@ -179,6 +178,7 @@ class DcnmImageUpgradeCommon:
     DcnmImageUpgrade()
 
     """
+
     def __init__(self, module):
         self.module = module
         self.params = module.params
@@ -189,14 +189,22 @@ class DcnmImageUpgradeCommon:
 
     def _init_endpoints(self):
         self.endpoint_api_v1 = "/appcenter/cisco/ndfc/api/v1"
-        self.endpoint_bootflash = f"{self.endpoint_api_v1}/imagemanagement/rest/imagemgnt/bootFlash"
+        self.endpoint_bootflash = (
+            f"{self.endpoint_api_v1}/imagemanagement/rest/imagemgnt/bootFlash"
+        )
         self.endpoint_image_management = f"{self.endpoint_api_v1}/imagemanagement"
         self.endpoint_feature_manager = f"{self.endpoint_api_v1}/fm"
         self.endpoint_lan_fabric = f"{self.endpoint_api_v1}/lan-fabric"
 
-        self.endpoint_staging_management = f"{self.endpoint_image_management}/rest/stagingmanagement"
-        self.endpoint_image_upgrade = f"{self.endpoint_image_management}/rest/imageupgrade"
-        self.endpoint_package_mgnt = f"{self.endpoint_image_management}/rest/packagemgnt"
+        self.endpoint_staging_management = (
+            f"{self.endpoint_image_management}/rest/stagingmanagement"
+        )
+        self.endpoint_image_upgrade = (
+            f"{self.endpoint_image_management}/rest/imageupgrade"
+        )
+        self.endpoint_package_mgnt = (
+            f"{self.endpoint_image_management}/rest/packagemgnt"
+        )
         self.endpoint_policy_mgnt = f"{self.endpoint_image_management}/rest/policymgnt"
         self.endpoints = {}
         self.endpoints["bootflash_info"] = {}
@@ -215,58 +223,91 @@ class DcnmImageUpgradeCommon:
         self.endpoints["stage_info"] = {}
         self.endpoints["switches_info"] = {}
 
-        self.endpoints["bootflash_info"]["path"] = f"{self.endpoint_bootflash}/bootflash-info"
+        self.endpoints["bootflash_info"][
+            "path"
+        ] = f"{self.endpoint_bootflash}/bootflash-info"
         self.endpoints["bootflash_info"]["verb"] = "GET"
 
-        self.endpoints["install_options"]["path"] = f"{self.endpoint_image_upgrade}/install-options"
+        self.endpoints["install_options"][
+            "path"
+        ] = f"{self.endpoint_image_upgrade}/install-options"
         self.endpoints["install_options"]["verb"] = "POST"
 
-        self.endpoints["image_stage"]["path"] = f"{self.endpoint_staging_management}/stage-image"
+        self.endpoints["image_stage"][
+            "path"
+        ] = f"{self.endpoint_staging_management}/stage-image"
         self.endpoints["image_stage"]["verb"] = "POST"
 
-        self.endpoints["image_upgrade"]["path"] = f"{self.endpoint_image_upgrade}/upgrade-image"
+        self.endpoints["image_upgrade"][
+            "path"
+        ] = f"{self.endpoint_image_upgrade}/upgrade-image"
         self.endpoints["image_upgrade"]["verb"] = "POST"
 
-        self.endpoints["image_validate"]["path"] = f"{self.endpoint_staging_management}/validate-image"
+        self.endpoints["image_validate"][
+            "path"
+        ] = f"{self.endpoint_staging_management}/validate-image"
         self.endpoints["image_validate"]["verb"] = "POST"
 
         self.endpoints["issu_info"]["path"] = f"{self.endpoint_package_mgnt}/issu"
         self.endpoints["issu_info"]["verb"] = "GET"
 
-        self.endpoints["ndfc_version"]["path"] = f"{self.endpoint_feature_manager}/about/version"
+        self.endpoints["ndfc_version"][
+            "path"
+        ] = f"{self.endpoint_feature_manager}/about/version"
         self.endpoints["ndfc_version"]["verb"] = "GET"
 
-        self.endpoints["policies_attached_info"]["path"] = f"{self.endpoint_policy_mgnt}/all-attached-policies"
+        self.endpoints["policies_attached_info"][
+            "path"
+        ] = f"{self.endpoint_policy_mgnt}/all-attached-policies"
         self.endpoints["policies_attached_info"]["verb"] = "GET"
 
-        self.endpoints["policies_info"]["path"] = f"{self.endpoint_policy_mgnt}/policies"
+        self.endpoints["policies_info"][
+            "path"
+        ] = f"{self.endpoint_policy_mgnt}/policies"
         self.endpoints["policies_info"]["verb"] = "GET"
 
-        self.endpoints["policy_attach"]["path"] = f"{self.endpoint_policy_mgnt}/attach-policy"
+        self.endpoints["policy_attach"][
+            "path"
+        ] = f"{self.endpoint_policy_mgnt}/attach-policy"
         self.endpoints["policy_attach"]["verb"] = "POST"
 
-        self.endpoints["policy_create"]["path"] = f"{self.endpoint_policy_mgnt}/platform-policy"
+        self.endpoints["policy_create"][
+            "path"
+        ] = f"{self.endpoint_policy_mgnt}/platform-policy"
         self.endpoints["policy_create"]["verb"] = "POST"
 
-        self.endpoints["policy_detach"]["path"] = f"{self.endpoint_policy_mgnt}/detach-policy"
+        self.endpoints["policy_detach"][
+            "path"
+        ] = f"{self.endpoint_policy_mgnt}/detach-policy"
         self.endpoints["policy_detach"]["verb"] = "DELETE"
 
         # Replace __POLICY_NAME__ with the policy_name to query
         # e.g. path.replace("__POLICY_NAME__", "NR1F")
-        self.endpoints["policy_info"]["path"] = f"{self.endpoint_policy_mgnt}/image-policy/__POLICY_NAME__"
+        self.endpoints["policy_info"][
+            "path"
+        ] = f"{self.endpoint_policy_mgnt}/image-policy/__POLICY_NAME__"
         self.endpoints["policy_info"]["verb"] = "GET"
 
-        self.endpoints["stage_info"]["path"] = f"{self.endpoint_staging_management}/stage-info"
+        self.endpoints["stage_info"][
+            "path"
+        ] = f"{self.endpoint_staging_management}/stage-info"
         self.endpoints["stage_info"]["verb"] = "GET"
 
-        self.endpoints["switches_info"]["path"] = f"{self.endpoint_lan_fabric}/rest/inventory/allswitches"
+        self.endpoints["switches_info"][
+            "path"
+        ] = f"{self.endpoint_lan_fabric}/rest/inventory/allswitches"
         self.endpoints["switches_info"]["verb"] = "GET"
 
     def _handle_response(self, response, verb):
         if verb == "GET":
             return self._handle_get_response(response)
-        if verb == "POST" or verb == "PUT" or verb == "DELETE":
+        if verb in {"POST", "PUT", "DELETE"}:
             return self._handle_post_put_delete_response(response)
+        return self._handle_unknown_request_verbs(response, verb)
+
+    def _handle_unknown_request_verbs(self, response, verb):
+        msg=f"Unknown request verb ({verb}) in _handle_response()."
+        self.module.fail_json(msg=msg)
 
     def _handle_get_response(self, response):
         """
@@ -315,7 +356,6 @@ class DcnmImageUpgradeCommon:
         - success:
             - False if RETURN_CODE != 200 or MESSAGE != "OK"
             - True otherwise
-
         """
         result = {}
         if response.get("MESSAGE") != "OK":
@@ -333,6 +373,7 @@ class DcnmImageUpgradeCommon:
     def log_msg(self, msg):
         """
         used for debugging. disable this when committing to main
+        by setting __init__().debug to False
         """
         if self.debug is False:
             return
@@ -362,10 +403,12 @@ class DcnmImageUpgradeCommon:
                 return False
         return value
 
+
 class DcnmImageUpgrade(DcnmImageUpgradeCommon):
     """
     Ansible support for image policy attach, detach, and query.
     """
+
     def __init__(self, module):
         super().__init__(module)
 
@@ -375,7 +418,7 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
         self.config = module.params.get("config")
         if not isinstance(self.config, dict):
             msg = "expected dict type for self.config. "
-            msg =+ f"got {type(self.config).__name__}"
+            msg = +f"got {type(self.config).__name__}"
             self.module.fail_json(msg=msg)
 
         self.check_mode = False
@@ -486,9 +529,11 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
             self.have.ip_address = want_create["ip_address"]
             if self.have.serial_number is not None:
                 idempotent_want = self._get_idempotent_want(want_create)
-                if (idempotent_want["policy_changed"] is False and
-                    idempotent_want["stage"] is False and
-                    idempotent_want["upgrade"] is False):
+                if (
+                    idempotent_want["policy_changed"] is False
+                    and idempotent_want["stage"] is False
+                    and idempotent_want["upgrade"] is False
+                ):
                     continue
                 diff_create.append(idempotent_want)
         self.diff_create = diff_create
@@ -504,23 +549,9 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
                 parameter specifications.
         """
         params_spec = {}
-        params_spec.update(
-            policy=dict(
-            required=True,
-            type="str")
-        )
-        params_spec.update(
-            upgrade=dict(
-            required=False,
-            type="bool",
-            default=True)
-        )
-        params_spec.update(
-            stage=dict(
-            required=False,
-            type="bool",
-            default=True)
-        )
+        params_spec.update(policy=dict(required=True, type="str"))
+        params_spec.update(upgrade=dict(required=False, type="bool", default=True))
+        params_spec.update(stage=dict(required=False, type="bool", default=True))
         return params_spec
 
     def validate_input(self):
@@ -564,7 +595,7 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
             msg = "Invalid parameters in playbook: "
             msg += f"{','.join(invalid_params)}"
             self.module.fail_json(msg=msg)
-        
+
     def _merge_global_and_switch_configs(self, config):
         """
         Merge the global config with each switch config and return
@@ -581,58 +612,58 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
             mandatory parameter, fail.
         """
         global_config = {}
-        global_config['policy'] = config.get('policy')
-        global_config['stage'] = config.get('stage')
-        global_config['upgrade'] = config.get('upgrade')
+        global_config["policy"] = config.get("policy")
+        global_config["stage"] = config.get("stage")
+        global_config["upgrade"] = config.get("upgrade")
 
         self.switch_configs = []
-        if not config.get('switches'):
+        if not config.get("switches"):
             msg = "playbook is missing list of switches"
             self.module.fail_json(msg)
-        for switch in config['switches']:
+        for switch in config["switches"]:
             self.switch_configs.append(global_config | switch)
 
     def _validate_switch_configs(self):
         for switch in self.switch_configs:
-            if not switch.get('ip_address'):
+            if not switch.get("ip_address"):
                 msg = "playbook is missing ip_address for at least one switch"
                 self.module.fail_json(msg)
-            if not switch.get('policy'):
+            if not switch.get("policy"):
                 msg = "playbook is missing image policy for switch "
                 msg += f"{switch.get('ip_address')} "
                 msg = "and global image policy is not defined"
                 self.module.fail_json(msg)
-            if switch.get('stage') is None:
-                switch['stage'] = self.defaults["stage"]
-            if switch.get('upgrade') is None:
-                switch['upgrade'] = self.defaults["upgrade"]
+            if switch.get("stage") is None:
+                switch["stage"] = self.defaults["stage"]
+            if switch.get("upgrade") is None:
+                switch["upgrade"] = self.defaults["upgrade"]
 
     def attach_image_management_policy(self):
         """
-            {
-                "mappingList":
-                    [
-                        {
-                            "policyName": "MyPolicy",
-                            "hostName": "N9K_62",
-                            "ipAddr": "172.23.258.66",
-                            "platform": "N7K",
-                            "serialNumber": "FDO2338082P",
-                            "bootstrapMode": "true"
-                        }
-                    ],
-                "stageValidate": true
-            }
+        {
+            "mappingList":
+                [
+                    {
+                        "policyName": "MyPolicy",
+                        "hostName": "N9K_62",
+                        "ipAddr": "172.23.258.66",
+                        "platform": "N7K",
+                        "serialNumber": "FDO2338082P",
+                        "bootstrapMode": "true"
+                    }
+                ],
+            "stageValidate": true
+        }
         """
         pass
 
     def build_policy_attach_payload(self):
         self.payloads = []
         for switch in self.diff_create:
-            if switch.get('policy_changed') is False:
+            if switch.get("policy_changed") is False:
                 continue
-            self.switch_details.ip_address = switch.get('ip_address')
-            self.image_policies.policy_name = switch.get('policy')
+            self.switch_details.ip_address = switch.get("ip_address")
+            self.image_policies.policy_name = switch.get("policy")
 
             # Fail if the image policy does not exist.
             # Image policy creation is handled by a different module.
@@ -656,12 +687,12 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
             payload["ipAddr"] = self.switch_details.ip_address
             payload["platform"] = self.switch_details.platform
             payload["serialNumber"] = self.switch_details.serial_number
-            #payload["bootstrapMode"] = switch.get('bootstrap_mode')
+            # payload["bootstrapMode"] = switch.get('bootstrap_mode')
 
             for item in payload:
                 if payload[item] is None:
                     msg = f"Unable to determine {item} for switch {switch.get('ip_address')}. "
-                    msg += f"Please verify that the switch is managed by NDFC."
+                    msg += "Please verify that the switch is managed by NDFC."
                     self.module.fail_json(msg=msg)
             self.payloads.append(payload)
 
@@ -777,15 +808,15 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
         stage_devices = []
         upgrade_devices = []
         for switch in self.diff_create:
-            self.switch_details.ip_address = switch.get('ip_address')
+            self.switch_details.ip_address = switch.get("ip_address")
             device = {}
             device["serial_number"] = self.switch_details.serial_number
             self.have.ip_address = self.switch_details.ip_address
             device["policy_name"] = self.have.policy
             device["ip_address"] = self.switch_details.ip_address
-            if switch.get('stage') is not False:
+            if switch.get("stage") is not False:
                 stage_devices.append(device)
-            if switch.get('upgrade') is not False:
+            if switch.get("upgrade") is not False:
                 upgrade_devices.append(device)
 
         self._stage_images(stage_devices)
@@ -823,7 +854,6 @@ class DcnmImageUpgrade(DcnmImageUpgradeCommon):
         self.module.fail_json(msg=res)
 
 
-
 class DcnmSwitchDetails(DcnmImageUpgradeCommon):
     """
     Retrieve switch details from NDFC and provide property accessors
@@ -843,6 +873,7 @@ class DcnmSwitchDetails(DcnmImageUpgradeCommon):
     Endpoint:
     /appcenter/cisco/ndfc/api/v1/lan-fabric/rest/inventory/allswitches
     """
+
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
@@ -884,10 +915,11 @@ class DcnmSwitchDetails(DcnmImageUpgradeCommon):
     def ip_address(self):
         """
         Set the ip_address of the switch to query.
-        
+
         This needs to be set before accessing this class's properties.
         """
         return self.properties.get("ip_address")
+
     @ip_address.setter
     def ip_address(self, value):
         self.properties["ip_address"] = value
@@ -944,7 +976,6 @@ class DcnmSwitchDetails(DcnmImageUpgradeCommon):
         """
         return self.properties["ndfc_result"]
 
-
     @property
     def platform(self):
         """
@@ -963,7 +994,7 @@ class DcnmSwitchDetails(DcnmImageUpgradeCommon):
         Return None otherwise
         """
         return self._get("switchRole")
-    
+
     @property
     def serial_number(self):
         """
@@ -971,6 +1002,7 @@ class DcnmSwitchDetails(DcnmImageUpgradeCommon):
         Return None otherwise
         """
         return self._get("serialNumber")
+
 
 class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
     """
@@ -1063,6 +1095,7 @@ class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
             }
 
     """
+
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
@@ -1094,9 +1127,9 @@ class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
         path = self.endpoints["install_options"]["path"]
         verb = self.endpoints["install_options"]["verb"]
         self._build_payload()
-        self.log_msg(f"TODO: DcnmImageInstallOptions.refresh() payload: {json.dumps(self.payload)}")
-        self.response = dcnm_send(self.module, verb, path, data=json.dumps(self.payload))
-
+        self.response = dcnm_send(
+            self.module, verb, path, data=json.dumps(self.payload)
+        )
         self.result = self._handle_response(self.response, verb)
         if not self.result["success"]:
             msg = "Unable to retrieve install-options information from NDFC"
@@ -1113,17 +1146,17 @@ class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
 
     def _build_payload(self):
         """
-            {
-                "devices": [
-                    {
-                        "serialNumber": "FDO211218HH",
-                        "policyName": "NR1F"
-                    }
-                ],
-                "issu": true,
-                "epld": false,
-                "packageInstall": false
-            }
+        {
+            "devices": [
+                {
+                    "serialNumber": "FDO211218HH",
+                    "policyName": "NR1F"
+                }
+            ],
+            "issu": true,
+            "epld": false,
+            "packageInstall": false
+        }
         """
         self.payload = {}
         self.payload["devices"] = []
@@ -1145,6 +1178,7 @@ class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
         Set the policy_name of the policy to query.
         """
         return self.properties.get("policy_name")
+
     @policy_name.setter
     def policy_name(self, value):
         self.properties["policy_name"] = value
@@ -1155,6 +1189,7 @@ class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
         Set the serial_number of the device to query.
         """
         return self.properties.get("serial_number")
+
     @serial_number.setter
     def serial_number(self, value):
         self.properties["serial_number"] = value
@@ -1170,6 +1205,7 @@ class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
         Default: True
         """
         return self.properties.get("issu")
+
     @issu.setter
     def issu(self, value):
         self.properties["issu"] = value
@@ -1185,10 +1221,11 @@ class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
         Default: False
         """
         return self.properties.get("epld")
+
     @epld.setter
     def epld(self, value):
         self.properties["epld"] = value
-    
+
     @property
     def package_install(self):
         """
@@ -1199,6 +1236,7 @@ class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
         Default: False
         """
         return self.properties.get("package_install")
+
     @package_install.setter
     def package_install(self, value):
         self.properties["package_install"] = value
@@ -1212,7 +1250,7 @@ class DcnmImageInstallOptions(DcnmImageUpgradeCommon):
         Return None otherwise
         """
         return self._get("compDisp")
-    
+
     @property
     def device_name(self):
         """
@@ -1348,6 +1386,7 @@ class DcnmImagePolicies(DcnmImageUpgradeCommon):
     Endpoint:
     /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/policies
     """
+
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
@@ -1402,6 +1441,7 @@ class DcnmImagePolicies(DcnmImageUpgradeCommon):
         This must be set prior to accessing any other properties
         """
         return self.properties.get("policy_name")
+
     @policy_name.setter
     def policy_name(self, value):
         self.properties["policy_name"] = value
@@ -1564,8 +1604,9 @@ class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
             },
             {etc...}
         ]
-    
+
     """
+
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
@@ -1814,7 +1855,6 @@ class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
         """
         return self._get("model")
 
-
     @property
     def model_type(self):
         """
@@ -1890,7 +1930,7 @@ class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
             None
         """
         return self._get("role")
-    
+
     @property
     def serial_number(self):
         """
@@ -2026,7 +2066,6 @@ class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
         """
         return self._get("validatedPercent")
 
-
     @property
     def vdc_id(self):
         """
@@ -2092,6 +2131,7 @@ class DcnmSwitchIssuDetails(DcnmImageUpgradeCommon):
         """
         return self._get("vpcRole")
 
+
 class DcnmSwitchIssuDetailsByIpAddress(DcnmSwitchIssuDetails):
     """
     Retrieve switch issu details from NDFC and provide property accessors
@@ -2108,6 +2148,7 @@ class DcnmSwitchIssuDetailsByIpAddress(DcnmSwitchIssuDetails):
 
     See DcnmSwitchIssuDetails for more details.
     """
+
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
@@ -2150,13 +2191,15 @@ class DcnmSwitchIssuDetailsByIpAddress(DcnmSwitchIssuDetails):
     def ip_address(self):
         """
         Set the ip_address of the switch to query.
-        
+
         This needs to be set before accessing this class's properties.
         """
         return self.properties.get("ip_address")
+
     @ip_address.setter
     def ip_address(self, value):
         self.properties["ip_address"] = value
+
 
 class DcnmSwitchIssuDetailsBySerialNumber(DcnmSwitchIssuDetails):
     """
@@ -2175,6 +2218,7 @@ class DcnmSwitchIssuDetailsBySerialNumber(DcnmSwitchIssuDetails):
     See DcnmSwitchIssuDetails for more details.
 
     """
+
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
@@ -2217,13 +2261,15 @@ class DcnmSwitchIssuDetailsBySerialNumber(DcnmSwitchIssuDetails):
     def serial_number(self):
         """
         Set the serial_number of the switch to query.
-        
+
         This needs to be set before accessing this class's properties.
         """
         return self.properties.get("serial_number")
+
     @serial_number.setter
     def serial_number(self, value):
         self.properties["serial_number"] = value
+
 
 class DcnmSwitchIssuDetailsByDeviceName(DcnmSwitchIssuDetails):
     """
@@ -2242,6 +2288,7 @@ class DcnmSwitchIssuDetailsByDeviceName(DcnmSwitchIssuDetails):
     See DcnmSwitchIssuDetails for more details.
 
     """
+
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
@@ -2284,45 +2331,15 @@ class DcnmSwitchIssuDetailsByDeviceName(DcnmSwitchIssuDetails):
     def device_name(self):
         """
         Set the device_name of the switch to query.
-        
+
         This needs to be set before accessing this class's properties.
         """
         return self.properties.get("device_name")
+
     @device_name.setter
     def device_name(self, value):
         self.properties["device_name"] = value
 
-
-def main():
-    """main entry point for module execution"""
-
-    element_spec = dict(
-        config=dict(required=False, type="dict"),
-        state=dict(default="merged", choices=["merged"]),
-    )
-
-    module = AnsibleModule(argument_spec=element_spec, supports_check_mode=True)
-    dcnm_module = DcnmImageUpgrade(module)
-    dcnm_module.validate_input()
-    dcnm_module.get_have()
-    dcnm_module.get_want()
-
-    if module.params["state"] == "merged":
-        dcnm_module.get_diff_merge()
-
-    if dcnm_module.diff_create:
-        dcnm_module.result["changed"] = True
-    else:
-        module.exit_json(**dcnm_module.result)
-
-    if module.check_mode:
-        dcnm_module.result["changed"] = False
-        module.exit_json(**dcnm_module.result)
-
-    if dcnm_module.diff_create:
-        dcnm_module.handle_image_upgrades()
-
-    module.exit_json(**dcnm_module.result)
 
 class DcnmImageStage(DcnmImageUpgradeCommon):
     """
@@ -2340,7 +2357,7 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
         {
             "sereialNum": [
                 "FDO211218HH",
-                "FDO211218GC"                
+                "FDO211218GC"
             ]
         }
     Request body (12.1.3b):
@@ -2384,6 +2401,7 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
             }
         ]
     """
+
     def __init__(self, module):
         super().__init__(module)
         self.class_name = self.__class__.__name__
@@ -2396,8 +2414,8 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
         self.properties["data"] = None
         self.properties["ndfc_result"] = None
         self.properties["ndfc_response"] = None
-        self.properties["stage_check_interval"] = 10 # seconds
-        self.properties["stage_check_timeout"] = 300 # seconds
+        self.properties["check_interval"] = 10  # seconds
+        self.properties["check_timeout"] = 300  # seconds
 
     def _populate_ndfc_version(self):
         """
@@ -2420,7 +2438,7 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
             issu.serial_number = serial_number
             issu.refresh()
             if issu.image_staged == "Success":
-                msg = f"image already staged for "
+                msg = "image already staged for "
                 msg += f"{issu.serial_number} / {issu.ip_address}"
                 self.log_msg(msg)
                 self.serial_numbers.remove(issu.serial_number)
@@ -2435,12 +2453,11 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
             issu.serial_number = serial_number
             issu.refresh()
             if issu.image_staged == "Failed":
-                msg = f"Image staging is failing for the following switch: "
+                msg = "Image staging is failing for the following switch: "
                 msg += f"{issu.device_name}, {issu.ip_address}, "
                 msg += f"{issu.serial_number}. Please check the switch "
-                msg += f"connectivity to NDFC and try again."
+                msg += "connectivity to NDFC and try again."
                 self.module.fail_json(msg)
-
 
     def commit(self):
         """
@@ -2449,7 +2466,7 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
         """
         if self.serial_numbers is None:
             msg = f"{self.class_name}.commit() call instance.serial_numbers "
-            msg += f"before calling commit()."
+            msg += "before calling commit()."
             self.module.fail_json(msg=msg)
         if len(self.serial_numbers) == 0:
             msg = f"{self.class_name}.commit() no serial numbers to stage."
@@ -2464,7 +2481,9 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
             payload["sereialNum"] = self.serial_numbers
         else:
             payload["serialNumbers"] = self.serial_numbers
-        self.properties["ndfc_response"] = dcnm_send(self.module, verb, path, data=json.dumps(payload))
+        self.properties["ndfc_response"] = dcnm_send(
+            self.module, verb, path, data=json.dumps(payload)
+        )
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
         self.log_msg(f"TODO: DcnmImageStage.commit() response: {self.ndfc_response}")
         self.log_msg(f"TODO: DcnmImageStage.commit() result: {self.ndfc_result}")
@@ -2477,15 +2496,16 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
 
     def _wait_for_current_actions_to_complete(self):
         """
-        Wait for current actions to complete before staging image
+        NDFC will not stage an image if there are any actions in progress.
+        Wait for all actions to complete before staging image.
+        Actions include image staging, image upgrade, and image validation.
         """
-        sleep_time = 10
         serial_numbers = copy.deepcopy(self.serial_numbers)
-        timeout = 300
+        timeout = self.check_timeout
         issu = DcnmSwitchIssuDetailsBySerialNumber(self.module)
         while len(serial_numbers) > 0 and timeout > 0:
-            sleep(sleep_time)
-            timeout -= sleep_time
+            sleep(self.check_interval)
+            timeout -= self.check_interval
             for serial_number in self.serial_numbers:
                 if serial_number not in serial_numbers:
                     continue
@@ -2493,9 +2513,9 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
                 issu.refresh()
                 if issu.actions_in_progress is False:
                     msg = f"{self.class_name}: "
-                    msg += f"_wait_for_current_actions_to_complete: "
+                    msg += "_wait_for_current_actions_to_complete: "
                     msg += f"{serial_number} no actions in progress. "
-                    msg += "Removing."
+                    msg += f"Removing. {timeout} seconds remaining."
                     self.log_msg(msg)
                     serial_numbers.remove(serial_number)
 
@@ -2505,11 +2525,11 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
         """
         issu = DcnmSwitchIssuDetailsBySerialNumber(self.module)
         serial_numbers_complete = set()
-        timeout = self.stage_check_timeout
+        timeout = self.check_timeout
         serial_numbers_remaining = set(copy.deepcopy(self.serial_numbers))
         while serial_numbers_complete != serial_numbers_remaining and timeout > 0:
-            sleep(self.stage_check_interval)
-            timeout -= self.stage_check_interval
+            sleep(self.check_interval)
+            timeout -= self.check_interval
             msg = f"_stage_images: issu seconds remaining: {timeout} "
             msg += f"serial_numbers complete: {serial_numbers_complete} "
             msg += f"serial_numbers remaining: {serial_numbers_remaining}"
@@ -2532,11 +2552,11 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
                     msg += f"{issu.serial_number} / {issu.ip_address}"
                     self.log_msg(msg)
                     serial_numbers_complete.add(issu.serial_number)
-                if issu.image_staged == None: 
+                if issu.image_staged == None:
                     msg = f"Seconds remaining {timeout}: stage image not stated for "
                     msg += f"{issu.serial_number} / {issu.ip_address}"
                     self.log_msg(msg)
-                if issu.image_staged == None or issu.image_staged == "In Progress": 
+                if issu.image_staged == "In Progress":
                     msg = f"Seconds remaining {timeout}: stage image in progress for "
                     msg += f"{issu.serial_number} / {issu.ip_address}"
                     self.log_msg(msg)
@@ -2549,6 +2569,7 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
         This must be set before calling instance.commit()
         """
         return self.properties.get("serial_numbers")
+
     @serial_numbers.setter
     def serial_numbers(self, value):
         if not isinstance(value, list):
@@ -2556,7 +2577,7 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
             msg += f"be a python list of switch serial numbers."
             self.module.fail_json(msg=msg)
         self.properties["serial_numbers"] = value
-    
+
     @property
     def data(self):
         """
@@ -2582,170 +2603,18 @@ class DcnmImageStage(DcnmImageUpgradeCommon):
         return self.properties.get("ndfc_response")
 
     @property
-    def stage_check_interval(self):
+    def check_interval(self):
         """
         Return the stage check interval in seconds
         """
-        return self.properties.get("stage_check_interval")
+        return self.properties.get("check_interval")
 
     @property
-    def stage_check_timeout(self):
+    def check_timeout(self):
         """
         Return the stage check interval in seconds
         """
-        return self.properties.get("stage_check_timeout")
-
-class DcnmImageStageInfo(DcnmImageUpgradeCommon):
-    """
-    This uses an unpublished endpoint, so let's not use it for now.
-
-    We were going to use this to get free space on the switch bootflash
-    but hopefully stage-image will do that for us.
-
-    Endpoint:
-    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/stage-info?serialNumber=FDO211218HH
-
-    Response:
-    [{
-        "serialNumber": "FDO211218HH",
-        "deviceName": "cvd-1313-leaf",
-        "primary": "49013579776",
-        "secodnory": "N/A",
-        "requiredSpace": 0,
-        "stagingFiles": [{
-            "fileName": "nxos64-cs.10.3.2.F.bin",
-            "size": "0"
-        }]
-    }]
-    """
-    def __init__(self, module):
-        super().__init__(module)
-        self._init_properties()
-        self.refresh()
-
-    def _init_properties(self):
-        self.properties = {}
-        self.properties["serial_number"] = None
-
-class DcnmBootflashInfo(DcnmImageUpgradeCommon):
-    """
-    We may not need this if stage-image does the checking of bootflash space
-    for us and returns a reasonable error message...
-
-    Retrieve bootflash information for a switch from NDFC and provide
-    property accessors for the following:
-
-        - primary_total_space (bootFlashSpaceMap["bootflash:"]["totalSpace"])
-        - primary_free_space (bootFlashSpaceMap["bootflash:"]["freeSpace"])
-        - primary_used_space (bootFlashSpaceMap["bootflash:"]["usedSpace"])
-        TODO:2 add support for secondary bootflash when we find a switch with two supervisors
-
-    Usage (where module is an instance of AnsibleModule):
-
-    instance = DcnmBootflashInfo(module)
-    instance.serial_number = "AB222222CD"
-    instance.refresh()
-    primary_free_space = instance.primary_free_space
-    secondary_free_space = instance.secondary_free_space
-    etc...
-
-    Endpoint:
-    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imagemgnt/bootFlash/bootflash-info?serialNumber=<serial_number>
-
-    {
-        "requiredSpace": "0 MB",
-        "partitions": [
-            "bootflash:"
-        ],
-        "bootFlashSpaceMap": {
-            "bootflash:": {
-                "deviceName": "cvd-1313-leaf",
-                "serialNumber": "FDO211218HH",
-                "ipAddr": " 172.22.150.104",
-                "name": "bootflash:",
-                "totalSpace": 53586325504,
-                "freeSpace": 49013579776,
-                "usedSpace": 4572745728,
-                "bootflash_type": "active"
-            }
-        },
-        "bootFlashDataMap": {
-            "bootflash:": [
-                {
-                    "deviceName": "cvd-1313-leaf",
-                    "serialNumber": "FDO211218HH",
-                    "ipAddr": " 172.22.150.104",
-                    "fileName": ".rpmstore/",
-                    "size": "0",
-                    "filePath": "bootflash:.rpmstore/",
-                    "bootflash_type": "active",
-                    "date": "May 24 21:44:08 2023",
-                    "name": "bootflash:"
-                },
-            ]
-        }
-    }    
-    """
-    def __init__(self, module):
-        super().__init__(module)
-        self._init_properties()
-        self.refresh()
-
-    def _init_properties(self):
-        self.properties = {}
-        self.properties["serial_number"] = None
-
-    def refresh(self):
-        """
-        Refresh self.stage_info with current image staging state from NDFC
-        """
-        if self.properties["serial_number"] is None:
-            msg = f"{self.__class__.__name__}: set instance.serial_number "
-            msg += f"before calling refresh()."
-            self.module.fail_json(msg=msg)
-
-        path = f"{self.endpoints['bootflash_info']['path']}?serialNumber="
-        path += f"{self.serial_number}"
-        verb = self.endpoints["bootflash_info"]["verb"]
-        response = dcnm_send(self.module, verb, path)
-
-        result = self._handle_response(response, verb)
-        if not result["success"]:
-            msg = "Unable to retrieve image staging information from NDFC"
-            self.module.fail_json(msg=msg)
-
-        data = response.get("DATA").get("bootFlashSpaceMap")
-        if data is None:
-            msg = "Unable to retrieve bootflash information from NDFC"
-            self.module.fail_json(msg=msg)
-        self.data = {}
-        for flash_device in data.keys():
-            if flash_device == "bootflash:":
-                self.data["primary_total_space"] = data[flash_device]["totalSpace"]
-                self.data["primary_free_space"] = data[flash_device]["freeSpace"]
-                self.data["primary_used_space"] = data[flash_device]["usedSpace"]
-            if flash_device == "remote-bootflash:":
-                self.data["secondary_total_space"] = data[flash_device]["totalSpace"]
-                self.data["secondary_free_space"] = data[flash_device]["freeSpace"]
-                self.data["secondary_used_space"] = data[flash_device]["usedSpace"]
-
-
-    def _get(self, item):
-        if self.policy_name is None:
-            msg = f"{self.__class__.__name__}: instance.policy_name must "
-            msg += f"be set before accessing property {item}."
-            self.module.fail_json(msg=msg)
-        return self.data[self.policy_name].get(item)
-
-    @property
-    def serial_number(self):
-        """
-        Set the serial_number of the switch to query.
-        """
-        return self.properties.get("serial_number")
-    @serial_number.setter
-    def serial_number(self, value):
-        self.properties["serial_number"] = value
+        return self.properties.get("check_timeout")
 
 
 class DcnmNdfcVersion(DcnmImageUpgradeCommon):
@@ -2780,6 +2649,7 @@ class DcnmNdfcVersion(DcnmImageUpgradeCommon):
             "is_upgrade_inprogress": false
         }
     """
+
     def __init__(self, module):
         super().__init__(module)
         self.class_name = self.__class__.__name__
@@ -2796,11 +2666,13 @@ class DcnmNdfcVersion(DcnmImageUpgradeCommon):
         """
         Refresh self.data with current version info from NDFC
         """
-        path =  self.endpoints["ndfc_version"]["path"]
-        verb =  self.endpoints["ndfc_version"]["verb"]
+        path = self.endpoints["ndfc_version"]["path"]
+        verb = self.endpoints["ndfc_version"]["verb"]
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
-        self.log_msg(f"TODO: {self.class_name}.refresh() response: {self.ndfc_response}")
+        self.log_msg(
+            f"TODO: {self.class_name}.refresh() response: {self.ndfc_response}"
+        )
         self.log_msg(f"TODO: {self.class_name}.refresh() result: {self.ndfc_result}")
         if not self.ndfc_result["success"]:
             msg = f"{self.class_name}.refresh() failed: {self.ndfc_result}"
@@ -2949,7 +2821,7 @@ class DcnmNdfcVersion(DcnmImageUpgradeCommon):
             if version is 12.1.2e, return 12
             None
         """
-        return (self._get("version").split('.'))[0]
+        return (self._get("version").split("."))[0]
 
     @property
     def version_minor(self):
@@ -2964,7 +2836,7 @@ class DcnmNdfcVersion(DcnmImageUpgradeCommon):
             if version is 12.1.2e, return 1
             None
         """
-        return (self._get("version").split('.'))[1]
+        return (self._get("version").split("."))[1]
 
     @property
     def version_patch(self):
@@ -2979,7 +2851,39 @@ class DcnmNdfcVersion(DcnmImageUpgradeCommon):
             if version is 12.1.2e, return 2e
             None
         """
-        return (self._get("version").split('.'))[2]
+        return (self._get("version").split("."))[2]
+
+
+def main():
+    """main entry point for module execution"""
+
+    element_spec = dict(
+        config=dict(required=False, type="dict"),
+        state=dict(default="merged", choices=["merged"]),
+    )
+
+    module = AnsibleModule(argument_spec=element_spec, supports_check_mode=True)
+    dcnm_module = DcnmImageUpgrade(module)
+    dcnm_module.validate_input()
+    dcnm_module.get_have()
+    dcnm_module.get_want()
+
+    if module.params["state"] == "merged":
+        dcnm_module.get_diff_merge()
+
+    if dcnm_module.diff_create:
+        dcnm_module.result["changed"] = True
+    else:
+        module.exit_json(**dcnm_module.result)
+
+    if module.check_mode:
+        dcnm_module.result["changed"] = False
+        module.exit_json(**dcnm_module.result)
+
+    if dcnm_module.diff_create:
+        dcnm_module.handle_image_upgrades()
+
+    module.exit_json(**dcnm_module.result)
 
 
 if __name__ == "__main__":
