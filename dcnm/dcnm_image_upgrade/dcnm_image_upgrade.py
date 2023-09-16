@@ -644,25 +644,6 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             if switch.get("upgrade") is None:
                 switch["upgrade"] = self.defaults["upgrade"]
 
-    def attach_image_management_policy(self):
-        """
-        {
-            "mappingList":
-                [
-                    {
-                        "policyName": "MyPolicy",
-                        "hostName": "N9K_62",
-                        "ipAddr": "172.23.258.66",
-                        "platform": "N7K",
-                        "serialNumber": "FDO2338082P",
-                        "bootstrapMode": "true"
-                    }
-                ],
-            "stageValidate": true
-        }
-        """
-        pass
-
     def build_policy_attach_payload(self):
         self.payloads = []
         for switch in self.diff_create:
@@ -722,32 +703,38 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         Validate the image staged to the switch(es)
         """
-        if len(serial_numbers) == 0:
-            return
-        path = self.endpoints["image_validate"]["path"]
-        verb = self.endpoints["image_validate"]["verb"]
-        payload = {}
-        payload["serialNumbers"] = serial_numbers
-        payload["nonDisruptive"] = True
-        response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
-        result = self._handle_response(response, verb)
+        instance = NdfcImageValidate(self.module)
+        instance.serial_numbers = serial_numbers
+        # TODO:2 Discuss with Mike/Shangxin
+        # TODO:2 Should we add this option to the playbook?
+        # It's supported in NdfcImageValidate with default of False
+        # instance.non_disruptive = False
+        instance.commit()
 
-        if not result["success"]:
-            self._failure(response)
+        # if len(serial_numbers) == 0:
+        #     return
+        # path = self.endpoints["image_validate"]["path"]
+        # verb = self.endpoints["image_validate"]["verb"]
+        # payload = {}
+        # payload["serialNumbers"] = serial_numbers
+        # payload["nonDisruptive"] = True
+        # response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
+        # result = self._handle_response(response, verb)
+
+        # if not result["success"]:
+        #     self._failure(response)
 
     def _stage_images(self, serial_numbers):
         """
         Initiate image staging to the switch(es) associated with serial_numbers
         """
-        stage = NdfcImageStage(self.module)
-        stage.serial_numbers = serial_numbers
-        stage.commit()
+        instance = NdfcImageStage(self.module)
+        instance.serial_numbers = serial_numbers
+        instance.commit()
 
-    def _upgrade_images(self, devices):
+    def _verify_install_options(self, devices):
         """
-        1. Verify image validation status
-        2. Upgrade the switch(es) to the currently-validated image
-
+        Verify that the install options for the switch(es) are valid
         """
         if len(devices) == 0:
             return
@@ -762,6 +749,10 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 msg += f"with ip_address {device['ip_address']}."
                 self.module.fail_json(msg)
 
+    def _upgrade_images(self, devices):
+        """
+        Upgrade the switch(es) to the currently-validated image
+        """
         upgrade = NdfcImageUpgrade(self.module)
         upgrade.devices = devices
         upgrade.commit()
@@ -774,9 +765,22 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
         Caller: main()
         """
+        # TODO:1 Replace these with NdfcImagePolicyAction
+        # See commented code below
         self.build_policy_attach_payload()
         self.send_policy_attach_payload()
+
+        # Use below for policy attach/detach
+        #instance = NdfcImagePolicyAction(self.module)
+        #instance.policy_name = "NR3F"
+        #instance.action = "attach" # or detach
+        #instance.serial_numbers = ["FDO211218GC", "FDO211218HH"]
+        #instance.commit()
+        #policy_attach_devices = []
+        #policy_detach_devices = []
+
         stage_devices = []
+        validate_devices = []
         upgrade_devices = []
         for switch in self.diff_create:
             self.switch_details.ip_address = switch.get("ip_address")
@@ -786,11 +790,20 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             device["policy_name"] = self.have.policy
             device["ip_address"] = self.switch_details.ip_address
             if switch.get("stage") is not False:
-                stage_devices.append(device)
+                stage_devices.append(device["serial_number"])
+            # TODO:2 Discuss with Mike/Shangxin
+            # TODO:2 Should we add this option to the playbook?
+            # Currently, we always validate the image after staging
+            validate_devices.append(device["serial_number"])
             if switch.get("upgrade") is not False:
                 upgrade_devices.append(device)
 
+        self.log_msg(f"REMOVE: {self.class_name}.handle_image_upgrades: stage_devices: {stage_devices}")
         self._stage_images(stage_devices)
+        self.log_msg(f"REMOVE: {self.class_name}.handle_image_upgrades: validate_devices: {validate_devices}")
+        self._validate_images(validate_devices)
+        self.log_msg(f"REMOVE: {self.class_name}.handle_image_upgrades: upgrade_devices: {upgrade_devices}")
+        self._verify_install_options(upgrade_devices)
         self._upgrade_images(upgrade_devices)
 
     def _failure(self, resp):
@@ -1370,6 +1383,180 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         return self._get("versionCheck")
 
 
+#==============================================================================
+class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
+    """
+    Perform image policy actions on NDFC on one or more switches.
+
+    Support for the following actions:
+        - attach
+        - detach
+
+    Usage (where module is an instance of AnsibleModule):
+
+    instance = NdfcImagePolicyAction(module)
+    instance.policy_name = "NR3F"
+    instance.action = "attach" # or detach
+    instance.serial_numbers = ["FDO211218GC", "FDO211218HH"]
+    instance.commit()
+
+    Endpoints:
+    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/attach-policy
+    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/detach-policy
+    """
+
+    def __init__(self, module):
+        super().__init__(module)
+        self.class_name = self.__class__.__name__
+        self._init_properties()
+        self.image_policies = NdfcImagePolicies(self.module)
+        self.switch_details = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+
+    def _init_properties(self):
+        self.properties = {}
+        self.properties["action"] = None
+        self.properties["policy_name"] = None
+        self.properties["serial_numbers"] = None
+
+    def build_attach_payload(self):
+        self.payloads = []
+        for serial_number in self.serial_numbers:
+            self.switch_details.serial_number = serial_number
+            payload = {}
+            payload["policyName"] = self.policy_name
+            payload["hostName"] = self.switch_details.device_name
+            payload["ipAddr"] = self.switch_details.ip_address
+            payload["platform"] = self.switch_details.platform
+            payload["serialNumber"] = self.switch_details.serial_number
+            for item in payload:
+                if payload[item] is None:
+                    msg = f"Unable to determine {item} for switch "
+                    msg += f" {self.switch_details.ip_address} / "
+                    msg += f" {self.switch_details.serial_number} / "
+                    msg += f" {self.switch_details.device_name}. "
+                    msg += "Please verify that the switch is managed by NDFC."
+                    self.module.fail_json(msg)
+            self.payloads.append(payload)
+
+    def validate_request(self):
+        """
+        validations prior to commit() should be added here.
+        """
+        if self.action is None:
+            msg = f"{self.class_name}.validate_request: "
+            msg += "instance.action must be set before "
+            msg += "calling commit()"
+            self.module.fail_json(msg)
+
+        if self.serial_numbers is None:
+            msg = f"{self.class_name}.validate_request: "
+            msg += "instance.serial_numbers must be set before "
+            msg += "calling commit()"
+            self.module.fail_json(msg)
+
+        if self.policy_name is None:
+            msg = f"{self.class_name}.validate_request: "
+            msg += "instance.policy_name must be set before "
+            msg += "calling commit()"
+            self.module.fail_json(msg)
+
+        # Fail if the image policy does not support the switch platform
+        self.image_policies.policy_name = self.policy_name
+        self.image_policies.refresh()
+        for serial_number in self.serial_numbers:
+            self.switch_details.serial_number = serial_number
+            if self.switch_details.platform not in self.image_policies.platform:
+                msg = f"policy {self.policy_name} does not support platform "
+                msg += f"{self.switch_details.platform}. {self.policy_name} "
+                msg += "supports the following platform(s): "
+                msg += f"{self.image_policies.platform}"
+                self.module.fail_json(msg)
+
+    def commit(self):
+        self.validate_request()
+        if self.action == "attach":
+            self._attach_policy()
+        elif self.action == "detach":
+            self._detach_policy()
+
+    def _attach_policy(self):
+        """
+        Attach policy_name to the switch(es) associated with serial_numbers
+        """
+        self.build_attach_payload()
+        path = self.endpoints["attach_policy"]["path"]
+        verb = self.endpoints["attach_policy"]["verb"]
+        for payload in self.payloads:
+            response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
+            result = self._handle_response(response, verb)
+            if not result["success"]:
+                msg = f"{self.class_name}._attach_policy: "
+                msg += f"Bad result when attaching policy {self.policy_name} "
+                msg += f"to switch {payload['ipAddr']}."
+                self.module.fail_json(msg)
+
+    def _detach_policy(self):
+        """
+        Detach policy_name from the switch(es) associated with serial_numbers
+        verb: DELETE
+        endpoint: /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/detach-policy
+        query_params: ?serialNumber=FDO211218GC,FDO21120U5D
+        """
+        path = self.endpoints["detach_policy"]["path"]
+        verb = self.endpoints["detach_policy"]["verb"]
+        query_params = ','.join(self.serial_numbers)
+        path += f"?serialNumber={query_params}"
+        response = dcnm_send(self.module, verb, path)
+        result = self._handle_response(response, verb)
+        if not result["success"]:
+            self._failure(response)
+
+    @property
+    def action(self):
+        """
+        Set the action to take. Either "attach" or "detach".
+
+        Must be set prior to calling instance.commit()
+        """
+        return self.properties.get("action")
+
+    @action.setter
+    def action(self, value):
+        self.properties["action"] = value
+
+    @property
+    def policy_name(self):
+        """
+        Set the name of the policy to attach or detach.
+
+        Must be set prior to calling instance.commit()
+        """
+        return self.properties.get("policy_name")
+
+    @policy_name.setter
+    def policy_name(self, value):
+        self.properties["policy_name"] = value
+
+    @property
+    def serial_numbers(self):
+        """
+        Set the serial numbers of the switches to/from which
+        policy_name will be attached or detached.
+
+        Must be set prior to calling instance.commit()
+        """
+        return self.properties.get("serial_numbers")
+
+    @serial_numbers.setter
+    def serial_numbers(self, value):
+        if not isinstance(value, list):
+            msg = f"{self.class_name}: instance.serial_numbers must "
+            msg += f"be a python list of switch serial numbers."
+            self.module.fail_json(msg)
+        self.properties["serial_numbers"] = value
+
+#==============================================================================
+
 class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
     """
     Retrieve image policy details from NDFC and provide property accessors
@@ -1403,6 +1590,10 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
     def _init_properties(self):
         self.properties = {}
         self.properties["policy_name"] = None
+        self.properties["ndfc_data"] = None
+        self.properties["ndfc_response"] = None
+        self.properties["ndfc_result"] = None
+
 
     def refresh(self):
         """
@@ -1410,18 +1601,18 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
         """
         path = self.endpoints["policies_info"]["path"]
         verb = self.endpoints["policies_info"]["verb"]
-        response = dcnm_send(self.module, verb, path)
+        self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
 
-        result = self._handle_response(response, verb)
+        self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
         msg = f"REMOVE: {self.class_name}.refresh: "
-        msg += f"result: {result}"
-        if not result["success"]:
+        msg += f"result: {self.ndfc_result}"
+        if not self.ndfc_result["success"]:
             msg = f"{self.class_name}.refresh: "
             msg += "Bad result when retriving image policy "
             msg += "information from NDFC."
             self.module.fail_json(msg)
 
-        data = response.get("DATA").get("lastOperDataObject")
+        data = self.ndfc_response.get("DATA").get("lastOperDataObject")
         if data is None:
             msg = f"{self.class_name}.refresh: "
             msg += "Bad response when retrieving image policy "
@@ -1431,14 +1622,14 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
             msg = f"{self.class_name}.refresh: "
             msg += "NDFC has no defined image policies."
             self.module.fail_json(msg)
-        self.data = {}
+        self.properties["ndfc_data"] = {}
         for policy in data:
             policy_name = policy.get("policyName")
             if policy_name is None:
                 msg = f"{self.class_name}.refresh: "
                 msg += "Cannot parse NDFC policy information"
                 self.module.fail_json(msg)
-            self.data[policy_name] = policy
+            self.properties["ndfc_data"][policy_name] = policy
 
     def _get(self, item):
         if self.policy_name is None:
@@ -1446,7 +1637,33 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
             msg = f"instance.policy_name must be set before "
             msg += f"accessing property {item}."
             self.module.fail_json(msg)
-        return self.data[self.policy_name].get(item)
+        msg = f"{self.class_name}._get: "
+        msg += f"item {item} "
+        msg += f"ndfc_data {self.properties['ndfc_data']}"
+        self.log_msg(msg)
+        return self.properties["ndfc_data"][self.policy_name].get(item)
+
+    @property
+    def ndfc_data(self):
+        """
+        Return the parsed data from the NDFC response as a dictionary,
+        keyed on policy_name.
+        """
+        return self.properties["ndfc_data"]
+
+    @property
+    def ndfc_response(self):
+        """
+        Return the raw response from the NDFC response.
+        """
+        return self.properties["ndfc_response"]
+
+    @property
+    def ndfc_result(self):
+        """
+        Return the raw result from the NDFC response.
+        """
+        return self.properties["ndfc_result"]
 
     @property
     def policy_name(self):
@@ -2230,6 +2447,7 @@ class NdfcSwitchIssuDetailsBySerialNumber(NdfcSwitchIssuDetails):
 
     instance = NdfcSwitchIssuDetailsBySerialNumber(module)
     instance.serial_number = "FDO211218GC"
+    instance.refresh()
     image_staged = instance.image_staged
     image_upgraded = instance.image_upgraded
     ip_address = instance.ip_address
@@ -2264,6 +2482,8 @@ class NdfcSwitchIssuDetailsBySerialNumber(NdfcSwitchIssuDetails):
             msg = f"{self.class_name}: set instance.serial_number "
             msg += f"before accessing property {item}."
             self.module.fail_json(msg)
+        # self.log_msg(f"REMOVE: {self.class_name}._get: item: {item}")
+        # self.log_msg(f"REMOVE: {self.class_name}._get: self.data_subclass {self.data_subclass}")
         return self.data_subclass[self.serial_number].get(item)
 
     @property
@@ -2431,7 +2651,7 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
     def _init_properties(self):
         self.properties = {}
         self.properties["serial_numbers"] = None
-        self.properties["data"] = None
+        self.properties["ndfc_data"] = None
         self.properties["ndfc_result"] = None
         self.properties["ndfc_response"] = None
         self.properties["check_interval"] = 10  # seconds
@@ -2649,7 +2869,286 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         """
         return self.properties.get("check_timeout")
 
+#==============================================================================
+class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
+    """
+    Endpoint:
+        /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/validate-image
 
+    Usage (where module is an instance of AnsibleModule):
+
+    instance = NdfcImageValidate(module)
+    instance.serial_numbers = ["FDO211218HH", "FDO211218GC"]
+    # non_disruptive is optional
+    instance.non_disruptive = True
+    instance.commit()
+    data = instance.ndfc_data
+
+    Request body:
+    {
+        "serialNum": ["FDO21120U5D"],
+        "nonDisruptive":"true"
+    }
+
+    Response body:
+        [StageResponse [key=success, value=]]
+                
+        The response is not JSON, nor is it very useful.
+        Instead, we poll for validation status using
+        NdfcSwitchIssuDetailsBySerialNumber.
+    """
+
+    def __init__(self, module):
+        super().__init__(module)
+        self.class_name = self.__class__.__name__
+        self._init_properties()
+        self._populate_ndfc_version()
+
+    def _init_properties(self):
+        self.properties = {}
+        self.properties["serial_numbers"] = None
+        self.properties["non_disruptive"] = False
+        self.properties["ndfc_data"] = None
+        self.properties["ndfc_result"] = None
+        self.properties["ndfc_response"] = None
+        self.properties["check_interval"] = 10  # seconds
+        self.properties["check_timeout"] = 1200  # seconds
+
+    def _populate_ndfc_version(self):
+        """
+        Populate self.ndfc_version with the NDFC version.
+
+        TODO:3 Remove if 12.1.3b works with no changes to request/response payloads.
+
+        Notes:
+        1.  This cannot go into NdfcAnsibleImageUpgradeCommon() due to circular
+            imports resulting in RecursionError
+        """
+        instance = NdfcVersion(self.module)
+        self.ndfc_version = instance.version
+
+    def prune_serial_numbers(self):
+        """
+        If the image is already validated on a switch, remove that switch's
+        serial number from the list of serial numbers to validate.
+        """
+        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+        for serial_number in self.serial_numbers:
+            issu.serial_number = serial_number
+            issu.refresh()
+            if issu.validated == "Success":
+                msg = f"REMOVE: {self.class_name}.prune_serial_numbers: "
+                msg += "image already validated for "
+                msg += f"{issu.serial_number} / {issu.ip_address}"
+                self.log_msg(msg)
+                self.serial_numbers.remove(issu.serial_number)
+
+    def validate_serial_numbers(self):
+        """
+        Fail if the validated state for any serial_number
+        is Failed.
+        """
+        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+        for serial_number in self.serial_numbers:
+            issu.serial_number = serial_number
+            issu.refresh()
+            if issu.validated == "Failed":
+                msg = "Image validation is failing for the following switch: "
+                msg += f"{issu.device_name}, {issu.ip_address}, "
+                msg += f"{issu.serial_number}. Please check the switch "
+                msg += "connectivity to NDFC and try again."
+                self.module.fail_json(msg)
+
+    def build_payload(self):
+        self.payload = {}
+        self.payload["serialNum"] = self.serial_numbers
+        self.payload["nonDisruptive"] = self.non_disruptive
+
+    def commit(self):
+        """
+        Commit the image validation request to NDFC and wait
+        for the images to be validated.
+        """
+        if self.serial_numbers is None:
+            msg = f"{self.class_name}.commit() call instance.serial_numbers "
+            msg += "before calling commit()."
+            self.module.fail_json(msg)
+        if len(self.serial_numbers) == 0:
+            msg = f"REMOVE: {self.class_name}.commit() no serial numbers "
+            msg += "to validate."
+            self.log_msg(msg)
+            return
+        self.prune_serial_numbers()
+        self.validate_serial_numbers()
+        self._wait_for_current_actions_to_complete()
+        path = self.endpoints["image_validate"]["path"]
+        verb = self.endpoints["image_validate"]["verb"]
+        self.build_payload()
+        self.properties["ndfc_response"] = dcnm_send(
+            self.module, verb, path, data=json.dumps(self.payload)
+        )
+        self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
+        self.log_msg(f"REMOVE: {self.class_name}.commit() response: {self.ndfc_response}")
+        self.log_msg(f"REMOVE: {self.class_name}.commit() result: {self.ndfc_result}")
+        if not self.ndfc_result["success"]:
+            msg = f"{self.class_name}.commit() failed: {self.ndfc_result}. "
+            msg += f"NDFC response was: {self.ndfc_response}"
+            self.module.fail_json(msg)
+        self.properties["ndfc_data"] = self.ndfc_response.get("DATA")
+        self._wait_for_image_validate_to_complete()
+
+    def _wait_for_current_actions_to_complete(self):
+        """
+        NDFC will not stage an image if there are any actions in progress.
+        Wait for all actions to complete before validating image.
+        Actions include image staging, image upgrade, and image validation.
+        """
+        serial_numbers = copy.copy(self.serial_numbers)
+        timeout = self.check_timeout
+        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+        while len(serial_numbers) > 0 and timeout > 0:
+            sleep(self.check_interval)
+            timeout -= self.check_interval
+            for serial_number in self.serial_numbers:
+                if serial_number not in serial_numbers:
+                    continue
+                issu.serial_number = serial_number
+                issu.refresh()
+                if issu.actions_in_progress is False:
+                    msg = f"REMOVE: {self.class_name}."
+                    msg += "_wait_for_current_actions_to_complete: "
+                    msg += f"{serial_number} no actions in progress. "
+                    msg += f"Removing. {timeout} seconds remaining."
+                    self.log_msg(msg)
+                    serial_numbers.remove(serial_number)
+
+    def _wait_for_image_validate_to_complete(self):
+        """
+        # Wait for image validation to complete
+        """
+        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+        serial_numbers_done = set()
+        timeout = self.check_timeout
+        serial_numbers_todo = set(copy.copy(self.serial_numbers))
+        while serial_numbers_done != serial_numbers_todo and timeout > 0:
+            sleep(self.check_interval)
+            timeout -= self.check_interval
+            msg = f"REMOVE: {self.class_name}."
+            msg += "_wait_for_image_validate_to_complete: "
+            msg += f"seconds remaining: {timeout}, "
+            msg += f"serial_numbers_done: {serial_numbers_done}, "
+            msg += f"serial_numbers_todo: {serial_numbers_todo}"
+            self.log_msg(msg)
+            for serial_number in self.serial_numbers:
+                if serial_number in serial_numbers_done:
+                    continue
+                issu.serial_number = serial_number
+                issu.refresh()
+                msg = f"REMOVE: {self.class_name}."
+                msg += "_wait_for_image_validate_to_complete: "
+                msg += f"Seconds remaining {timeout}: "
+                msg += f"{issu.serial_number} / {issu.ip_address} "
+                msg += f"validated_percent: {issu.validated_percent} "
+                msg += f"validated_state: {issu.validated}"
+                self.log_msg(msg)
+                if issu.validated == "Failed":
+                    msg = f"Seconds remaining {timeout}: validate image {issu.validated} "
+                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    self.module.fail_json(msg)
+                if issu.validated == "Success":
+                    msg = f"REMOVE: {self.class_name}."
+                    msg += "_wait_for_image_validate_to_complete: "
+                    msg += f"Seconds remaining {timeout}: validate image {issu.validated} "
+                    msg += f"{issu.serial_number} / {issu.ip_address} "
+                    msg += f"image validated percent: {issu.validated_percent}"
+                    self.log_msg(msg)
+                    serial_numbers_done.add(issu.serial_number)
+                if issu.validated == None:
+                    msg = f"REMOVE: {self.class_name}."
+                    msg += "_wait_for_image_validate_to_complete: "
+                    msg += f"Seconds remaining {timeout}: validate image not started "
+                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    self.log_msg(msg)
+                if issu.validated == "In Progress":
+                    msg = f"REMOVE: {self.class_name}."
+                    msg += "_wait_for_image_validate_to_complete: "
+                    msg += f"Seconds remaining {timeout}: validate image {issu.validated} "
+                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    msg += f"image validated percent: {issu.validated_percent}"
+                    self.log_msg(msg)
+
+    @property
+    def serial_numbers(self):
+        """
+        Set the serial numbers of the switches to stage.
+
+        This must be set before calling instance.commit()
+        """
+        return self.properties.get("serial_numbers")
+
+    @serial_numbers.setter
+    def serial_numbers(self, value):
+        if not isinstance(value, list):
+            msg = f"{self.__class__.__name__}: instance.serial_numbers must "
+            msg += f"be a python list of switch serial numbers."
+            self.module.fail_json(msg)
+        self.properties["serial_numbers"] = value
+
+    @property
+    def non_disruptive(self):
+        """
+        Set the non_disruptive flag to True or False.
+        """
+        return self.properties.get("non_disruptive")
+    @non_disruptive.setter
+    def non_disruptive(self, value):
+        value = self.make_boolean(value)
+        if not isinstance(value, bool):
+            msg = f"{self.class_name}.non_disruptive: "
+            msg += "instance.non_disruptive must "
+            msg += f"be a boolean. Got {value}."
+            self.module.fail_json(msg)
+        self.properties["non_disruptive"] = value
+
+    @property
+    def ndfc_data(self):
+        """
+        Return the result of the image staging request
+        for serial_numbers.
+
+        instance.serial_numbers must be set first.
+        """
+        return self.properties.get("ndfc_data")
+
+    @property
+    def ndfc_result(self):
+        """
+        Return the POST result from NDFC
+        """
+        return self.properties.get("ndfc_result")
+
+    @property
+    def ndfc_response(self):
+        """
+        Return the POST response from NDFC
+        """
+        return self.properties.get("ndfc_response")
+
+    @property
+    def check_interval(self):
+        """
+        Return the stage check interval in seconds
+        """
+        return self.properties.get("check_interval")
+
+    @property
+    def check_timeout(self):
+        """
+        Return the stage check timeout in seconds
+        """
+        return self.properties.get("check_timeout")
+
+#==============================================================================
 class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
     """
     Endpoint:
@@ -2706,15 +3205,14 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             "pacakgeUnInstall": false
         }
     Response bodies:
-        These are returned immediately, so the upgrade is not complete.
-        We need to poll NDFC to determine when the upgrade is complete.
-        Basically, we should ignore these responses in favor of the
-        poll responses.
+        Responses are text, not JSON, and are returned immediately.
+        They do not contain useful information. We need to poll NDFC
+        to determine when the upgrade is complete. Basically, we ignore
+        these responses in favor of the poll responses.
         - If an action is in progress, text is returned:
             "Action in progress for some of selected device(s). Please try again after completing current action."
         -   If an action is not in progress, text is returned:
             "3"
-
     """
 
     def __init__(self, module):
