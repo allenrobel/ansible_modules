@@ -156,14 +156,11 @@ EXAMPLES = """
                     upgrade: true
 
 # Detach image policy NR3F from two devices
-# Stage the image on both devices but do not upgrade
     -   name: stage/upgrade devices
         cisco.dcnm.dcnm_image_upgrade:
-            state: merged
+            state: deleted
             config:
                 policy: NR3F
-                stage: true
-                upgrade: false
                 switches:
                 -   ip_address: 192.168.1.1
                 -   ip_address: 192.168.1.2
@@ -403,6 +400,15 @@ class NdfcAnsibleImageUpgradeCommon:
                 return False
         return value
 
+    def make_none(self, value):
+        """
+        Return None if value is an empty string, or a string
+        representation of a None type
+        Return value otherwise
+        """
+        if value in ["", "none", "None", "NONE", "null", "Null", "NULL"]:
+            return None
+        return value
 
 class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
     """
@@ -425,7 +431,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.validated = []
         self.have_create = []
         self.want_create = []
-        self.diff_create = []
+        self.need = []
         self.diff_save = {}
         self.query = []
         self.result = dict(changed=False, diff=[], response=[])
@@ -490,7 +496,17 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         The have item is obtained from an instance of NdfcSwitchIssuDetails
         created in self.get_have().
 
-        Caller: self.get_diff_merge()
+        Structure:
+
+        {
+            "ip_address": "192.168.1.1",
+            "policy": "NR1F",
+            "policy_changed": False,
+            "stage": True,
+            "upgrade": True
+        }
+
+        Caller: self.get_need_merged()
         """
         self.have.ip_address = want["ip_address"]
 
@@ -523,14 +539,15 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             idempotent_want["upgrade"] = False
         return idempotent_want
 
-    def get_diff_merge(self):
+    def get_need_merged(self):
         """
         Caller: main()
 
-        Populates self.diff_create list() with items from our want list
-        that are not in our have list.  These items will be sent to NDFC.
+        For merged state, populate self.need list() with items from
+        our want list that are not in our have list.  These items will be sent
+        to NDFC.
         """
-        diff_create = []
+        need = []
 
         for want_create in self.want_create:
             self.have.ip_address = want_create["ip_address"]
@@ -542,10 +559,30 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                     and idempotent_want["upgrade"] is False
                 ):
                     continue
-                diff_create.append(idempotent_want)
-        self.diff_create = diff_create
-        msg = f"REMOVE: {self.class_name}.diff_create: {self.diff_create}"
+                need.append(idempotent_want)
+        self.need = need
+        msg = f"REMOVE: {self.class_name}.get_need_merged: "
+        msg += f"need: {self.need}"
         self.log_msg(msg)
+
+    def get_need_deleted(self):
+        """
+        Caller: main()
+
+        For deleted state, populate self.need list() with items from our want
+        list that are not in our have list.  These items will be sent to NDFC.
+
+        TODO:2 We assume that deleted state is intended only to detach image policies.
+        """
+        need = []
+        for want in self.want_create:
+            self.have.ip_address = want["ip_address"]
+            if self.have.serial_number is None:
+                continue
+            if self.have.policy is None:
+                continue
+            need.append(want)
+        self.need = need
 
     @staticmethod
     def _build_params_spec_for_merged_state():
@@ -571,19 +608,42 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         state = self.params["state"]
 
         # TODO:2 remove this when we implement query state
-        if state != "merged":
-            msg = f"Only merged state is supported. Got state {state}"
+        if state not in ["merged", "deleted"]:
+            msg = f"Only merged and deleted states are supported. Got state {state}"
             self.module.fail_json(msg)
 
         if state == "merged":
             self._validate_input_for_merged_state()
             return
+        if state == "deleted":
+            self._validate_input_for_deleted_state()
+            return
 
     def _validate_input_for_merged_state(self):
         """
-        Caller: self._validate_input()
+        Caller: self.validate_input()
 
         Validate that self.config contains appropriate values for merged state
+        """
+        params_spec = self._build_params_spec_for_merged_state()
+        if not self.config:
+            msg = "config: element is mandatory for state merged"
+            self.module.fail_json(msg)
+
+        valid_params, invalid_params = validate_list_of_dicts(
+            self.config.get("switches"), params_spec, self.module
+        )
+        # We're not using self.validated. Keeping this to avoid
+        # linter error due to non-use of valid_params
+        self.validated = copy.deepcopy(valid_params)
+
+    def _validate_input_for_deleted_state(self):
+        """
+        Caller: self.validate_input()
+        TODO:2 We should just be able to ignore stage/upgrade parameters
+        TODO:2 Is anything else needed specific to deleted state?
+
+        Validate that self.config contains appropriate values for deleted state
         """
         params_spec = self._build_params_spec_for_merged_state()
         if not self.config:
@@ -646,7 +706,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
     def build_policy_attach_payload(self):
         self.payloads = []
-        for switch in self.diff_create:
+        for switch in self.need:
             if switch.get("policy_changed") is False:
                 continue
             self.switch_details.ip_address = switch.get("ip_address")
@@ -711,19 +771,6 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         # instance.non_disruptive = False
         instance.commit()
 
-        # if len(serial_numbers) == 0:
-        #     return
-        # path = self.endpoints["image_validate"]["path"]
-        # verb = self.endpoints["image_validate"]["verb"]
-        # payload = {}
-        # payload["serialNumbers"] = serial_numbers
-        # payload["nonDisruptive"] = True
-        # response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
-        # result = self._handle_response(response, verb)
-
-        # if not result["success"]:
-        #     self._failure(response)
-
     def _stage_images(self, serial_numbers):
         """
         Initiate image staging to the switch(es) associated with serial_numbers
@@ -757,7 +804,8 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         upgrade.devices = devices
         upgrade.commit()
 
-    def handle_image_upgrades(self):
+
+    def handle_merged_state(self):
         """
         Update the switch policy if it has changed.
         Stage the image if requested.
@@ -770,7 +818,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.build_policy_attach_payload()
         self.send_policy_attach_payload()
 
-        # Use below for policy attach/detach
+        # Use (or not) below for policy attach/detach
         #instance = NdfcImagePolicyAction(self.module)
         #instance.policy_name = "NR3F"
         #instance.action = "attach" # or detach
@@ -782,12 +830,14 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         stage_devices = []
         validate_devices = []
         upgrade_devices = []
-        for switch in self.diff_create:
+        for switch in self.need:
+            msg = f"REMOVE: {self.class_name}.handle_merged_state: switch: {switch}"
+            self.log_msg(msg)
             self.switch_details.ip_address = switch.get("ip_address")
             device = {}
             device["serial_number"] = self.switch_details.serial_number
             self.have.ip_address = self.switch_details.ip_address
-            device["policy_name"] = self.have.policy
+            device["policy_name"] = switch.get("policy")
             device["ip_address"] = self.switch_details.ip_address
             if switch.get("stage") is not False:
                 stage_devices.append(device["serial_number"])
@@ -798,13 +848,46 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             if switch.get("upgrade") is not False:
                 upgrade_devices.append(device)
 
-        self.log_msg(f"REMOVE: {self.class_name}.handle_image_upgrades: stage_devices: {stage_devices}")
+        self.log_msg(f"REMOVE: {self.class_name}.handle_merged_state: stage_devices: {stage_devices}")
         self._stage_images(stage_devices)
-        self.log_msg(f"REMOVE: {self.class_name}.handle_image_upgrades: validate_devices: {validate_devices}")
+        self.log_msg(f"REMOVE: {self.class_name}.handle_merged_state: validate_devices: {validate_devices}")
         self._validate_images(validate_devices)
-        self.log_msg(f"REMOVE: {self.class_name}.handle_image_upgrades: upgrade_devices: {upgrade_devices}")
+        self.log_msg(f"REMOVE: {self.class_name}.handle_merged_state: upgrade_devices: {upgrade_devices}")
         self._verify_install_options(upgrade_devices)
         self._upgrade_images(upgrade_devices)
+
+    def handle_deleted_state(self):
+        """
+        Delete the image policy from the switch(es)
+
+        Caller: main()
+        """
+        msg = f"handle_deleted_state: Entered with self.need {self.need}"
+        self.log_msg(msg)
+        detach_policy_devices = {}
+        for switch in self.need:
+            self.switch_details.ip_address = switch.get("ip_address")
+            self.image_policies.policy_name = switch.get("policy")
+            # if self.image_policies.name is None:
+            #     continue
+            if self.image_policies.name not in detach_policy_devices:
+                detach_policy_devices[self.image_policies.policy_name] = []
+            detach_policy_devices[self.image_policies.policy_name].append(
+                self.switch_details.serial_number
+            )
+        msg = f"handle_deleted_state: detach_policy_devices: {detach_policy_devices}"
+        self.log_msg(msg)
+        if len(detach_policy_devices) == 0:
+            self.result = dict(changed=False, diff=[], response=[])
+            return
+        instance = NdfcImagePolicyAction(self.module)
+        for policy_name in detach_policy_devices:
+            msg = f"handle_deleted_state: detach policy_name: {policy_name}"
+            msg += f" from devices: {detach_policy_devices[policy_name]}"
+            instance.policy_name = policy_name
+            instance.action = "detach"
+            instance.serial_numbers = detach_policy_devices[policy_name]
+            instance.commit()
 
     def _failure(self, resp):
         """
@@ -1126,7 +1209,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
             self.module, verb, path, data=json.dumps(self.payload)
         )
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
-        if not self.ndfc_result["success"]:
+        if self.ndfc_result["success"] is False:
             msg = f"{self.class_name}.refresh: "
             msg += "Bad result when retrieving install-options from NDFC."
             self.module.fail_json(msg)
@@ -1484,8 +1567,8 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         Attach policy_name to the switch(es) associated with serial_numbers
         """
         self.build_attach_payload()
-        path = self.endpoints["attach_policy"]["path"]
-        verb = self.endpoints["attach_policy"]["verb"]
+        path = self.endpoints["policy_attach"]["path"]
+        verb = self.endpoints["policy_attach"]["verb"]
         for payload in self.payloads:
             response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
             result = self._handle_response(response, verb)
@@ -1502,8 +1585,8 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         endpoint: /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/detach-policy
         query_params: ?serialNumber=FDO211218GC,FDO21120U5D
         """
-        path = self.endpoints["detach_policy"]["path"]
-        verb = self.endpoints["detach_policy"]["verb"]
+        path = self.endpoints["policy_detach"]["path"]
+        verb = self.endpoints["policy_detach"]["verb"]
         query_params = ','.join(self.serial_numbers)
         path += f"?serialNumber={query_params}"
         response = dcnm_send(self.module, verb, path)
@@ -1872,6 +1955,7 @@ class NdfcSwitchIssuDetails(NdfcAnsibleImageUpgradeCommon):
             msg += "Unable to retrieve switch information from NDFC"
             self.module.fail_json(msg)
         self.properties["ndfc_data"] = self.ndfc_response.get("DATA", {}).get("lastOperDataObject", [])
+
 
     @property
     def actions_in_progress(self):
@@ -2411,7 +2495,7 @@ class NdfcSwitchIssuDetailsByIpAddress(NdfcSwitchIssuDetails):
             msg = f"{self.class_name}: set instance.ip_address "
             msg += f"before accessing property {item}."
             self.module.fail_json(msg)
-        return self.data_subclass[self.ip_address].get(item)
+        return self.make_none(self.data_subclass[self.ip_address].get(item))
 
     @property
     def actions_in_progress(self):
@@ -2482,9 +2566,7 @@ class NdfcSwitchIssuDetailsBySerialNumber(NdfcSwitchIssuDetails):
             msg = f"{self.class_name}: set instance.serial_number "
             msg += f"before accessing property {item}."
             self.module.fail_json(msg)
-        # self.log_msg(f"REMOVE: {self.class_name}._get: item: {item}")
-        # self.log_msg(f"REMOVE: {self.class_name}._get: self.data_subclass {self.data_subclass}")
-        return self.data_subclass[self.serial_number].get(item)
+        return self.make_none(self.data_subclass[self.serial_number].get(item))
 
     @property
     def actions_in_progress(self):
@@ -2554,7 +2636,7 @@ class NdfcSwitchIssuDetailsByDeviceName(NdfcSwitchIssuDetails):
             msg = f"{self.class_name}: set instance.device_name "
             msg += f"before accessing property {item}."
             self.module.fail_json(msg)
-        return self.data_subclass[self.device_name].get(item)
+        return self.make_none(self.data_subclass[self.device_name].get(item))
 
     @property
     def actions_in_progress(self):
@@ -2655,7 +2737,7 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         self.properties["ndfc_result"] = None
         self.properties["ndfc_response"] = None
         self.properties["check_interval"] = 10  # seconds
-        self.properties["check_timeout"] = 1200  # seconds
+        self.properties["check_timeout"] = 1800 # seconds
 
     def _populate_ndfc_version(self):
         """
@@ -3355,10 +3437,6 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             for serial_number in self.serial_numbers:
                 if serial_number not in serial_numbers:
                     continue
-                msg = f"REMOVE: {self.class_name}."
-                msg += "wait_for_current_actions_to_complete: "
-                msg += f"setting issu.serial_number to {serial_number}"
-                self.log_msg(msg)
                 issu.serial_number = serial_number
                 issu.refresh()
                 if issu.actions_in_progress is False:
@@ -3751,8 +3829,8 @@ def main():
     """main entry point for module execution"""
 
     element_spec = dict(
-        config=dict(required=False, type="dict"),
-        state=dict(default="merged", choices=["merged"]),
+        config=dict(required=True, type="dict"),
+        state=dict(default="merged", choices=["merged", "deleted", "query"]),
     )
 
     module = AnsibleModule(argument_spec=element_spec, supports_check_mode=True)
@@ -3762,9 +3840,11 @@ def main():
     dcnm_module.get_want()
 
     if module.params["state"] == "merged":
-        dcnm_module.get_diff_merge()
+        dcnm_module.get_need_merged()
+    elif module.params["state"] == "deleted":
+        dcnm_module.get_need_deleted()
 
-    if dcnm_module.diff_create:
+    if dcnm_module.need:
         dcnm_module.result["changed"] = True
     else:
         module.exit_json(**dcnm_module.result)
@@ -3773,8 +3853,11 @@ def main():
         dcnm_module.result["changed"] = False
         module.exit_json(**dcnm_module.result)
 
-    if dcnm_module.diff_create:
-        dcnm_module.handle_image_upgrades()
+    if dcnm_module.need:
+        if module.params["state"] == "merged":
+            dcnm_module.handle_merged_state()
+        elif module.params["state"] == "deleted":
+            dcnm_module.handle_deleted_state()
 
     module.exit_json(**dcnm_module.result)
 
