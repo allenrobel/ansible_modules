@@ -13,8 +13,10 @@ template = NdfcTemplateEasyFabric()
 template.template_json = ef_json
 template.load()
 template.build_ruleset()
-# for key in template.ruleset:
-#     print(f"{key}: {template.ruleset[key]}")
+for key in template.ruleset:
+    print(f"{key}: {template.ruleset[key]}")
+
+print("Usage example:")
 
 parameter = "unnum_dhcp_end"
 bootstrap_enable = True
