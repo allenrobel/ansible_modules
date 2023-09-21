@@ -590,6 +590,23 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             need.append(want)
         self.need = need
 
+    def get_need_query(self):
+        """
+        Caller: main()
+
+        For query state, populate self.need list() with all items from our want
+        list.  These items will be sent to NDFC.
+        """
+        need = []
+        for want in self.want_create:
+            # self.have.ip_address = want["ip_address"]
+            # if self.have.serial_number is None:
+            #     continue
+            # if self.have.policy is None:
+            #     continue
+            need.append(want)
+        self.need = need
+
     @staticmethod
     def _build_params_spec_for_merged_state():
         """
@@ -613,9 +630,8 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         state = self.params["state"]
 
-        # TODO:2 remove this when we implement query state
-        if state not in ["merged", "deleted"]:
-            msg = f"Only merged and deleted states are supported. Got state {state}"
+        if state not in ["merged", "deleted", "query"]:
+            msg = f"Only deleted, merged, and query states are supported. Got state {state}"
             self.module.fail_json(msg)
 
         if state == "merged":
@@ -623,6 +639,9 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             return
         if state == "deleted":
             self._validate_input_for_deleted_state()
+            return
+        if state == "query":
+            self._validate_input_for_query_state()
             return
 
     def _validate_input_for_merged_state(self):
@@ -643,11 +662,47 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         # linter error due to non-use of valid_params
         self.validated = copy.deepcopy(valid_params)
 
+        if invalid_params:
+            msg = "Invalid parameters in playbook: "
+            msg += f"{','.join(invalid_params)}"
+            self.module.fail_json(msg)
+
     def _validate_input_for_deleted_state(self):
         """
         Caller: self.validate_input()
 
         Validate that self.config contains appropriate values for deleted state
+
+        NOTES:
+        1. This is currently identical to _validate_input_for_merged_state()
+        2. Adding in case there are differences in the future
+        """
+        params_spec = self._build_params_spec_for_merged_state()
+        if not self.config:
+            msg = "config: element is mandatory for state merged"
+            self.module.fail_json(msg)
+
+        valid_params, invalid_params = validate_list_of_dicts(
+            self.config.get("switches"), params_spec, self.module
+        )
+        # We're not using self.validated. Keeping this to avoid
+        # linter error due to non-use of valid_params
+        self.validated = copy.deepcopy(valid_params)
+
+        if invalid_params:
+            msg = "Invalid parameters in playbook: "
+            msg += f"{','.join(invalid_params)}"
+            self.module.fail_json(msg)
+
+    def _validate_input_for_query_state(self):
+        """
+        Caller: self.validate_input()
+
+        Validate that self.config contains appropriate values for query state
+
+        NOTES:
+        1. This is currently identical to _validate_input_for_merged_state()
+        2. Adding in case there are differences in the future
         """
         params_spec = self._build_params_spec_for_merged_state()
         if not self.config:
@@ -897,7 +952,8 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
         Caller: main()
         """
-        msg = f"handle_deleted_state: Entered with self.need {self.need}"
+        msg = f"REMOVE: {self.class_name}.handle_deleted_state: "
+        msg += f"Entered with self.need {self.need}"
         self.log_msg(msg)
         detach_policy_devices = {}
         for switch in self.need:
@@ -910,19 +966,57 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             detach_policy_devices[self.image_policies.policy_name].append(
                 self.switch_details.serial_number
             )
-        msg = f"handle_deleted_state: detach_policy_devices: {detach_policy_devices}"
+        msg = f"REMOVE: {self.class_name}.handle_deleted_state: "
+        msg += f"detach_policy_devices: {detach_policy_devices}"
         self.log_msg(msg)
+
         if len(detach_policy_devices) == 0:
             self.result = dict(changed=False, diff=[], response=[])
             return
         instance = NdfcImagePolicyAction(self.module)
         for policy_name in detach_policy_devices:
-            msg = f"handle_deleted_state: detach policy_name: {policy_name}"
+            msg = f"REMOVE: {self.class_name}.handle_deleted_state: "
+            msg += f"detach policy_name: {policy_name}"
             msg += f" from devices: {detach_policy_devices[policy_name]}"
             instance.policy_name = policy_name
             instance.action = "detach"
             instance.serial_numbers = detach_policy_devices[policy_name]
             instance.commit()
+
+    def handle_query_state(self):
+        """
+        Query the image policy
+
+        Caller: main()
+        """
+        msg = f"REMOVE: {self.class_name}.handle_query_state: "
+        msg += f"Entered. self.need {self.need}"
+        self.log_msg(msg)
+        query_image_policies = set()
+        for switch in self.need:
+            self.switch_details.ip_address = switch.get("ip_address")
+            self.image_policies.policy_name = switch.get("policy")
+            query_image_policies.add(self.image_policies.name)
+        msg = f"REMOVE: {self.class_name}.handle_query_state: "
+        msg += f"query_policies: {query_image_policies}"
+        self.log_msg(msg)
+        if len(query_image_policies) == 0:
+            self.result = dict(changed=False, diff=[], response=[])
+            return
+        instance = NdfcImagePolicyAction(self.module)
+        for policy_name in sorted(list(query_image_policies)):
+            msg = f"REMOVE: {self.class_name}.handle_query_state: "
+            msg += f"query policy_name: {policy_name}"
+            self.log_msg(msg)
+            instance.policy_name = policy_name
+            instance.action = "query"
+            instance.serial_numbers = ["none"]
+            instance.commit()
+            if instance.query_result is None:
+                continue
+            self.result["response"].append(instance.query_result)
+        self.result["diff"] = []
+        self.result["changed"] = False
 
     def _failure(self, resp):
         """
@@ -1508,18 +1602,25 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
     Support for the following actions:
         - attach
         - detach
+        - query
 
     Usage (where module is an instance of AnsibleModule):
 
     instance = NdfcImagePolicyAction(module)
     instance.policy_name = "NR3F"
-    instance.action = "attach" # or detach
+    instance.action = "attach" # or detach, or query
     instance.serial_numbers = ["FDO211218GC", "FDO211218HH"]
     instance.commit()
+    # for query only
+    query_result = instance.query_result
 
     Endpoints:
+    For action == attach:
     /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/attach-policy
+    For action == detach:
     /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/detach-policy
+    For action == query:
+    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/image-policy/__POLICY_NAME__
     """
 
     def __init__(self, module):
@@ -1534,6 +1635,7 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         self.properties["action"] = None
         self.properties["policy_name"] = None
         self.properties["serial_numbers"] = None
+        self.properties["query_result"] = None
 
     def build_attach_payload(self):
         self.payloads = []
@@ -1565,17 +1667,21 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
             msg += "calling commit()"
             self.module.fail_json(msg)
 
+        if self.policy_name is None:
+            msg = f"{self.class_name}.validate_request: "
+            msg += "instance.policy_name must be set before "
+            msg += "calling commit()"
+            self.module.fail_json(msg)
+
+        if self.action == "query":
+            return
+
         if self.serial_numbers is None:
             msg = f"{self.class_name}.validate_request: "
             msg += "instance.serial_numbers must be set before "
             msg += "calling commit()"
             self.module.fail_json(msg)
 
-        if self.policy_name is None:
-            msg = f"{self.class_name}.validate_request: "
-            msg += "instance.policy_name must be set before "
-            msg += "calling commit()"
-            self.module.fail_json(msg)
 
         # Fail if the image policy does not support the switch platform
         self.image_policies.policy_name = self.policy_name
@@ -1595,6 +1701,8 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
             self._attach_policy()
         elif self.action == "detach":
             self._detach_policy()
+        elif self.action == "query":
+            self._query_policy()
 
     def _attach_policy(self):
         """
@@ -1627,6 +1735,28 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         result = self._handle_response(response, verb)
         if not result["success"]:
             self._failure(response)
+
+    def _query_policy(self):
+        """
+        Query the image policy
+        verb: GET
+        endpoint: /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/image-policy/__POLICY_NAME__
+        """
+        path = self.endpoints["policy_info"]["path"]
+        verb = self.endpoints["policy_info"]["verb"]
+        path = path.replace("__POLICY_NAME__", self.policy_name)
+        response = dcnm_send(self.module, verb, path)
+        result = self._handle_response(response, verb)
+        if not result["success"]:
+            self._failure(response)
+        self.properties["query_result"] = response.get("DATA")
+
+    @property
+    def query_result(self):
+        """
+        Return the value of properties["query_result"].
+        """
+        return self.properties.get("query_result")
 
     @property
     def action(self):
@@ -4133,11 +4263,21 @@ def main():
         dcnm_module.get_need_merged()
     elif module.params["state"] == "deleted":
         dcnm_module.get_need_deleted()
+    elif module.params["state"] == "query":
+        dcnm_module.get_need_query()
 
-    if dcnm_module.need:
-        dcnm_module.result["changed"] = True
-    else:
-        module.exit_json(**dcnm_module.result)
+    if module.params["state"] == "query":
+        dcnm_module.result["changed"] = False
+    if module.params["state"] in ["merged", "deleted"]:
+        if dcnm_module.need:
+            dcnm_module.result["changed"] = True
+        else:
+            module.exit_json(**dcnm_module.result)
+    # original code from above
+    # if dcnm_module.need:
+    #     dcnm_module.result["changed"] = True
+    # else:
+    #     module.exit_json(**dcnm_module.result)
 
     if module.check_mode:
         dcnm_module.result["changed"] = False
@@ -4148,6 +4288,8 @@ def main():
             dcnm_module.handle_merged_state()
         elif module.params["state"] == "deleted":
             dcnm_module.handle_deleted_state()
+        elif module.params["state"] == "query":
+            dcnm_module.handle_query_state()
 
     module.exit_json(**dcnm_module.result)
 
