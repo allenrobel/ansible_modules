@@ -985,38 +985,27 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
     def handle_query_state(self):
         """
-        Query the image policy
+        Return the ISSU state of the switch(es) listed in the playbook
 
         Caller: main()
         """
+        instance = NdfcSwitchIssuDetailsByIpAddress(self.module)
         msg = f"REMOVE: {self.class_name}.handle_query_state: "
         msg += f"Entered. self.need {self.need}"
         self.log_msg(msg)
-        query_image_policies = set()
+        query_devices = []
         for switch in self.need:
-            self.switch_details.ip_address = switch.get("ip_address")
-            self.image_policies.policy_name = switch.get("policy")
-            query_image_policies.add(self.image_policies.name)
-        msg = f"REMOVE: {self.class_name}.handle_query_state: "
-        msg += f"query_policies: {query_image_policies}"
-        self.log_msg(msg)
-        if len(query_image_policies) == 0:
-            self.result = dict(changed=False, diff=[], response=[])
-            return
-        instance = NdfcImagePolicyAction(self.module)
-        for policy_name in sorted(list(query_image_policies)):
-            msg = f"REMOVE: {self.class_name}.handle_query_state: "
-            msg += f"query policy_name: {policy_name}"
-            self.log_msg(msg)
-            instance.policy_name = policy_name
-            instance.action = "query"
-            instance.serial_numbers = ["none"]
-            instance.commit()
-            if instance.query_result is None:
+            instance.ip_address = switch.get("ip_address")
+            if instance.filtered_data is None:
                 continue
-            self.result["response"].append(instance.query_result)
+            query_devices.append(instance.filtered_data)
+        msg = f"REMOVE: {self.class_name}.handle_query_state: "
+        msg += f"query_policies: {query_devices}"
+        self.log_msg(msg)
+        self.result["response"] = query_devices
         self.result["diff"] = []
         self.result["changed"] = False
+
 
     def _failure(self, resp):
         """
@@ -2664,6 +2653,14 @@ class NdfcSwitchIssuDetailsByIpAddress(NdfcSwitchIssuDetails):
         return self.make_none(self.data_subclass[self.ip_address].get(item))
 
     @property
+    def filtered_data(self):
+        """
+        Return a dictionary of the switch matching self.ip_address.
+        Return None of the switch does not exist in NDFC.
+        """
+        return self.data_subclass.get(self.ip_address)
+        
+    @property
     def ip_address(self):
         """
         Set the ip_address of the switch to query.
@@ -2723,16 +2720,13 @@ class NdfcSwitchIssuDetailsBySerialNumber(NdfcSwitchIssuDetails):
             self.module.fail_json(msg)
         return self.make_none(self.data_subclass[self.serial_number].get(item))
 
-    # @property
-    # def actions_in_progress(self):
-    #     """
-    #     Return True if any actions are in progress
-    #     Return False otherwise
-    #     """
-    #     for action_key in self.properties["action_keys"]:
-    #         if self._get(action_key) == "In-Progress":
-    #             return True
-    #     return False
+    @property
+    def filtered_data(self):
+        """
+        Return a dictionary of the switch matching self.serial_number.
+        Return None of the switch does not exist in NDFC.
+        """
+        return self.data_subclass.get(self.serial_number)
 
     @property
     def serial_number(self):
@@ -2793,16 +2787,13 @@ class NdfcSwitchIssuDetailsByDeviceName(NdfcSwitchIssuDetails):
             self.module.fail_json(msg)
         return self.make_none(self.data_subclass[self.device_name].get(item))
 
-    # @property
-    # def actions_in_progress(self):
-    #     """
-    #     Return True if any actions are in progress
-    #     Return False otherwise
-    #     """
-    #     for action_key in self.properties["action_keys"]:
-    #         if self._get(action_key) == "In-Progress":
-    #             return True
-    #     return False
+    @property
+    def filtered_data(self):
+        """
+        Return a dictionary of the switch matching self.device_name.
+        Return None of the switch does not exist in NDFC.
+        """
+        return self.data_subclass.get(self.device_name)
 
     @property
     def device_name(self):
