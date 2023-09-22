@@ -1,0 +1,33 @@
+-   hosts: ndfc
+    gather_facts: false
+    tasks:
+    -   name: stage/validate/upgrade devices
+        cisco.dcnm.dcnm_image_upgrade:
+            state: merged                       # Mandatory, one of: merged, deleted, query
+            config:
+                policy: KMR5                    # Policy name to which switches are attached
+                                                # - mandatory if not specified in switches list
+                stage: true                     # Trigger stage image if the image is not staged
+                                                # - optional
+                                                # - default: true
+                                                # - ignored if state is deleted or query
+                upgrade: true                   # Trigger upgrade if image is staged
+                                                # - optional
+                                                # - default: true
+                                                # - ignored if state is deleted or query
+                switches:                       # Mandatory list of dict, per-switch override of the global config
+                -   ip_address: 172.22.150.102
+                    policy: KMR5
+                    stage: true
+                    upgrade: true
+                -   ip_address: 172.22.150.103
+                    policy: NR2F
+                    stage: true
+                    upgrade: true
+                -   ip_address: 172.22.150.113
+                    policy: KMR5
+        register: result
+    -   name: print result
+        ansible.builtin.debug:
+            var: result
+

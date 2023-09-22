@@ -1,9 +1,9 @@
 -   hosts: ndfc
     gather_facts: false
     tasks:
-    -   name: stage/upgrade devices
+    -   name: detach policies
         cisco.dcnm.dcnm_image_upgrade:
-            state: query                        # Mandatory, one of: merged, deleted, query
+            state: deleted                      # Mandatory, one of: merged, deleted, query
             config:
                 policy: KMR5                    # Policy name to which switches are attached
                                                 # - mandatory if not specified in switches list
