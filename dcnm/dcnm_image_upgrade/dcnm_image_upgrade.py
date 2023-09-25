@@ -576,9 +576,6 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
         For deleted state, populate self.need list() with items from our want
         list that are not in our have list.  These items will be sent to NDFC.
-
-        TODO:2 Discuss with Mike/Shangxin. NdfcAnsibleImageUpgrade.get_need_delete()
-        # Assumption is that we just detach the image policy.
         """
         need = []
         for want in self.want_create:
@@ -599,11 +596,6 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         need = []
         for want in self.want_create:
-            # self.have.ip_address = want["ip_address"]
-            # if self.have.serial_number is None:
-            #     continue
-            # if self.have.policy is None:
-            #     continue
             need.append(want)
         self.need = need
 
@@ -837,9 +829,23 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         if not result["success"]:
             self._failure(response)
 
+    def _stage_images(self, serial_numbers):
+        """
+        Initiate image staging to the switch(es) associated with serial_numbers
+
+        Callers:
+        - handle_merged_state
+        """
+        instance = NdfcImageStage(self.module)
+        instance.serial_numbers = serial_numbers
+        instance.commit()
+
     def _validate_images(self, serial_numbers):
         """
         Validate the image staged to the switch(es)
+
+        Callers:
+        - handle_merged_state
         """
         instance = NdfcImageValidate(self.module)
         instance.serial_numbers = serial_numbers
@@ -849,17 +855,12 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         # instance.non_disruptive = False
         instance.commit()
 
-    def _stage_images(self, serial_numbers):
-        """
-        Initiate image staging to the switch(es) associated with serial_numbers
-        """
-        instance = NdfcImageStage(self.module)
-        instance.serial_numbers = serial_numbers
-        instance.commit()
-
     def _verify_install_options(self, devices):
         """
         Verify that the install options for the switch(es) are valid
+
+        Callers:
+        - self.handle_merged_state
         """
         if len(devices) == 0:
             return
@@ -877,6 +878,9 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
     def _upgrade_images(self, devices):
         """
         Upgrade the switch(es) to the currently-validated image
+
+        Callers:
+        - handle_merged_state
         """
         upgrade = NdfcImageUpgrade(self.module)
         upgrade.devices = devices
