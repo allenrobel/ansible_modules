@@ -441,7 +441,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.query = []
         self.result = dict(changed=False, diff=[], response=[])
 
-        self.mandatory_global_keys = {"policy", "switches"}
+        self.mandatory_global_keys = {"switches"}
         self.mandatory_switch_keys = {"ip_address"}
 
         if not self.mandatory_global_keys.issubset(self.config):
@@ -609,7 +609,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 parameter specifications.
         """
         params_spec = {}
-        params_spec.update(policy=dict(required=True, type="str"))
+        params_spec.update(policy=dict(required=False, type="str"))
         params_spec.update(upgrade=dict(required=False, type="bool", default=True))
         params_spec.update(stage=dict(required=False, type="bool", default=True))
         return params_spec
