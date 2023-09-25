@@ -671,7 +671,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         params_spec = self._build_params_spec_for_merged_state()
         if not self.config:
-            msg = "config: element is mandatory for state merged"
+            msg = "config: element is mandatory for state deleted"
             self.module.fail_json(msg)
 
         valid_params, invalid_params = validate_list_of_dicts(
@@ -698,7 +698,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         params_spec = self._build_params_spec_for_merged_state()
         if not self.config:
-            msg = "config: element is mandatory for state merged"
+            msg = "config: element is mandatory for state query"
             self.module.fail_json(msg)
 
         valid_params, invalid_params = validate_list_of_dicts(
@@ -753,10 +753,14 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             if not switch.get("ip_address"):
                 msg = "playbook is missing ip_address for at least one switch"
                 self.module.fail_json(msg)
-            if not switch.get("policy"):
+            # for query state, the only mandatory parameter is ip_address
+            # so skip the remaining checks
+            if self.params.get("state") == "query":
+                continue
+            if switch.get("policy") is None:
                 msg = "playbook is missing image policy for switch "
                 msg += f"{switch.get('ip_address')} "
-                msg = "and global image policy is not defined"
+                msg += "and global image policy is not defined."
                 self.module.fail_json(msg)
             if switch.get("stage") is None:
                 switch["stage"] = self.defaults["stage"]
