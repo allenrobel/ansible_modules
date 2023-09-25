@@ -1878,6 +1878,11 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
             msg = f"instance.policy_name must be set before "
             msg += f"accessing property {item}."
             self.module.fail_json(msg)
+        if self.properties['ndfc_data'].get(self.policy_name) is None:
+            msg = f"{self.class_name}._get: "
+            msg = f"instance.policy_name {self.policy_name} is not "
+            msg += f"defined in NDFC."
+            self.module.fail_json(msg)
         msg = f"{self.class_name}._get: item {item} "
         msg += f"value {self.properties['ndfc_data'][self.policy_name].get(item)}"
         self.log_msg(msg)
