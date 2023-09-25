@@ -1700,6 +1700,10 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
             self._detach_policy()
         elif self.action == "query":
             self._query_policy()
+        else:
+            msg = f"{self.class_name}.commit: "
+            msg += f"Unknown action {self.action}."
+            self.module.fail_json(msg)
 
     def _attach_policy(self):
         """
