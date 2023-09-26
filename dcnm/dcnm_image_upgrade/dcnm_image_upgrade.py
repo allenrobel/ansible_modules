@@ -3064,8 +3064,8 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
             msg = f"REMOVE: {self.class_name}."
             msg += "_wait_for_image_stage_to_complete: "
             msg += f"seconds remaining: {timeout}, "
-            msg += f"serial_numbers_done: {serial_numbers_done}, "
-            msg += f"serial_numbers_todo: {serial_numbers_todo}"
+            msg += f"serial_numbers_todo: {serial_numbers_todo}, "
+            msg += f"serial_numbers_done: {serial_numbers_done}"
             self.log_msg(msg)
             for serial_number in self.serial_numbers:
                 if serial_number in serial_numbers_done:
@@ -3342,8 +3342,8 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
             msg = f"REMOVE: {self.class_name}."
             msg += "_wait_for_image_validate_to_complete: "
             msg += f"seconds remaining: {timeout}, "
-            msg += f"serial_numbers_done: {serial_numbers_done}, "
-            msg += f"serial_numbers_todo: {serial_numbers_todo}"
+            msg += f"serial_numbers_todo: {serial_numbers_todo}, "
+            msg += f"serial_numbers_done: {serial_numbers_done}"
             self.log_msg(msg)
             for serial_number in self.serial_numbers:
                 if serial_number in serial_numbers_done:
@@ -3733,8 +3733,8 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             msg = f"REMOVE: {self.class_name}."
             msg += "_wait_for_image_upgrade_to_complete: "
             msg += f"seconds remaining {timeout}, "
-            msg += f"serial_numbers_done: {serial_numbers_done} "
-            msg += f"serial_numbers_todo: {serial_numbers_todo}"
+            msg += f"serial_numbers_todo: {serial_numbers_todo}, "
+            msg += f"serial_numbers_done: {serial_numbers_done}"
             self.log_msg(msg)
             for serial_number in self.serial_numbers:
                 if serial_number in serial_numbers_done:
