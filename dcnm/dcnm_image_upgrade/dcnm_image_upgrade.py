@@ -2993,7 +2993,7 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         Wait for all actions to complete before staging image.
         Actions include image staging, image upgrade, and image validation.
         """
-        serial_numbers = copy.deepcopy(self.serial_numbers)
+        serial_numbers = copy.copy(self.serial_numbers)
         timeout = self.check_timeout
         while len(serial_numbers) > 0 and timeout > 0:
             sleep(self.check_interval)
