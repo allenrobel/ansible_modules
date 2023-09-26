@@ -889,8 +889,9 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         upgrade = NdfcImageUpgrade(self.module)
         upgrade.devices = devices
         # TODO:2 Discuss with Mike/Shangxin. Upgrade option handling mutex options.
-        # I'm leaning toward doing this in a validate_options() method that covers
-        # the various scenarios and fail_json() on invalid combinations.
+        # I'm leaning toward doing this in NdfcImageUpgrade().validate_options()
+        # which would cover the various scenarios and fail_json() on invalid
+        # combinations.
         # For epld upgrade disrutive must be True and non_disruptive must be False
         # upgrade.epld_upgrade = True
         # upgrade.disruptive = True
@@ -936,6 +937,9 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 stage_devices.append(device["serial_number"])
             # TODO:2 Discuss with Mike/Shangxin.  Add validate option?
             # Currently, we always validate the image after staging
+            # Replace with the below if we add a validate option
+            # if switch.get("validate") is not False:
+            #     validate_devices.append(device["serial_number"])
             validate_devices.append(device["serial_number"])
             if switch.get("upgrade") is not False:
                 upgrade_devices.append(device)
