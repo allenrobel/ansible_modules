@@ -2892,6 +2892,7 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         self.class_name = self.__class__.__name__
         self._init_properties()
         self._populate_ndfc_version()
+        self.issu_detail = NdfcSwitchIssuDetailsBySerialNumber(self.module)
 
     def _init_properties(self):
         self.properties = {}
@@ -2918,31 +2919,33 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         If the image is already staged on a switch, remove that switch's
         serial number from the list of serial numbers to stage.
         """
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         for serial_number in self.serial_numbers:
-            issu.serial_number = serial_number
-            issu.refresh()
-            if issu.image_staged == "Success":
+            self.issu_detail.serial_number = serial_number
+            self.issu_detail.refresh()
+            if self.issu_detail.image_staged == "Success":
                 msg = f"REMOVE: {self.class_name}.prune_serial_numbers: "
                 msg += "image already staged for "
-                msg += f"{issu.serial_number} / {issu.ip_address}"
+                msg += f"{self.issu_detail.device_name}, "
+                msg += f"{self.issu_detail.ip_address}, "
+                msg += f"{self.issu_detail.serial_number}."
                 self.log_msg(msg)
-                self.serial_numbers.remove(issu.serial_number)
+                self.serial_numbers.remove(serial_number)
 
     def validate_serial_numbers(self):
         """
         Fail if the image_staged state for any serial_number
         is Failed.
         """
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         for serial_number in self.serial_numbers:
-            issu.serial_number = serial_number
-            issu.refresh()
-            if issu.image_staged == "Failed":
+            self.issu_detail.serial_number = serial_number
+            self.issu_detail.refresh()
+            if self.issu_detail.image_staged == "Failed":
                 msg = "Image staging is failing for the following switch: "
-                msg += f"{issu.device_name}, {issu.ip_address}, "
-                msg += f"{issu.serial_number}. Please check the switch "
-                msg += "connectivity to NDFC and try again."
+                msg += f"{self.issu_detail.device_name}, "
+                msg += f"{self.issu_detail.ip_address}, "
+                msg += f"{self.issu_detail.serial_number}. "
+                msg += f"Check the switch connectivity to NDFC "
+                msg += "and try again."
                 self.module.fail_json(msg)
 
     def commit(self):
@@ -2992,16 +2995,15 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         """
         serial_numbers = copy.deepcopy(self.serial_numbers)
         timeout = self.check_timeout
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         while len(serial_numbers) > 0 and timeout > 0:
             sleep(self.check_interval)
             timeout -= self.check_interval
             for serial_number in self.serial_numbers:
                 if serial_number not in serial_numbers:
                     continue
-                issu.serial_number = serial_number
-                issu.refresh()
-                if issu.actions_in_progress is False:
+                self.issu_detail.serial_number = serial_number
+                self.issu_detail.refresh()
+                if self.issu_detail.actions_in_progress is False:
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_current_actions_to_complete: "
                     msg += f"{serial_number} no actions in progress. "
@@ -3013,7 +3015,6 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         """
         # Wait for image stage to complete
         """
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         serial_numbers_done = set()
         timeout = self.check_timeout
         serial_numbers_todo = set(copy.copy(self.serial_numbers))
@@ -3029,36 +3030,51 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
             for serial_number in self.serial_numbers:
                 if serial_number in serial_numbers_done:
                     continue
-                issu.serial_number = serial_number
-                issu.refresh()
+                self.issu_detail.serial_number = serial_number
+                self.issu_detail.refresh()
+                ip_address = self.issu_detail.ip_address
+                device_name = self.issu_detail.device_name
+                staged_percent = self.issu_detail.image_staged_percent
+                staged_status = self.issu_detail.image_staged
+
                 msg = f"REMOVE: {self.class_name}."
                 msg += "_wait_for_image_stage_to_complete: "
                 msg += f"Seconds remaining {timeout}: "
-                msg += f"{issu.serial_number} / {issu.ip_address} "
-                msg += f"image staged percent: {issu.image_staged_percent}"
+                msg += f"{device_name}, {serial_number}, {ip_address} "
+                msg += f"image staged percent: {staged_percent}"
                 self.log_msg(msg)
-                if issu.image_staged == "Failed":
-                    msg = f"Seconds remaining {timeout}: stage image failed for "
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
+
+                if staged_status == "Failed":
+                    msg = f"Seconds remaining {timeout}: stage image failed "
+                    msg += f"for {device_name}, {serial_number}, {ip_address}. "
+                    msg += f"image staged percent: {staged_percent}"
                     self.module.fail_json(msg)
-                if issu.image_staged == "Success":
+
+                if staged_status == "Success":
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_image_stage_to_complete: "
                     msg += f"Seconds remaining {timeout}: stage image complete for "
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    msg += f"for {device_name}, {serial_number}, {ip_address}. "
+                    msg += f"image staged percent: {staged_percent}"
                     self.log_msg(msg)
-                    serial_numbers_done.add(issu.serial_number)
-                if issu.image_staged == None:
+                    serial_numbers_done.add(serial_number)
+
+                if staged_status == None:
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_image_stage_to_complete: "
-                    msg += f"Seconds remaining {timeout}: stage image not started for "
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    msg += f"Seconds remaining {timeout}: stage image "
+                    msg += "not started for "
+                    msg += f"{device_name}, {serial_number}, {ip_address}. "
+                    msg += f"image staged percent: {staged_percent}"
                     self.log_msg(msg)
-                if issu.image_staged == "In Progress":
+
+                if staged_status == "In Progress":
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_image_stage_to_complete: "
-                    msg += f"Seconds remaining {timeout}: stage image in progress for "
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    msg += f"Seconds remaining {timeout}: stage image "
+                    msg += f"{staged_status} for "
+                    msg += f"{device_name}, {serial_number}, {ip_address}. "
+                    msg += f"image staged percent: {staged_percent}"
                     self.log_msg(msg)
 
     @property
@@ -3151,6 +3167,7 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
         self.class_name = self.__class__.__name__
         self._init_properties()
         self._populate_ndfc_version()
+        self.issu_detail = NdfcSwitchIssuDetailsBySerialNumber(self.module)
 
     def _init_properties(self):
         self.properties = {}
@@ -3180,31 +3197,32 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
         If the image is already validated on a switch, remove that switch's
         serial number from the list of serial numbers to validate.
         """
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         for serial_number in self.serial_numbers:
-            issu.serial_number = serial_number
-            issu.refresh()
-            if issu.validated == "Success":
+            self.issu_detail.serial_number = serial_number
+            self.issu_detail.refresh()
+            if self.issu_detail.validated == "Success":
                 msg = f"REMOVE: {self.class_name}.prune_serial_numbers: "
                 msg += "image already validated for "
-                msg += f"{issu.serial_number} / {issu.ip_address}"
+                msg += f"{self.issu_detail.serial_number}, "
+                msg += f"{self.issu_detail.ip_address}"
                 self.log_msg(msg)
-                self.serial_numbers.remove(issu.serial_number)
+                self.serial_numbers.remove(self.issu_detail.serial_number)
 
     def validate_serial_numbers(self):
         """
         Fail if the validated state for any serial_number
         is Failed.
         """
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         for serial_number in self.serial_numbers:
-            issu.serial_number = serial_number
-            issu.refresh()
-            if issu.validated == "Failed":
+            self.issu_detail.serial_number = serial_number
+            self.issu_detail.refresh()
+            if self.issu_detail.validated == "Failed":
                 msg = "Image validation is failing for the following switch: "
-                msg += f"{issu.device_name}, {issu.ip_address}, "
-                msg += f"{issu.serial_number}. Please check the switch "
-                msg += "connectivity to NDFC and try again."
+                msg += f"{self.issu_detail.device_name}, "
+                msg += f"{self.issu_detail.ip_address}, "
+                msg += f"{self.issu_detail.serial_number}. "
+                msg += "Please check the switch connectivity to NDFC and "
+                msg += "try again."
                 self.module.fail_json(msg)
 
     def build_payload(self):
@@ -3255,16 +3273,15 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
         """
         serial_numbers = copy.copy(self.serial_numbers)
         timeout = self.check_timeout
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         while len(serial_numbers) > 0 and timeout > 0:
             sleep(self.check_interval)
             timeout -= self.check_interval
             for serial_number in self.serial_numbers:
                 if serial_number not in serial_numbers:
                     continue
-                issu.serial_number = serial_number
-                issu.refresh()
-                if issu.actions_in_progress is False:
+                self.issu_detail.serial_number = serial_number
+                self.issu_detail.refresh()
+                if self.issu_detail.actions_in_progress is False:
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_current_actions_to_complete: "
                     msg += f"{serial_number} no actions in progress. "
@@ -3276,7 +3293,6 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
         """
         # Wait for image validation to complete
         """
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         serial_numbers_done = set()
         timeout = self.check_timeout
         serial_numbers_todo = set(copy.copy(self.serial_numbers))
@@ -3292,45 +3308,54 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
             for serial_number in self.serial_numbers:
                 if serial_number in serial_numbers_done:
                     continue
-                issu.serial_number = serial_number
-                issu.refresh()
+                self.issu_detail.serial_number = serial_number
+                self.issu_detail.refresh()
+                ip_address = self.issu_detail.ip_address
+                device_name = self.issu_detail.device_name
+                validated_percent = self.issu_detail.validated_percent
+                validated_state = self.issu_detail.validated
+
                 msg = f"REMOVE: {self.class_name}."
                 msg += "_wait_for_image_validate_to_complete: "
                 msg += f"Seconds remaining {timeout}: "
-                msg += f"{issu.serial_number} / {issu.ip_address} "
-                msg += f"validated_percent: {issu.validated_percent} "
-                msg += f"validated_state: {issu.validated}"
+                msg += f"{device_name}, {ip_address}, {serial_number}, "
+                msg += f"validated_percent: {validated_percent} "
+                msg += f"validated_state: {validated_state}"
                 self.log_msg(msg)
-                if issu.validated == "Failed":
-                    msg = (
-                        f"Seconds remaining {timeout}: validate image {issu.validated} "
-                    )
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
+
+                if validated_state == "Failed":
+                    msg = f"Seconds remaining {timeout}: validate image "
+                    msg += f"{validated_state} for "
+                    msg += f"{device_name}, {ip_address}, {serial_number}, "
+                    msg += f"image validated percent: {validated_percent}"
                     self.module.fail_json(msg)
-                if issu.validated == "Success":
+
+                if validated_state == "Success":
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_image_validate_to_complete: "
-                    msg += (
-                        f"Seconds remaining {timeout}: validate image {issu.validated} "
-                    )
-                    msg += f"{issu.serial_number} / {issu.ip_address} "
-                    msg += f"image validated percent: {issu.validated_percent}"
+                    msg += f"Seconds remaining {timeout}: validate image "
+                    msg += f"{validated_state} for "
+                    msg += f"{device_name}, {ip_address}, {serial_number}, "
+                    msg += f"image validated percent: {validated_percent}"
                     self.log_msg(msg)
-                    serial_numbers_done.add(issu.serial_number)
-                if issu.validated == None:
+                    serial_numbers_done.add(serial_number)
+
+                if validated_state == None:
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_image_validate_to_complete: "
-                    msg += f"Seconds remaining {timeout}: validate image not started "
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    msg += f"Seconds remaining {timeout}: validate image "
+                    msg += "not started for "
+                    msg += f"{device_name}, {ip_address}, {serial_number}, "
+                    msg += f"image validated percent: {validated_percent}"
                     self.log_msg(msg)
-                if issu.validated == "In Progress":
+
+                if validated_state == "In Progress":
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_image_validate_to_complete: "
-                    msg += (
-                        f"Seconds remaining {timeout}: validate image {issu.validated} "
-                    )
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
-                    msg += f"image validated percent: {issu.validated_percent}"
+                    msg += f"Seconds remaining {timeout}: validate image "
+                    msg += f"{validated_state} for "
+                    msg += f"{device_name}, {ip_address}, {serial_number}, "
+                    msg += f"image validated percent: {validated_percent}"
                     self.log_msg(msg)
 
     @property
@@ -3410,7 +3435,7 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
 class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
     """
     Endpoint:
-        /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade/upgrade-image
+    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade/upgrade-image
 
     TODO:3 Discuss with Mike/Shangxin. NdfcImageUpgrade.epld_upgrade, etc
 
@@ -3477,6 +3502,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.class_name = self.__class__.__name__
         self._init_properties()
         self._populate_ndfc_version()
+        self.issu_detail = NdfcSwitchIssuDetailsBySerialNumber(self.module)
 
     def _init_properties(self):
         self.properties = {}
@@ -3517,18 +3543,21 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         from self.devices.  self.devices dict has already been validated,
         so no further error checking is needed here.
         """
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+        # issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         serial_numbers_to_remove = set()
         for device in self.devices:
-            self.log_msg(f"REMOVE: {self.class_name}.prune_devices() device: {device}")
-            issu.serial_number = device.get("serial_number")
-            issu.refresh()
-            if issu.upgrade == "Success":
+            msg = f"REMOVE: {self.class_name}.prune_devices() device: {device}"
+            self.log_msg(msg)
+            self.issu_detail.serial_number = device.get("serial_number")
+            self.issu_detail.refresh()
+            if self.issu_detail.upgrade == "Success":
                 msg = f"REMOVE: {self.class_name}.prune_devices: "
                 msg = "image already upgraded for "
-                msg += f"{issu.serial_number} / {issu.ip_address}"
+                msg += f"{self.issu_detail.device_name}, "
+                msg += f"{self.issu_detail.serial_number}, "
+                msg += f"{self.issu_detail.ip_address}"
                 self.log_msg(msg)
-                serial_numbers_to_remove.add(issu.serial_number)
+                serial_numbers_to_remove.add(self.issu_detail.serial_number)
         self.devices = [
             device
             for device in self.devices
@@ -3539,14 +3568,15 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         Fail if the upgrade state for any device is Failed.
         """
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         for device in self.devices:
-            issu.serial_number = device.get("serial_number")
-            issu.refresh()
-            if issu.upgrade == "Failed":
+            self.issu_detail.serial_number = device.get("serial_number")
+            self.issu_detail.refresh()
+            if self.issu_detail.upgrade == "Failed":
                 msg = "Image upgrade is failing for the following switch: "
-                msg += f"{issu.device_name}, {issu.ip_address}, "
-                msg += f"{issu.serial_number}. Please check the switch "
+                msg += f"{self.issu_detail.device_name}, "
+                msg += f"{self.issu_detail.ip_address}, "
+                msg += f"{self.issu_detail.serial_number}. "
+                msg += "Please check the switch "
                 msg += "to determine the cause and try again."
                 self.module.fail_json(msg)
 
@@ -3634,16 +3664,15 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         serial_numbers = copy.copy(self.serial_numbers)
         timeout = self.check_timeout
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         while len(serial_numbers) > 0 and timeout > 0:
             sleep(self.check_interval)
             timeout -= self.check_interval
             for serial_number in self.serial_numbers:
                 if serial_number not in serial_numbers:
                     continue
-                issu.serial_number = serial_number
-                issu.refresh()
-                if issu.actions_in_progress is False:
+                self.issu_detail.serial_number = serial_number
+                self.issu_detail.refresh()
+                if self.issu_detail.actions_in_progress is False:
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_current_actions_to_complete: "
                     msg += f"{serial_number} no actions in progress. "
@@ -3655,7 +3684,6 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         Wait for image upgrade to complete
         """
-        issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
         serial_numbers_done = set()
         timeout = self.check_timeout
         serial_numbers_todo = set(copy.copy(self.serial_numbers))
@@ -3664,50 +3692,60 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             timeout -= self.check_interval
             msg = f"REMOVE: {self.class_name}."
             msg += "_wait_for_image_upgrade_to_complete: "
-            msg += f"seconds remaining: {timeout}, "
+            msg += f"seconds remaining {timeout}, "
             msg += f"serial_numbers_done: {serial_numbers_done} "
             msg += f"serial_numbers_todo: {serial_numbers_todo}"
             self.log_msg(msg)
             for serial_number in self.serial_numbers:
                 if serial_number in serial_numbers_done:
                     continue
-                issu.serial_number = serial_number
-                issu.refresh()
+                self.issu_detail.serial_number = serial_number
+                self.issu_detail.refresh()
+                ip_address = self.issu_detail.ip_address
+                device_name = self.issu_detail.device_name
+                upgrade_percent = self.issu_detail.upgrade_percent
+                upgrade_status = self.issu_detail.upgrade
+
                 msg = f"REMOVE: {self.class_name}."
                 msg += "_wait_for_image_upgrade_to_complete: "
                 msg += f"Seconds remaining {timeout}: "
-                msg += f"{issu.serial_number} / {issu.ip_address} "
-                msg += f"image upgrade percent: {issu.upgrade_percent}"
+                msg += f"{device_name}, {serial_number}, {ip_address} "
+                msg += f"image upgrade percent: {upgrade_percent}"
                 self.log_msg(msg)
-                if issu.upgrade == "Failed":
+
+                if upgrade_status == "Failed":
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_image_upgrade_to_complete: "
-                    msg += f"Seconds remaining {timeout}: upgrade image failed for "
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    msg += f"Seconds remaining {timeout}: upgrade image "
+                    msg += "failed for "
+                    msg += f"{device_name}, {serial_number}, {ip_address}"
                     self.module.fail_json(msg)
-                if issu.upgrade == "Success":
+
+                if upgrade_status == "Success":
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_image_upgrade_to_complete: "
-                    msg += f"Seconds remaining {timeout}: upgrade image complete for "
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    msg += f"Seconds remaining {timeout}: upgrade image "
+                    msg += "complete for "
+                    msg += f"{device_name}, {serial_number}, {ip_address}"
                     self.log_msg(msg)
-                    serial_numbers_done.add(issu.serial_number)
-                if issu.upgrade == None:
+                    serial_numbers_done.add(serial_number)
+
+                if upgrade_status == None:
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_image_upgrade_to_complete: "
-                    msg += (
-                        f"Seconds remaining {timeout}: upgrade image not started for "
-                    )
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    msg += f"Seconds remaining {timeout}: upgrade image "
+                    msg += "not started for "
+                    msg += f"{device_name}, {serial_number}, {ip_address}"
                     self.log_msg(msg)
-                if issu.upgrade == "In Progress":
+
+                if upgrade_status == "In Progress":
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_image_upgrade_to_complete: "
-                    msg += (
-                        f"Seconds remaining {timeout}: upgrade image in progress for "
-                    )
-                    msg += f"{issu.serial_number} / {issu.ip_address}"
+                    msg += f"Seconds remaining {timeout}: upgrade image "
+                    msg += "in progress for "
+                    msg += f"{device_name}, {serial_number}, {ip_address}"
                     self.log_msg(msg)
+
         if serial_numbers_done != serial_numbers_todo:
             msg = f"{self.class_name}._wait_for_image_upgrade_to_complete(): "
             msg += "The following serial_numbers did not complete upgrade: "
