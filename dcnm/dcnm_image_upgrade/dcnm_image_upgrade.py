@@ -986,6 +986,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             msg = f"REMOVE: {self.class_name}.handle_deleted_state: "
             msg += f"detach policy_name: {policy_name}"
             msg += f" from devices: {detach_policy_devices[policy_name]}"
+            self.log_msg(msg)
             instance.policy_name = policy_name
             instance.action = "detach"
             instance.serial_numbers = detach_policy_devices[policy_name]
@@ -1631,6 +1632,8 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         self.properties = {}
         self.properties["action"] = None
         self.properties["policy_name"] = None
+        self.properties["ndfc_response"] = None
+        self.properties["ndfc_result"] = None
         self.properties["serial_numbers"] = None
         self.properties["query_result"] = None
 
@@ -1708,10 +1711,17 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
     def _attach_policy(self):
         """
         Attach policy_name to the switch(es) associated with serial_numbers
+
+        NOTES:
+        1. This method creates a list of responses and results which
+        are accessible via properties ndfc_response and ndfc_result,
+        respectively.
         """
         self.build_attach_payload()
         path = self.endpoints["policy_attach"]["path"]
         verb = self.endpoints["policy_attach"]["verb"]
+        responses = []
+        results = []
         for payload in self.payloads:
             response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
             result = self._handle_response(response, verb)
@@ -1720,6 +1730,10 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
                 msg += f"Bad result when attaching policy {self.policy_name} "
                 msg += f"to switch {payload['ipAddr']}."
                 self.module.fail_json(msg)
+            responses.append(response)
+            results.append(result)
+        self.properties["ndfc_response"] = responses
+        self.properties["ndfc_result"] = results
 
     def _detach_policy(self):
         """
@@ -1736,6 +1750,8 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         result = self._handle_response(response, verb)
         if not result["success"]:
             self._failure(response)
+        self.properties["ndfc_response"] = response
+        self.properties["ndfc_result"] = result
 
     def _query_policy(self):
         """
@@ -1751,6 +1767,8 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         if not result["success"]:
             self._failure(response)
         self.properties["query_result"] = response.get("DATA")
+        self.properties["ndfc_response"] = response
+        self.properties["ndfc_result"] = result
 
     @property
     def query_result(self):
@@ -1773,9 +1791,27 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         self.properties["action"] = value
 
     @property
+    def ndfc_response(self):
+        """
+        Return the raw response from NDFC after calling commit().
+
+        In the case of attach, this is a list of responses.
+        """
+        return self.properties.get("ndfc_response")
+
+    @property
+    def ndfc_result(self):
+        """
+        Return the raw result from NDFC after calling commit().
+
+        In the case of attach, this is a list of results.
+        """
+        return self.properties.get("ndfc_result")
+
+    @property
     def policy_name(self):
         """
-        Set the name of the policy to attach or detach.
+        Set the name of the policy to attach, detach, query.
 
         Must be set prior to calling instance.commit()
         """
