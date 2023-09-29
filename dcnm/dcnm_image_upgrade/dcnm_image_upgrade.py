@@ -3746,45 +3746,29 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 upgrade_percent = self.issu_detail.upgrade_percent
                 upgrade_status = self.issu_detail.upgrade
 
-                msg = f"REMOVE: {self.class_name}."
-                msg += "_wait_for_image_upgrade_to_complete: "
-                msg += f"Seconds remaining {timeout}: "
-                msg += f"{device_name}, {serial_number}, {ip_address} "
-                msg += f"image upgrade percent: {upgrade_percent}"
-                self.log_msg(msg)
-
                 if upgrade_status == "Failed":
-                    msg = f"REMOVE: {self.class_name}."
+                    msg = f"{self.class_name}."
                     msg += "_wait_for_image_upgrade_to_complete: "
                     msg += f"Seconds remaining {timeout}: upgrade image "
-                    msg += "failed for "
+                    msg += f"{upgrade_status} for "
                     msg += f"{device_name}, {serial_number}, {ip_address}"
                     self.module.fail_json(msg)
 
                 if upgrade_status == "Success":
-                    msg = f"REMOVE: {self.class_name}."
-                    msg += "_wait_for_image_upgrade_to_complete: "
-                    msg += f"Seconds remaining {timeout}: upgrade image "
-                    msg += "complete for "
-                    msg += f"{device_name}, {serial_number}, {ip_address}"
-                    self.log_msg(msg)
                     serial_numbers_done.add(serial_number)
-
+                    status = "succeeded"
                 if upgrade_status == None:
-                    msg = f"REMOVE: {self.class_name}."
-                    msg += "_wait_for_image_upgrade_to_complete: "
-                    msg += f"Seconds remaining {timeout}: upgrade image "
-                    msg += "not started for "
-                    msg += f"{device_name}, {serial_number}, {ip_address}"
-                    self.log_msg(msg)
+                    status = "not started"
+                if upgrade_status == "In-Progress":
+                    status = "in progress"
 
-                if upgrade_status == "In Progress":
-                    msg = f"REMOVE: {self.class_name}."
-                    msg += "_wait_for_image_upgrade_to_complete: "
-                    msg += f"Seconds remaining {timeout}: upgrade image "
-                    msg += "in progress for "
-                    msg += f"{device_name}, {serial_number}, {ip_address}"
-                    self.log_msg(msg)
+                msg = f"REMOVE: {self.class_name}."
+                msg += "_wait_for_image_upgrade_to_complete: "
+                msg += f"Seconds remaining {timeout}, "
+                msg += f"Percent remaining {upgrade_percent}, "
+                msg += f"Status {status}, "
+                msg += f"{device_name}, {serial_number}, {ip_address}"
+                self.log_msg(msg)
 
         if serial_numbers_done != serial_numbers_todo:
             msg = f"{self.class_name}._wait_for_image_upgrade_to_complete(): "
