@@ -26,18 +26,9 @@ from __future__ import absolute_import, division, print_function
 
 import copy
 import json
+from time import sleep
 
 from ansible.module_utils.basic import AnsibleModule
-# from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm_image_upgrade_lib import (
-#     NdfcAnsibleImageUpgradeCommon,
-#     NdfcImageValidate,
-#     NdfcImagePolicies,
-#     NdfcImagePolicyAction,
-#     NdfcImageInstallOptions,
-#     NdfcImageUpgrade,
-#     NdfcSwitchDetails,
-#     NdfcSwitchIssuDetailsByIpAddress
-# )
 from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm import (
     dcnm_send,
     validate_list_of_dicts,
@@ -82,56 +73,12 @@ options:
                 type: bool
                 required: false
                 default: True
-            validate:
+            upgrade:
                 description:
-                - Validate (True) or do not validate (False) the image
-                - after staging
+                - Enable (True) or disable (False) image upgrade
                 type: bool
                 required: false
                 default: True
-            upgrade:
-                nxos:
-                    description:
-                    - Enable (True) or disable (False) image upgrade
-                    type: bool
-                    required: false
-                    default: True
-                epld:
-                    description:
-                    - Enable (True) or disable (False) EPLD upgrade
-                    - If upgrade.nxos is false, epld and packages cannot both be true
-                    - If epld is true, nxos_option must be disruptive
-                    type: bool
-                    required: false
-                    default: False
-                packages:
-                    description:
-                    - Enable (True) or disable (False) package(s) upgrade
-                    - If upgrade.nxos is false, epld and packages cannot both be true
-                    type: bool
-                    required: false
-                    default: False
-                upgrade_option:
-                    description:
-                    - The type of upgrade to perform
-                    - Choose between distruptive, non_disruptive, force_non_disruptive
-                    type: string
-                    required: false
-                    default: distruptive
-                epld_options:
-                    module: 
-                        description:
-                        - The switch module to upgrade
-                        - Choose between ALL, or integer values
-                        type: string
-                        required: false
-                        default: ALL
-                    golden:
-                        description:
-                        - Enable (True) or disable (False) reverting to the golden EPLD image
-                        type: bool
-                        required: false
-                        default: False
             switches:
                 description:
                 - A list of devices to attach the image policy to.
@@ -157,59 +104,13 @@ options:
                         type: bool
                         required: false
                         default: True
-                    validate:
+                    upgrade:
                         description:
-                        - Validate (True) or do not validate (False) the image
-                        - after staging
+                        - Enable (True) or disable (False) image upgrade
+                        - Overrides the global upgrade parameter
                         type: bool
                         required: false
                         default: True
-                    upgrade:
-                        nxos:
-                            description:
-                            - Enable (True) or disable (False) image upgrade
-                            type: bool
-                            required: false
-                            default: True
-                        epld:
-                            description:
-                            - Enable (True) or disable (False) EPLD upgrade
-                            - If upgrade.nxos is false, epld and packages cannot both be true
-                            - If epld is true, nxos_option must be disruptive
-                            type: bool
-                            required: false
-                            default: False
-                        packages:
-                            description:
-                            - Enable (True) or disable (False) package(s) upgrade
-                            - If upgrade.nxos is false, epld and packages cannot both be true
-                            type: bool
-                            required: false
-                            default: False
-                    options:
-                        nxos:
-                            mode:
-                                description:
-                                - nxos upgrade mode
-                                - Choose between distruptive, non_disruptive, force_non_disruptive
-                                type: string
-                                required: false
-                                default: distruptive
-                        epld:
-                            module: 
-                                description:
-                                - The switch module to upgrade
-                                - Choose between ALL, or integer values
-                                type: string
-                                required: false
-                                default: ALL
-                            golden:
-                                description:
-                                - Enable (True) or disable (False) reverting to the golden EPLD image
-                                type: bool
-                                required: false
-                                default: False
-
 """
 
 EXAMPLES = """
@@ -246,38 +147,15 @@ EXAMPLES = """
         cisco.dcnm.dcnm_image_upgrade:
             state: merged
             config:
-                validate: false
-                stage: false
-                upgrade:
-                    nxos: false
-                    epld: false
-                options:
-                    nxos:
-                        type: disruptive
-                    epld:
-                        module: ALL
-                        golden: false
                 switches:
-                    -   ip_address: 192.168.1.1
-                        policy: NR1F
-                        stage: true
-                        validate: true
-                        upgrade:
-                            nxos: true
-                            epld: false
-                    -   ip_address: 192.168.1.2
-                        policy: NR2F
-                        stage: true
-                        validate: true
-                        upgrade:
-                            nxos: true
-                            epld: true
-                        options:
-                            nxos:
-                                type: disruptive
-                            epld:
-                                module: ALL
-                                golden: false
+                    - ip_address: 192.168.1.1
+                    policy: NR1F
+                    stage: true
+                    upgrade: false
+                    - ip_address: 192.168.1.2
+                    policy: NR2F
+                    stage: true
+                    upgrade: true
 
 # Detach image policy NR3F from two devices
     -   name: stage/upgrade devices
@@ -290,6 +168,8 @@ EXAMPLES = """
                 -   ip_address: 192.168.1.2
 
 """
+
+
 class NdfcAnsibleImageUpgradeCommon:
     """
     Base class for the following classes in this file:
@@ -307,7 +187,6 @@ class NdfcAnsibleImageUpgradeCommon:
         self._init_endpoints()
 
     def _init_endpoints(self):
-        self.log_msg(f"{self.__class__.__name__}._init_endpoints()")
         self.endpoint_api_v1 = "/appcenter/cisco/ndfc/api/v1"
 
         self.endpoint_image_management = f"{self.endpoint_api_v1}/imagemanagement"
@@ -544,12 +423,10 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
     def __init__(self, module):
         super().__init__(module)
         self.class_name = self.__class__.__name__
-        self.log_msg(f"{self.class_name}.__init__")
         # populated in self._build_policy_attach_payload()
         self.payloads = []
 
         self.config = module.params.get("config")
-        self.log_msg(f"{self.class_name}.__init__() self.config {self.config}")
         if not isinstance(self.config, dict):
             msg = "expected dict type for self.config. "
             msg = +f"got {type(self.config).__name__}"
@@ -589,23 +466,13 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
         self._init_defaults()
 
-        self.log_msg(f"{self.class_name}.__init__: instantiate NdfcSwitchDetails")
         self.switch_details = NdfcSwitchDetails(self.module)
-        self.log_msg(f"{self.class_name}.__init__: instantiate NdfcImagePolicies")
         self.image_policies = NdfcImagePolicies(self.module)
 
     def _init_defaults(self):
         self.defaults = {}
         self.defaults["stage"] = True
-        self.defaults["upgrade"] = {}
-        self.defaults["upgrade"]["nxos"] = True
-        self.defaults["upgrade"]["epld"] = False
-        self.defaults["options"] = {}
-        self.defaults["options"]["nxos"] = {}
-        self.defaults["options"]["nxos"]["mode"] = "disruptive"
-        self.defaults["options"]["epld"] = {}
-        self.defaults["options"]["epld"]["module"] = "ALL"
-        self.defaults["options"]["epld"]["golden"] = False
+        self.defaults["upgrade"] = True
 
     def get_have(self):
         """
@@ -621,13 +488,10 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
         Update self.want_create for all switches defined in the playbook
         """
-        self.log_msg(f"{self.class_name}.get_want() calling _merge_global_and_switch_configs()")
         self._merge_global_and_switch_configs(self.config)
-        self.log_msg(f"{self.class_name}.get_want() calling _validate_switch_configs()")
         self._validate_switch_configs()
         if not self.switch_configs:
             return
-        self.log_msg(f"{self.class_name}.get_want() self.switch_configs: {self.switch_configs}")
         self.want_create = self.switch_configs
 
     def _get_idempotent_want(self, want):
@@ -745,62 +609,10 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 parameter specifications.
         """
         params_spec = {}
-        params_spec["policy"] = {}
-        params_spec["policy"]["required"] = True
-        params_spec["policy"]["type"] = "str"
-
-        params_spec["stage"] = {}
-        params_spec["stage"]["required"] = False
-        params_spec["stage"]["type"] = "bool"
-        params_spec["stage"]["default"] = True
-
-        params_spec["validate"] = {}
-        params_spec["validate"]["required"] = False
-        params_spec["validate"]["type"] = "bool"
-        params_spec["validate"]["default"] = True
-
-        params_spec["upgrade"] = {}
-        params_spec["upgrade"]["required"] = False
-        params_spec["upgrade"]["type"] = "dict"
-        params_spec["upgrade"]["default"] = {}
-
-        params_spec["options"] = {}
-        params_spec["options"]["required"] = False
-        params_spec["options"]["type"] = "dict"
-        params_spec["options"]["default"] = {}
-
-        params_spec["options"]["nxos"] = {}
-        params_spec["options"]["nxos"]["required"] = False
-        params_spec["options"]["nxos"]["type"] = "dict"
-        params_spec["options"]["nxos"]["default"] = {}
-
-        params_spec["options"]["nxos"]["mode"] = {}
-        params_spec["options"]["nxos"]["mode"]["required"] = False
-        params_spec["options"]["nxos"]["mode"]["type"] = "str"
-        params_spec["options"]["nxos"]["mode"]["default"] = "disruptive"
-
-        params_spec["options"]["epld"] = {}
-        params_spec["options"]["epld"]["required"] = False
-        params_spec["options"]["epld"]["type"] = "dict"
-        params_spec["options"]["epld"]["default"] = {}
-
-        params_spec["options"]["epld"]["module"] = {}
-        params_spec["options"]["epld"]["module"] ["required"] = False
-        params_spec["options"]["epld"]["module"] ["type"] = "str"
-        params_spec["options"]["epld"]["module"] ["default"] = "ALL"
-
-        params_spec["options"]["epld"]["golden"] = {}
-        params_spec["options"]["epld"]["golden"] ["required"] = False
-        params_spec["options"]["epld"]["golden"] ["type"] = "bool"
-        params_spec["options"]["epld"]["golden"] ["default"] = False
-
-        # params_spec.update(policy=dict(required=False, type="str"))
-        # params_spec.update(stage=dict(required=False, type="bool", default=True))
-        # params_spec.update(validate=dict(required=False, type="bool", default=True))
-        # params_spec.update(upgrade=dict(required=False, type="dict", default={}))
-        # params_spec.update(options=dict(required=False, type="dict", default={}))
-        # params_spec.update(switches=dict(required=True, type="list", elements="dict"))
-        return copy.deepcopy(params_spec)
+        params_spec.update(policy=dict(required=False, type="str"))
+        params_spec.update(upgrade=dict(required=False, type="bool", default=True))
+        params_spec.update(stage=dict(required=False, type="bool", default=True))
+        return params_spec
 
     def validate_input(self):
         """
@@ -809,14 +621,12 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         Validate the playbook parameters
         """
         state = self.params["state"]
-        self.log_msg(f"{self.class_name}.validate_input: state: {state}")
 
         if state not in ["merged", "deleted", "query"]:
-            msg = f"This module supports deleted, merged, and query states. Got state {state}"
+            msg = f"Only deleted, merged, and query states are supported. Got state {state}"
             self.module.fail_json(msg)
 
         if state == "merged":
-            self.log_msg(f"{self.class_name}.validate_input: call _validate_input_for_merged_state()")
             self._validate_input_for_merged_state()
             return
         if state == "deleted":
@@ -832,14 +642,11 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
         Validate that self.config contains appropriate values for merged state
         """
+        params_spec = self._build_params_spec_for_merged_state()
         if not self.config:
             msg = "config: element is mandatory for state merged"
             self.module.fail_json(msg)
 
-        params_spec = self._build_params_spec_for_merged_state()
-
-        self.log_msg(f"{self.class_name}._validate_input_for_merged_state: params_spec: {params_spec}")
-        self.log_msg(f"{self.class_name}._validate_input_for_merged_state: self.config: {self.config}")
         valid_params, invalid_params = validate_list_of_dicts(
             self.config.get("switches"), params_spec, self.module
         )
@@ -925,8 +732,6 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         global_config["policy"] = config.get("policy")
         global_config["stage"] = config.get("stage")
         global_config["upgrade"] = config.get("upgrade")
-        global_config["options"] = config.get("options")
-        global_config["validate"] = config.get("validate")
 
         self.switch_configs = []
         if not config.get("switches"):
@@ -961,19 +766,6 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 switch["stage"] = self.defaults["stage"]
             if switch.get("upgrade") is None:
                 switch["upgrade"] = self.defaults["upgrade"]
-            if switch.get("options") is None:
-                switch["options"] = self.defaults["options"]
-            if switch["options"].get("nxos") is None:
-                switch["options"]["nxos"] = self.defaults["options"]["nxos"]
-            if switch["options"].get("epld") is None:
-                switch["options"]["epld"] = self.defaults["options"]["epld"]
-            if switch["options"]["nxos"].get("mode") is None:
-                switch["options"]["nxos"]["mode"] = self.defaults["options"]["nxos"]["mode"]
-            if switch["options"]["epld"].get("module") is None:
-                switch["options"]["epld"]["module"] = self.defaults["options"]["epld"]["module"]
-            if switch["options"]["epld"].get("golden") is None:
-                switch["options"]["epld"]["golden"] = self.defaults["options"]["epld"]["golden"]
-
 
     def _build_policy_attach_payload(self):
         """
@@ -1282,7 +1074,6 @@ class NdfcSwitchDetails(NdfcAnsibleImageUpgradeCommon):
 
     def __init__(self, module):
         super().__init__(module)
-        self.class_name = self.__class__.__name__
         self._init_properties()
         self.refresh()
 
@@ -1303,9 +1094,8 @@ class NdfcSwitchDetails(NdfcAnsibleImageUpgradeCommon):
         verb = self.endpoints["switches_info"]["verb"]
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
-        if self.ndfc_response["RETURN_CODE"] != 200:
-            msg = "Unable to retrieve switch information from NDFC. "
-            msg += f"Got response {self.ndfc_response}"
+        if not self.ndfc_result["success"]:
+            msg = "Unable to retrieve switch information from NDFC"
             self.module.fail_json(msg)
 
         data = self.ndfc_response.get("DATA")
@@ -1315,7 +1105,7 @@ class NdfcSwitchDetails(NdfcAnsibleImageUpgradeCommon):
 
     def _get(self, item):
         if self.ip_address is None:
-            msg = f"{self.class_name}: set instance.ip_address "
+            msg = f"{self.__class__.__name__}: set instance.ip_address "
             msg += f"before accessing property {item}."
             self.module.fail_json(msg)
         return self.properties["ndfc_data"][self.ip_address].get(item)
@@ -2084,7 +1874,6 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
     def __init__(self, module):
         super().__init__(module)
         self.class_name = self.__class__.__name__
-        self.log_msg(f"{self.class_name}.__init__ entered")
         self._init_properties()
         self.refresh()
 
@@ -4554,6 +4343,11 @@ def main():
             dcnm_module.result["changed"] = True
         else:
             module.exit_json(**dcnm_module.result)
+    # original code from above
+    # if dcnm_module.need:
+    #     dcnm_module.result["changed"] = True
+    # else:
+    #     module.exit_json(**dcnm_module.result)
 
     if module.check_mode:
         dcnm_module.result["changed"] = False
