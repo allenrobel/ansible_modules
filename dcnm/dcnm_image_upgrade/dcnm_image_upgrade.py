@@ -598,15 +598,23 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
     def _init_defaults(self):
         self.defaults = {}
         self.defaults["stage"] = True
+        self.defaults["validate"] = True
         self.defaults["upgrade"] = {}
         self.defaults["upgrade"]["nxos"] = True
         self.defaults["upgrade"]["epld"] = False
         self.defaults["options"] = {}
         self.defaults["options"]["nxos"] = {}
         self.defaults["options"]["nxos"]["mode"] = "disruptive"
+        self.defaults["options"]["nxos"]["bios_force"] = False
         self.defaults["options"]["epld"] = {}
         self.defaults["options"]["epld"]["module"] = "ALL"
         self.defaults["options"]["epld"]["golden"] = False
+        self.defaults["options"]["reboot"] = {}
+        self.defaults["options"]["reboot"]["config_reload"] = False
+        self.defaults["options"]["reboot"]["write_erase"] = False
+        self.defaults["options"]["package"] = {}
+        self.defaults["options"]["package"]["install"] = False
+        self.defaults["options"]["package"]["uninstall"] = False
 
     def get_have(self):
         """
@@ -648,6 +656,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             'options': {
                 'nxos': {
                     'mode': 'non_disruptive'
+                    'bios_force': False
                 },
                 'epld': {
                     'module': 'ALL',
@@ -688,6 +697,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         # the case where the image is already staged and/or upgraded.
         idempotent_want["policy_changed"] = False
 
+        self.log_msg(f"{self.class_name}._get_idempotent_want() self.have.ndfc_data: {self.have.ndfc_data}")
         # if the image is already staged, don't stage it again
         if self.have.image_staged == "Success":
             idempotent_want["stage"] = False
@@ -695,7 +705,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         if self.have.validated == "Success":
             idempotent_want["validate"] = False
         # if the image is already upgraded, don't upgrade it again
-        if self.have.upgrade == "Success":
+        if self.have.status == "In-Sync" and self.have.reason == "Upgrade" and self.have.policy == want["policy"]:
             idempotent_want["upgrade"]["nxos"] = False
 
         # Get relevant install options from NDFC based on the
@@ -707,7 +717,6 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         instance.issu = want["upgrade"]["nxos"]
         instance.refresh()
 
-        self.log_msg(f"{self.class_name}._get_idempotent_want() instance.epld_modules: {instance.epld_modules}")
         if instance.epld_modules is None:
             idempotent_want["upgrade"]["epld"] = False
         self.log_msg(f"{self.class_name}._get_idempotent_want() returned idempotent_want: {idempotent_want}")
@@ -940,6 +949,39 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             msg += f"{','.join(invalid_params)}"
             self.module.fail_json(msg)
 
+    def _merge_defaults_to_switch_config(self, config):
+        if not config.get("stage"):
+            config["stage"] = self.defaults["stage"]
+        if not config.get("upgrade"):
+            config["upgrade"] = self.defaults["upgrade"]
+        if not config.get("options"):
+            config["options"] = self.defaults["options"]
+        if not config["options"].get("nxos"):
+            config["options"]["nxos"] = self.defaults["options"]["nxos"]
+        if not config["options"]["nxos"].get("mode"):
+            config["options"]["nxos"]["mode"] = self.defaults["options"]["nxos"]["mode"]
+        if not config["options"]["nxos"].get("bios_force"):
+            config["options"]["nxos"]["bios_force"] = self.defaults["options"]["nxos"]["bios_force"]
+        if not config["options"].get("epld"):
+            config["options"]["epld"] = self.defaults["options"]["epld"]
+        if not config["options"]["epld"].get("module"):
+            config["options"]["epld"]["module"] = self.defaults["options"]["epld"]["module"]
+        if not config["options"]["epld"].get("golden"):
+            config["options"]["epld"]["golden"] = self.defaults["options"]["epld"]["golden"]
+        if not config["options"].get("reboot"):
+            config["options"]["reboot"] = self.defaults["options"]["reboot"]
+        if not config["options"]["reboot"].get("config_reload"):
+            config["options"]["reboot"]["config_reload"] = self.defaults["options"]["reboot"]["config_reload"]
+        if not config["options"]["reboot"].get("write_erase"):
+            config["options"]["reboot"]["write_erase"] = self.defaults["options"]["reboot"]["write_erase"]
+        if not config["options"].get("package"):
+            config["options"]["package"] = self.defaults["options"]["package"]
+        if not config["options"]["package"].get("install"):
+            config["options"]["package"]["install"] = self.defaults["options"]["package"]["install"]
+        if not config["options"]["package"].get("uninstall"):
+            config["options"]["package"]["uninstall"] = self.defaults["options"]["package"]["uninstall"]
+        return config
+
     def _merge_global_and_switch_configs(self, config):
         """
         Merge the global config with each switch config and return
@@ -955,19 +997,24 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         5.  If global_config and switch_config are both missing a
             mandatory parameter, fail.
         """
+        self.log_msg(f"{self.class_name}._merge_global_and_switch_configs: config: {config}")
         global_config = {}
         global_config["policy"] = config.get("policy")
         global_config["stage"] = config.get("stage")
         global_config["upgrade"] = config.get("upgrade")
         global_config["options"] = config.get("options")
         global_config["validate"] = config.get("validate")
-
+        self.log_msg(f"{self.class_name}._merge_global_and_switch_configs: global_config: {global_config}")
         self.switch_configs = []
         if not config.get("switches"):
             msg = "playbook is missing list of switches"
             self.module.fail_json(msg)
         for switch in config["switches"]:
-            self.switch_configs.append(global_config | switch)
+            switch_config = global_config.copy() | switch.copy()
+            self.log_msg(f"{self.class_name}._merge_global_and_switch_configs: merged switch_config: {switch_config}")
+            switch_config = self._merge_defaults_to_switch_config(switch_config)
+            self.log_msg(f"{self.class_name}._merge_global_and_switch_configs: merged-defaulted switch_config: {switch_config}")
+            self.switch_configs.append(switch_config)
 
     def _validate_switch_configs(self):
         """
@@ -979,6 +1026,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             - self.get_want
         """
         for switch in self.switch_configs:
+            self.log_msg(f"{self.class_name}._validate_switch_configs: switch1: {switch}")
             if not switch.get("ip_address"):
                 msg = "playbook is missing ip_address for at least one switch"
                 self.module.fail_json(msg)
@@ -991,6 +1039,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 msg += f"{switch.get('ip_address')} "
                 msg += "and global image policy is not defined."
                 self.module.fail_json(msg)
+            # TODO:1 compare this to the code in _merge_global_and_switch_configs() and remove if not needed.
             if switch.get("stage") is None:
                 switch["stage"] = self.defaults["stage"]
             if switch.get("upgrade") is None:
@@ -1646,7 +1695,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         self.properties["ndfc_data"] = self.ndfc_response.get("DATA")
         self.data = self.properties["ndfc_data"]
         if self.data.get("compatibilityStatusList") is None:
-            self.compatiblity_status = {}
+            self.compatibility_status = {}
         else:
             self.compatibility_status = self.data.get("compatibilityStatusList")[0]
 
@@ -2475,7 +2524,7 @@ class NdfcSwitchIssuDetails(NdfcAnsibleImageUpgradeCommon):
         self.properties["ndfc_data"] = None
         # action_keys is used in subclasses to determine if any actions
         # are in progress.
-        # Property actions_in_progress return True if so, False otherwise
+        # Property actions_in_progress returns True if so, False otherwise
         self.properties["action_keys"] = set()
         self.properties["action_keys"].add("imageStaged")
         self.properties["action_keys"].add("upgrade")
@@ -2908,7 +2957,7 @@ class NdfcSwitchIssuDetails(NdfcAnsibleImageUpgradeCommon):
         Return None otherwise
 
         Possible values:
-            Failure (TODO:3 verify this)
+            Failed
             Success
             None
         """
@@ -3593,18 +3642,22 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
         """
         Fail if the validated state for any serial_number
         is Failed.
+
+        TODO:3 If validate == Failed, it may have been from the last operation.
+        TODO:3 We can't fail here based on this.  Have changed this to a log message.
         """
         for serial_number in self.serial_numbers:
             self.issu_detail.serial_number = serial_number
             self.issu_detail.refresh()
             if self.issu_detail.validated == "Failed":
-                msg = "Image validation is failing for the following switch: "
+                msg = "Previous image validation failed for the following switch: "
                 msg += f"{self.issu_detail.device_name}, "
                 msg += f"{self.issu_detail.ip_address}, "
                 msg += f"{self.issu_detail.serial_number}. "
-                msg += "Please check the switch connectivity to NDFC and "
+                msg += "If this persists, check the switch connectivity to NDFC and "
                 msg += "try again."
-                self.module.fail_json(msg)
+                self.log_msg(msg)
+                #self.module.fail_json(msg)
 
     def build_payload(self):
         self.payload = {}
@@ -3841,6 +3894,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 'options': {
                     'nxos': {
                         'mode': 'non_disruptive'
+                        'bios_force': False
                     },
                     'epld': {
                         'module': 'ALL',
@@ -3907,9 +3961,15 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.issu_detail = NdfcSwitchIssuDetailsByIpAddress(self.module)
 
     def _init_properties(self):
+        # self.ip_addresses is used in:
+        #   self._wait_for_current_actions_to_complete()
+        #   self._wait_for_image_upgrade_to_complete()
+        self.ip_addresses = set()
+        # TODO:1 Review these properties since we are no longer
+        # calling this class per-switch given the payload structure
+        # is not amenable to that.
         self.properties = {}
         self.properties["bios_force"] = False
-        # TODO:3 Discuss with Mike/Shangxin. NdfcImageUpgrade.check_timeout
         self.properties["check_interval"] = 10  # seconds
         self.properties["check_timeout"] = 1800  # seconds
         self.properties["config_reload"] = False
@@ -3985,50 +4045,94 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 msg += "Please check the switch "
                 msg += "to determine the cause and try again."
                 self.module.fail_json(msg)
+            # used in self._wait_for_current_actions_to_complete()
+            self.ip_addresses.add(self.issu_detail.ip_address)
 
-    def build_payload(self):
+    def build_payload(self, device):
         """
         Build the request payload to upgrade the switches.
         """
-        payload_devices = []
-        for device in self.devices:
-            self.issu_detail.ip_address = device.get("ip_address")
-            self.issu_detail.refresh()
-            payload_device = {}
-            payload_device["serialNumber"] = self.issu_detail.serial_number
-            payload_device["policyName"] = device.get("policy_name")
-            payload_devices.append(payload_device)
+        # This is currently a single device
+        self.log_msg(f"REMOVE: {self.class_name}.build_payload() device: {device}")
+        devices_to_upgrade = []
+        self.issu_detail.ip_address = device.get("ip_address")
+        self.issu_detail.refresh()
+        payload_device = {}
+        payload_device["serialNumber"] = self.issu_detail.serial_number
+        payload_device["policyName"] = device.get("policy")
+        devices_to_upgrade.append(payload_device)
 
         self.payload = {}
-        self.payload["devices"] = payload_devices
-        self.payload["issuUpgrade"] = True
-        self.payload["issuUpgradeOptions1"] = {}
+        self.payload["devices"] = devices_to_upgrade
+        self.payload["issuUpgrade"] = device.get("upgrade").get("nxos")
+
         # The following three options are mutually-exclusive.
         # If one is set to True, the others must be False.
         # nonDisruptive corresponds to NDFC Allow Non-Disruptive GUI option
-        self.payload["issuUpgradeOptions1"]["nonDisruptive"] = self.properties[
-            "non_disruptive"
-        ]
-        # forceNonDisruptive corresponds to NDFC Allow Force Non-Disruptive GUI option
-        self.payload["issuUpgradeOptions1"]["forceNonDisruptive"] = self.properties[
-            "force_non_disruptive"
-        ]
-        # disruptive corresponds to NDFC Disruptive GUI option
-        self.payload["issuUpgradeOptions1"]["disruptive"] = self.properties[
-            "disruptive"
-        ]
+        self.payload["issuUpgradeOptions1"] = {}
+        self.payload["issuUpgradeOptions1"]["nonDisruptive"] = False
+        self.payload["issuUpgradeOptions1"]["forceNonDisruptive"] = False
+        self.payload["issuUpgradeOptions1"]["disruptive"] = False
+        nxos_mode = device.get("options").get("nxos").get("mode")
+        if nxos_mode == "non_disruptive":
+            self.payload["issuUpgradeOptions1"]["nonDisruptive"] = True
+        elif nxos_mode == "disruptive":
+            self.payload["issuUpgradeOptions1"]["disruptive"] = True
+        elif nxos_mode == "force_non_disruptive":
+            self.payload["issuUpgradeOptions1"]["forceNonDisruptive"] = True
+        else:
+            msg = f"{self.class_name}.build_payload() options.nxos.mode must be "
+            msg += "one of non_disruptive, disruptive, or force_non_disruptive. "
+            msg += f"Got {nxos_mode}."
+            self.module.fail_json(msg)
+
+        # biosForce corresponds to NDFC BIOS Force GUI option
         self.payload["issuUpgradeOptions2"] = {}
-        self.payload["issuUpgradeOptions2"]["biosForce"] = self.properties["bios_force"]
-        self.payload["epldUpgrade"] = self.properties["epld_upgrade"]
+        self.payload["issuUpgradeOptions2"]["biosForce"] = device.get(
+            "options").get(
+            "nxos").get(
+            "bios_force"
+        )
+
+        # EPLD
+        self.payload["epldUpgrade"] = device.get("upgrade").get("epld")
         self.payload["epldOptions"] = {}
-        self.payload["epldOptions"]["moduleNumber"] = self.properties["epld_module"]
-        self.payload["epldOptions"]["golden"] = self.properties["epld_golden"]
-        self.payload["reboot"] = self.properties["reboot"]
+        self.payload["epldOptions"]["moduleNumber"] = device.get(
+            "options").get(
+            "epld").get(
+            "module"
+        )
+        self.payload["epldOptions"]["golden"] = device.get(
+            "options").get(
+            "epld").get(
+            "golden"
+        )
+
+        # Reboot
+        self.payload["reboot"] = device.get("reboot")
         self.payload["rebootOptions"] = {}
-        self.payload["rebootOptions"]["configReload"] = self.properties["config_reload"]
-        self.payload["rebootOptions"]["writeErase"] = self.properties["write_erase"]
-        self.payload["pacakgeInstall"] = self.properties["package_install"]
-        self.payload["pacakgeUnInstall"] = self.properties["package_uninstall"]
+        self.payload["rebootOptions"]["configReload"] = device.get(
+            "options").get(
+            "reboot").get(
+            "config_reload"
+        )
+        self.payload["rebootOptions"]["writeErase"] = device.get(
+            "options").get(
+            "reboot").get(
+            "write_erase"
+        )
+
+        # Packages
+        self.payload["pacakgeInstall"] = device.get(
+            "options").get(
+            "package").get(
+            "install"
+        )
+        self.payload["pacakgeUnInstall"] = device.get(
+            "options").get(
+            "package").get(
+            "uninstall"
+        )
 
     def commit(self):
         """
@@ -4048,20 +4152,22 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self._wait_for_current_actions_to_complete()
         path = self.endpoints["image_upgrade"]["path"]
         verb = self.endpoints["image_upgrade"]["verb"]
-        self.build_payload()
-        self.properties["ndfc_response"] = dcnm_send(
-            self.module, verb, path, data=json.dumps(self.payload)
-        )
-        self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
-        self.log_msg(
-            f"REMOVE: {self.class_name}.commit() response: {self.ndfc_response}"
-        )
-        self.log_msg(f"REMOVE: {self.class_name}.commit() result: {self.ndfc_result}")
-        if not self.ndfc_result["success"]:
-            msg = f"{self.class_name}.commit() failed: {self.ndfc_result}. "
-            msg += f"NDFC response was: {self.ndfc_response}"
-            self.module.fail_json(msg)
-        self.properties["ndfc_data"] = self.ndfc_response.get("DATA")
+        for device in self.devices:
+            self.build_payload(device)
+            self.log_msg(f"REMOVE: {self.class_name}.commit() upgrade payload: {self.payload}")
+            self.properties["ndfc_response"] = dcnm_send(
+                self.module, verb, path, data=json.dumps(self.payload)
+            )
+            self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
+            self.log_msg(
+                f"REMOVE: {self.class_name}.commit() response: {self.ndfc_response}"
+            )
+            self.log_msg(f"REMOVE: {self.class_name}.commit() result: {self.ndfc_result}")
+            if not self.ndfc_result["success"]:
+                msg = f"{self.class_name}.commit() failed: {self.ndfc_result}. "
+                msg += f"NDFC response was: {self.ndfc_response}"
+                self.module.fail_json(msg)
+            self.properties["ndfc_data"] = self.ndfc_response.get("DATA")
         self._wait_for_image_upgrade_to_complete()
 
     def _wait_for_current_actions_to_complete(self):
@@ -4070,49 +4176,50 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         Wait for all actions to complete before upgrading image.
         Actions include image staging, image upgrade, and image validation.
         """
-        serial_numbers = copy.copy(self.serial_numbers)
+        ipv4_todo = copy.copy(self.ip_addresses)
         timeout = self.check_timeout
-        while len(serial_numbers) > 0 and timeout > 0:
+        while len(ipv4_todo) > 0 and timeout > 0:
             sleep(self.check_interval)
             timeout -= self.check_interval
-            for serial_number in self.serial_numbers:
-                if serial_number not in serial_numbers:
+            for ipv4 in self.ip_addresses:
+                if ipv4 not in ipv4_todo:
                     continue
-                self.issu_detail.serial_number = serial_number
+                self.issu_detail.ip_address = ipv4
                 self.issu_detail.refresh()
                 if self.issu_detail.actions_in_progress is False:
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_current_actions_to_complete: "
-                    msg += f"{serial_number} no actions in progress. "
+                    msg += f"{ipv4} no actions in progress. "
                     msg += f"Removing. {timeout} seconds remaining."
                     self.log_msg(msg)
-                    serial_numbers.remove(serial_number)
+                    ipv4_todo.remove(ipv4)
 
     def _wait_for_image_upgrade_to_complete(self):
         """
         Wait for image upgrade to complete
         """
-        serial_numbers_done = set()
+        ipv4_done = set()
         timeout = self.check_timeout
-        serial_numbers_todo = set(copy.copy(self.serial_numbers))
-        while serial_numbers_done != serial_numbers_todo and timeout > 0:
+        ipv4_todo = set(copy.copy(self.ip_addresses))
+        while ipv4_done != ipv4_todo and timeout > 0:
             sleep(self.check_interval)
             timeout -= self.check_interval
             msg = f"REMOVE: {self.class_name}."
             msg += "_wait_for_image_upgrade_to_complete: "
             msg += f"seconds remaining {timeout}, "
-            msg += f"serial_numbers_todo: {serial_numbers_todo}, "
-            msg += f"serial_numbers_done: {serial_numbers_done}"
+            msg += f"ipv4_todo: {ipv4_todo}, "
+            msg += f"ipv4_done: {ipv4_done}"
             self.log_msg(msg)
-            for serial_number in self.serial_numbers:
-                if serial_number in serial_numbers_done:
+            for ipv4 in self.ip_addresses:
+                if ipv4 in ipv4_done:
                     continue
-                self.issu_detail.serial_number = serial_number
+                self.issu_detail.ip_address = ipv4
                 self.issu_detail.refresh()
                 ip_address = self.issu_detail.ip_address
                 device_name = self.issu_detail.device_name
                 upgrade_percent = self.issu_detail.upgrade_percent
                 upgrade_status = self.issu_detail.upgrade
+                serial_number = self.issu_detail.serial_number
 
                 if upgrade_status == "Failed":
                     msg = f"{self.class_name}."
@@ -4123,7 +4230,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                     self.module.fail_json(msg)
 
                 if upgrade_status == "Success":
-                    serial_numbers_done.add(serial_number)
+                    ipv4_done.add(ipv4)
                     status = "succeeded"
                 if upgrade_status == None:
                     status = "not started"
@@ -4133,17 +4240,17 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 msg = f"REMOVE: {self.class_name}."
                 msg += "_wait_for_image_upgrade_to_complete: "
                 msg += f"Seconds remaining {timeout}, "
-                msg += f"Percent remaining {upgrade_percent}, "
+                msg += f"Percent complete {upgrade_percent}, "
                 msg += f"Status {status}, "
                 msg += f"{device_name}, {serial_number}, {ip_address}"
                 self.log_msg(msg)
 
-        if serial_numbers_done != serial_numbers_todo:
+        if ipv4_done != ipv4_todo:
             msg = f"{self.class_name}._wait_for_image_upgrade_to_complete(): "
-            msg += "The following serial_numbers did not complete upgrade: "
-            msg += f"{serial_numbers_done.difference(serial_numbers_todo)}. "
+            msg += "The following device(s) did not complete upgrade: "
+            msg += f"{ipv4_done.difference(ipv4_todo)}. "
             msg += "Try increasing issu timeout in the playbook, or check "
-            msg += "the switch(s) to determine the cause "
+            msg += "the device(s) to determine the cause "
             msg += "(e.g. show install all status)."
             self.module.fail_json(msg)
 
