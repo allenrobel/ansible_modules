@@ -26,6 +26,7 @@ from __future__ import absolute_import, division, print_function
 
 import copy
 import json
+from time import sleep
 
 from ansible.module_utils.basic import AnsibleModule
 # from ansible_collections.cisco.dcnm.plugins.module_utils.network.dcnm.dcnm_image_upgrade_lib import (
@@ -621,9 +622,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
         Update self.want_create for all switches defined in the playbook
         """
-        self.log_msg(f"{self.class_name}.get_want() calling _merge_global_and_switch_configs()")
         self._merge_global_and_switch_configs(self.config)
-        self.log_msg(f"{self.class_name}.get_want() calling _validate_switch_configs()")
         self._validate_switch_configs()
         if not self.switch_configs:
             return
@@ -636,48 +635,82 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
         The have item is obtained from an instance of NdfcSwitchIssuDetails
         created in self.get_have().
-
-        Structure:
+        
+        want structure passed to this method:
 
         {
-            "ip_address": "192.168.1.1",
-            "policy": "NR1F",
-            "policy_changed": False,
-            "stage": True,
-            "upgrade": True
+            'policy': 'KR3F',
+            'stage': True,
+            'upgrade': {
+                'nxos': True,
+                'epld': False
+            },
+            'options': {
+                'nxos': {
+                    'mode': 'non_disruptive'
+                },
+                'epld': {
+                    'module': 'ALL',
+                    'golden': False
+                }
+            },
+            'validate': True,
+            'ip_address': '172.22.150.102'
         }
+
+        The returned idempotent_want structure is identical to the
+        above structure, except that the policy_changed key is added,
+        and values are modified based on results from the have item,
+        and the information returned by NdfcImageInstallOptions. 
 
         Caller: self.get_need_merged()
         """
+        self.log_msg(f"{self.class_name}._get_idempotent_want() want: {want}")
         self.have.ip_address = want["ip_address"]
 
         want["policy_changed"] = True
-        # The switch does not have an image policy attached
+        # In NDFC, the switch does not have an image policy attached
         # Return the want item as-is with policy_changed = True
         if self.have.serial_number is None:
+            self.log_msg(f"{self.class_name}._get_idempotent_want() no serial_number. returning want: {want}")
             return want
         # The switch has an image policy attached which is
         # different from the want policy.
         # Return the want item as-is with policy_changed = True
         if want["policy"] != self.have.policy:
+            self.log_msg(f"{self.class_name}._get_idempotent_want() different policy attached. returning want: {want}")
             return want
 
-        idempotent_want = {}
+        # start with a copy of the want item
+        idempotent_want = copy.deepcopy(want)
         # Give an indication to the caller that the policy has not changed
         # We can use this later to determine if we need to do anything in
         # the case where the image is already staged and/or upgraded.
         idempotent_want["policy_changed"] = False
-        idempotent_want["policy"] = want["policy"]
-        idempotent_want["ip_address"] = want["ip_address"]
-        idempotent_want["stage"] = want["stage"]
-        idempotent_want["upgrade"] = want["upgrade"]
 
         # if the image is already staged, don't stage it again
         if self.have.image_staged == "Success":
             idempotent_want["stage"] = False
+        # if the image is already validated, don't validate it again
+        if self.have.validated == "Success":
+            idempotent_want["validate"] = False
         # if the image is already upgraded, don't upgrade it again
         if self.have.upgrade == "Success":
-            idempotent_want["upgrade"] = False
+            idempotent_want["upgrade"]["nxos"] = False
+
+        # Get relevant install options from NDFC based on the
+        # options in our want item
+        instance = NdfcImageInstallOptions(self.module)
+        instance.policy_name = want["policy"]
+        instance.serial_number = self.have.serial_number
+        instance.epld = want["upgrade"]["epld"]
+        instance.issu = want["upgrade"]["nxos"]
+        instance.refresh()
+
+        self.log_msg(f"{self.class_name}._get_idempotent_want() instance.epld_modules: {instance.epld_modules}")
+        if instance.epld_modules is None:
+            idempotent_want["upgrade"]["epld"] = False
+        self.log_msg(f"{self.class_name}._get_idempotent_want() returned idempotent_want: {idempotent_want}")
         return idempotent_want
 
     def get_need_merged(self):
@@ -697,7 +730,8 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 if (
                     idempotent_want["policy_changed"] is False
                     and idempotent_want["stage"] is False
-                    and idempotent_want["upgrade"] is False
+                    and idempotent_want["upgrade"]["nxos"] is False
+                    and idempotent_want["upgrade"]["epld"] is False
                 ):
                     continue
                 need.append(idempotent_want)
@@ -965,10 +999,10 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 switch["options"] = self.defaults["options"]
             if switch["options"].get("nxos") is None:
                 switch["options"]["nxos"] = self.defaults["options"]["nxos"]
-            if switch["options"].get("epld") is None:
-                switch["options"]["epld"] = self.defaults["options"]["epld"]
             if switch["options"]["nxos"].get("mode") is None:
                 switch["options"]["nxos"]["mode"] = self.defaults["options"]["nxos"]["mode"]
+            if switch["options"].get("epld") is None:
+                switch["options"]["epld"] = self.defaults["options"]["epld"]
             if switch["options"]["epld"].get("module") is None:
                 switch["options"]["epld"]["module"] = self.defaults["options"]["epld"]["module"]
             if switch["options"]["epld"].get("golden") is None:
@@ -1069,7 +1103,33 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
     def _verify_install_options(self, devices):
         """
-        Verify that the install options for the switch(es) are valid
+        Verify that the install options for the devices(es) are valid
+
+        Example devices structure:
+
+        [
+            {
+                'policy': 'KR3F',
+                'stage': False,
+                'upgrade': {
+                    'nxos': True, 
+                    'epld': False
+                },
+                'options': {
+                    'nxos': {
+                        'mode': 'non_disruptive'
+                    },
+                    'epld': {
+                        'module': 'ALL',
+                        'golden': False
+                    }
+                },
+                'validate': False,
+                'ip_address': '172.22.150.102',
+                'policy_changed': False
+            },
+            etc...
+        ]
 
         Callers:
         - self.handle_merged_state
@@ -1078,22 +1138,34 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             return
         install_options = NdfcImageInstallOptions(self.module)
         for device in devices:
-            install_options.serial_number = device["serial_number"]
-            install_options.policy_name = device["policy_name"]
+            self.log_msg(f"REMOVE: {self.class_name}._verify_install_options: device: {device}")    
+            self.switch_details.ip_address = device.get("ip_address")
+            install_options.serial_number = self.switch_details.serial_number
+            install_options.policy_name = device["policy"]
+            install_options.epld = device["upgrade"]["epld"]
+            install_options.issu = device["upgrade"]["nxos"]
             install_options.refresh()
-            if install_options.status not in ["Success", "Skipped"]:
-                msg = f"Got install options status {install_options.status} "
-                msg += f"for device {device['serial_number']} "
-                msg += f"with ip_address {device['ip_address']}."
+            if install_options.status not in ["Success", "Skipped"] and device["upgrade"]["nxos"] is True:
+                msg = f"NXOS upgrade is set to True for switch  "
+                msg += f"{device['ip_address']}, but the image policy "
+                msg += f"{install_options.policy_name} does not contain an "
+                msg += f"NX-OS image"
+                self.module.fail_json(msg)
+            if install_options.epld_modules is None and device["upgrade"]["epld"] is True:
+                msg = f"EPLD upgrade is set to True for switch "
+                msg += f"{device['ip_address']}, but the image policy "
+                msg += f"{install_options.policy_name} does not contain an "
+                msg += f"EPLD image."
                 self.module.fail_json(msg)
 
     def _upgrade_images(self, devices):
         """
-        Upgrade the switch(es) to the currently-validated image
+        Upgrade the switch(es) to the specified image
 
         Callers:
         - handle_merged_state
         """
+        self.log_msg(f"REMOVE: {self.class_name}._upgrade_images: devices: {devices}")
         upgrade = NdfcImageUpgrade(self.module)
         upgrade.devices = devices
         # TODO:2 Discuss with Mike/Shangxin. Upgrade option handling mutex options.
@@ -1111,6 +1183,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         Update the switch policy if it has changed.
         Stage the image if requested.
+        Validate the image if requested.
         Upgrade the image if requested.
 
         Caller: main()
@@ -1132,6 +1205,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         stage_devices = []
         validate_devices = []
         upgrade_devices = []
+
         for switch in self.need:
             msg = f"REMOVE: {self.class_name}.handle_merged_state: switch: {switch}"
             self.log_msg(msg)
@@ -1143,23 +1217,22 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             device["ip_address"] = self.switch_details.ip_address
             if switch.get("stage") is not False:
                 stage_devices.append(device["serial_number"])
-            # TODO:2 Discuss with Mike/Shangxin.  Add validate option?
-            # Currently, we always validate the image after staging
-            # Replace with the below if we add a validate option
-            # if switch.get("validate") is not False:
-            #     validate_devices.append(device["serial_number"])
-            validate_devices.append(device["serial_number"])
-            if switch.get("upgrade") is not False:
-                upgrade_devices.append(device)
+            if switch.get("validate") is not False:
+                validate_devices.append(device["serial_number"])
+            if (
+                switch.get("upgrade").get("nxos") is not False or
+                switch.get("upgrade").get("epld") is not False):
+                    upgrade_devices.append(switch)
 
-        self.log_msg(
-            f"REMOVE: {self.class_name}.handle_merged_state: stage_devices: {stage_devices}"
-        )
+        msg = f"REMOVE: {self.class_name}.handle_merged_state: stage_devices: {stage_devices}"
+        self.log_msg(msg)
         self._stage_images(stage_devices)
+
         self.log_msg(
             f"REMOVE: {self.class_name}.handle_merged_state: validate_devices: {validate_devices}"
         )
         self._validate_images(validate_devices)
+
         self.log_msg(
             f"REMOVE: {self.class_name}.handle_merged_state: upgrade_devices: {upgrade_devices}"
         )
@@ -1471,44 +1544,59 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         "packageInstall": false
     }
     Response body:
-        install-options response body:
+    NOTES:
+    1.  epldModules will be null if epld is false in the request body.
+        This class converts this to None (python NoneType) in this case.
+
+    {
+        "compatibilityStatusList": [
             {
-                "compatibilityStatusList": [
-                    {
-                        "deviceName": "cvd-1313-leaf",
-                        "ipAddress": "172.22.150.104",
-                        "policyName": "NR1F",
-                        "platform": "N9K/N3K",
-                        "version": "10.3.2",
-                        "osType": "64bit",
-                        "status": "Success",
-                        "installOption": "non-disruptive",
-                        "compDisp": "[show install all impact nxos bootflash:nxos64-cs.10.3.2.F.bin non-disruptive cli output]",
-                        "versionCheck": "cli output elided...",
-                        "preIssuLink": "Not Applicable",
-                        "repStatus": "skipped",
-                        "timestamp": "NA"
-                    },
-                    {
-                        "deviceName": "cvd-1313-leaf",
-                        "ipAddress": "172.22.150.104",
-                        "policyName": "NR1F",
-                        "platform": "N9K/N3K",
-                        "version": "10.3.2",
-                        "osType": "64bit",
-                        "status": "Success",
-                        "installOption": "non-disruptive",
-                        "compDisp": "[cli output for show install all impact nxos bootflash:nxos.10.3.2.bin]",
-                        "versionCheck": "cli output elided...",
-                        "preIssuLink": "Not Applicable",
-                        "repStatus": "skipped",
-                        "timestamp": "NA"
-                    }
-                ],
-                "epldModules": null,
-                "installPacakges": null,
-                "errMessage": ""
+                "deviceName": "cvd-1312-leaf",
+                "ipAddress": "172.22.150.103",
+                "policyName": "KR5M",
+                "platform": "N9K/N3K",
+                "version": "10.2.5",
+                "osType": "64bit",
+                "status": "Skipped",
+                "installOption": "NA",
+                "compDisp": "Compatibility status skipped.",
+                "versionCheck": "Compatibility status skipped.",
+                "preIssuLink": "Not Applicable",
+                "repStatus": "skipped",
+                "timestamp": "NA"
             }
+        ],
+        "epldModules": {
+            "moduleList": [
+                {
+                    "deviceName": "cvd-1312-leaf",
+                    "ipAddress": "172.22.150.103",
+                    "policyName": "KR5M",
+                    "module": 1,
+                    "name": null,
+                    "modelName": "N9K-C93180YC-EX",
+                    "moduleType": "IO FPGA",
+                    "oldVersion": "0x15",
+                    "newVersion": "0x15"
+                },
+                {
+                    "deviceName": "cvd-1312-leaf",
+                    "ipAddress": "172.22.150.103",
+                    "policyName": "KR5M",
+                    "module": 1,
+                    "name": null,
+                    "modelName": "N9K-C93180YC-EX",
+                    "moduleType": "MI FPGA",
+                    "oldVersion": "0x4",
+                    "newVersion": "0x04"
+                }
+            ],
+            "bException": false,
+            "exceptionReason": null
+        },
+        "installPacakges": null,
+        "errMessage": ""
+    }
     """
 
     def __init__(self, module):
@@ -1526,6 +1614,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         self.properties["package_install"] = False
         self.properties["policy_name"] = None
         self.properties["serial_number"] = None
+        self.properties["epld_modules"] = None
 
     def refresh(self):
         """
@@ -1554,17 +1643,12 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
             msg += "Bad result when retrieving install-options from NDFC."
             self.module.fail_json(msg)
 
-        data = self.ndfc_response.get("DATA").get("compatibilityStatusList")
-        if data is None:
-            msg = f"{self.class_name}.refresh: "
-            msg += "NDFC response is missing install-options."
-            self.module.fail_json(msg)
-        if len(data) == 0:
-            msg = f"{self.class_name}.refresh: "
-            msg += "NDFC has no defined install-options."
-            self.module.fail_json(msg)
-        self.properties["ndfc_data"] = data
-        self.data = data[0]
+        self.properties["ndfc_data"] = self.ndfc_response.get("DATA")
+        self.data = self.properties["ndfc_data"]
+        if self.data.get("compatibilityStatusList") is None:
+            self.compatiblity_status = {}
+        else:
+            self.compatibility_status = self.data.get("compatibilityStatusList")[0]
 
     def _build_payload(self):
         """
@@ -1671,7 +1755,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         of the install-options response, if it exists.
         Return None otherwise
         """
-        return self._get("compDisp")
+        return self.compatibility_status.get("compDisp")
 
     @property
     def device_name(self):
@@ -1680,7 +1764,31 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         if it exists.
         Return None otherwise
         """
-        return self._get("deviceName")
+        return self.compatibility_status.get("deviceName")
+
+    @property
+    def epld_modules(self):
+        """
+        Return the epldModules of the install-options response,
+        if it exists.
+        Return None otherwise
+
+        epldModules will be "null" if self.epld is False, so
+        make_none() will convert to NoneType in this case.
+        """
+        return self._get("epldModules")
+
+    @property
+    def err_message(self):
+        """
+        Return the errMessage of the install-options response,
+        if it exists.
+        Return None otherwise
+
+        epldModules will be "null" if self.epld is False, so
+        make_none() will convert to NoneType in this case.
+        """
+        return self._get("errMessage")
 
     @property
     def install_option(self):
@@ -1689,7 +1797,21 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         if it exists.
         Return None otherwise
         """
-        return self._get("installOption")
+        return self.compatibility_status.get("installOption")
+
+    @property
+    def install_packages(self):
+        """
+        Return the installPackages of the install-options response,
+        if it exists.
+        Return None otherwise
+
+        NOTE:   yes, installPacakges is misspelled in the response in the
+                following versions (at least):
+                12.1.2e
+                12.1.3b
+        """
+        return self._get("installPacakges")
 
     @property
     def ip_address(self):
@@ -1698,7 +1820,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         if it exists.
         Return None otherwise
         """
-        return self._get("ipAddress")
+        return self.compatibility_status.get("ipAddress")
 
     @property
     def ndfc_data(self):
@@ -1728,7 +1850,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         if it exists.
         Return None otherwise
         """
-        return self._get("osType")
+        return self.compatibility_status.get("osType")
 
     @property
     def platform(self):
@@ -1737,7 +1859,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         if it exists.
         Return None otherwise
         """
-        return self._get("platform")
+        return self.compatibility_status.get("platform")
 
     @property
     def pre_issu_link(self):
@@ -1745,7 +1867,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         Return the preIssuLink of the install-options response, if it exists.
         Return None otherwise
         """
-        return self._get("preIssuLink")
+        return self.compatibility_status.get("preIssuLink")
 
     @property
     def raw_data(self):
@@ -1767,7 +1889,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         Return the repStatus of the install-options response, if it exists.
         Return None otherwise
         """
-        return self._get("repStatus")
+        return self.compatibility_status.get("repStatus")
 
     @property
     def status(self):
@@ -1776,7 +1898,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         if it exists.
         Return None otherwise
         """
-        return self._get("status")
+        return self.compatibility_status.get("status")
 
     @property
     def timestamp(self):
@@ -1785,7 +1907,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         if it exists.
         Return None otherwise
         """
-        return self._get("timestamp")
+        return self.compatibility_status.get("timestamp")
 
     @property
     def version(self):
@@ -1794,7 +1916,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         if it exists.
         Return None otherwise
         """
-        return self._get("version")
+        return self.compatibility_status.get("version")
 
     @property
     def version_check(self):
@@ -1803,7 +1925,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         of the install-options response, if it exists.
         Return None otherwise
         """
-        return self._get("versionCheck")
+        return self.compatibility_status.get("versionCheck")
 
 
 # ==============================================================================
@@ -2142,9 +2264,6 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
             msg = f"instance.policy_name {self.policy_name} is not "
             msg += f"defined in NDFC."
             self.module.fail_json(msg)
-        msg = f"{self.class_name}._get: item {item} "
-        msg += f"value {self.properties['ndfc_data'][self.policy_name].get(item)}"
-        self.log_msg(msg)
         return self.properties["ndfc_data"][self.policy_name].get(item)
 
     @property
@@ -2918,6 +3037,10 @@ class NdfcSwitchIssuDetailsByIpAddress(NdfcSwitchIssuDetails):
             msg = f"{self.class_name}: set instance.ip_address "
             msg += f"before accessing property {item}."
             self.module.fail_json(msg)
+        if self.data_subclass.get(self.ip_address) is None:
+            msg = f"{self.class_name}: {self.ip_address} is not "
+            msg += f"defined in NDFC."
+            self.module.fail_json(msg)
         return self.make_none(self.data_subclass[self.ip_address].get(item))
 
     @property
@@ -3080,7 +3203,9 @@ class NdfcSwitchIssuDetailsByDeviceName(NdfcSwitchIssuDetails):
 class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
     """
     Endpoint:
-        /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/stage-image
+    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/stage-image
+
+    Verb: POST
 
     Usage (where module is an instance of AnsibleModule):
 
@@ -3388,7 +3513,9 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
 class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
     """
     Endpoint:
-        /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/validate-image
+    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/validate-image
+
+    Verb: POST
 
     Usage (where module is an instance of AnsibleModule):
 
@@ -3405,12 +3532,15 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
         "nonDisruptive":"true"
     }
 
-    Response body:
+    Response body when nonDisruptive is True:
         [StageResponse [key=success, value=]]
 
-        The response is not JSON, nor is it very useful.
-        Instead, we poll for validation status using
-        NdfcSwitchIssuDetailsBySerialNumber.
+    Response body when nonDisruptive is False:
+        [StageResponse [key=success, value=]]
+
+    The response is not JSON, nor is it very useful.
+    Instead, we poll for validation status using
+    NdfcSwitchIssuDetailsBySerialNumber.
     """
 
     def __init__(self, module):
@@ -3687,21 +3817,42 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
     """
     Endpoint:
     /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade/upgrade-image
+    Verb: POST
 
     TODO:3 Discuss with Mike/Shangxin. NdfcImageUpgrade.epld_upgrade, etc
 
     Usage (where module is an instance of AnsibleModule):
 
-    devices = []
-    device = {}
-    device["serialNumber"] = "FDO211218HH"
-    device["policyName"] = "NR1F"
-    devices.append(copy.copy(device))
-
     upgrade = NdfcImageUpgrade(module)
     upgrade.devices = devices
     upgrade.commit()
     data = upgrade.data
+
+    Where devices is a list of dict.  Example structure:
+
+        [
+            {
+                'policy': 'KR3F',
+                'stage': False,
+                'upgrade': {
+                    'nxos': True, 
+                    'epld': False
+                },
+                'options': {
+                    'nxos': {
+                        'mode': 'non_disruptive'
+                    },
+                    'epld': {
+                        'module': 'ALL',
+                        'golden': False
+                    }
+                },
+                'validate': False,
+                'ip_address': '172.22.150.102',
+                'policy_changed': False
+            },
+            etc...
+        ]
 
     Request body:
         Yes, the keys below are misspelled in the request body:
@@ -3753,7 +3904,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.class_name = self.__class__.__name__
         self._init_properties()
         self._populate_ndfc_version()
-        self.issu_detail = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+        self.issu_detail = NdfcSwitchIssuDetailsByIpAddress(self.module)
 
     def _init_properties(self):
         self.properties = {}
@@ -3763,7 +3914,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.properties["check_timeout"] = 1800  # seconds
         self.properties["config_reload"] = False
         self.properties["devices"] = None
-        self.properties["disruptive"] = False
+        self.properties["disruptive"] = True
         self.properties["epld_golden"] = False
         self.properties["epld_module"] = "ALL"
         self.properties["epld_upgrade"] = False
@@ -3771,7 +3922,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.properties["ndfc_data"] = None
         self.properties["ndfc_result"] = None
         self.properties["ndfc_response"] = None
-        self.properties["non_disruptive"] = True
+        self.properties["non_disruptive"] = False
         self.properties["package_install"] = False
         self.properties["package_uninstall"] = False
         self.properties["reboot"] = False
@@ -3788,39 +3939,43 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         instance = NdfcVersion(self.module)
         self.ndfc_version = instance.version
 
-    def prune_devices(self):
-        """
-        If the image is already upgraded on a device, remove that device
-        from self.devices.  self.devices dict has already been validated,
-        so no further error checking is needed here.
-        """
-        # issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
-        serial_numbers_to_remove = set()
-        for device in self.devices:
-            msg = f"REMOVE: {self.class_name}.prune_devices() device: {device}"
-            self.log_msg(msg)
-            self.issu_detail.serial_number = device.get("serial_number")
-            self.issu_detail.refresh()
-            if self.issu_detail.upgrade == "Success":
-                msg = f"REMOVE: {self.class_name}.prune_devices: "
-                msg = "image already upgraded for "
-                msg += f"{self.issu_detail.device_name}, "
-                msg += f"{self.issu_detail.serial_number}, "
-                msg += f"{self.issu_detail.ip_address}"
-                self.log_msg(msg)
-                serial_numbers_to_remove.add(self.issu_detail.serial_number)
-        self.devices = [
-            device
-            for device in self.devices
-            if device.get("serial_number") not in serial_numbers_to_remove
-        ]
+    # def prune_devices(self):
+    #     """
+    #     If the image is already upgraded on a device, remove that device
+    #     from self.devices.  self.devices dict has already been validated,
+    #     so no further error checking is needed here.
+
+    #     TODO:1 This prunes devices only based on the image upgrade state.
+    #     TODO:1 It does not check other image states and EPLD states.
+    #     """
+    #     # issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+    #     pruned_devices = set()
+    #     instance = NdfcSwitchIssuDetailsByIpAddress(self.module)
+    #     for device in self.devices:
+    #         msg = f"REMOVE: {self.class_name}.prune_devices() device: {device}"
+    #         self.log_msg(msg)
+    #         instance.ip_address = device.get("ip_address")
+    #         instance.refresh()
+    #         if instance.upgrade == "Success":
+    #             msg = f"REMOVE: {self.class_name}.prune_devices: "
+    #             msg = "image already upgraded for "
+    #             msg += f"{instance.device_name}, "
+    #             msg += f"{instance.serial_number}, "
+    #             msg += f"{instance.ip_address}"
+    #             self.log_msg(msg)
+    #             pruned_devices.add(instance.ip_address)
+    #     self.devices = [
+    #         device
+    #         for device in self.devices
+    #         if device.get("ip_address") not in pruned_devices
+    #     ]
 
     def validate_devices(self):
         """
         Fail if the upgrade state for any device is Failed.
         """
         for device in self.devices:
-            self.issu_detail.serial_number = device.get("serial_number")
+            self.issu_detail.ip_address = device.get("ip_address")
             self.issu_detail.refresh()
             if self.issu_detail.upgrade == "Failed":
                 msg = "Image upgrade is failing for the following switch: "
@@ -3837,8 +3992,10 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         payload_devices = []
         for device in self.devices:
+            self.issu_detail.ip_address = device.get("ip_address")
+            self.issu_detail.refresh()
             payload_device = {}
-            payload_device["serialNumber"] = device.get("serial_number")
+            payload_device["serialNumber"] = self.issu_detail.serial_number
             payload_device["policyName"] = device.get("policy_name")
             payload_devices.append(payload_device)
 
@@ -3886,7 +4043,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             msg = f"REMOVE: {self.class_name}.commit() no devices to upgrade."
             self.log_msg(msg)
             return
-        self.prune_devices()
+        #self.prune_devices()
         self.validate_devices()
         self._wait_for_current_actions_to_complete()
         path = self.endpoints["image_upgrade"]["path"]
