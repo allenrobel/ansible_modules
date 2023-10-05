@@ -789,7 +789,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         params_spec = {}
         params_spec["policy"] = {}
-        params_spec["policy"]["required"] = True
+        params_spec["policy"]["required"] = False
         params_spec["policy"]["type"] = "str"
 
         params_spec["stage"] = {}
@@ -837,12 +837,6 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         params_spec["options"]["epld"]["golden"] ["type"] = "bool"
         params_spec["options"]["epld"]["golden"] ["default"] = False
 
-        # params_spec.update(policy=dict(required=False, type="str"))
-        # params_spec.update(stage=dict(required=False, type="bool", default=True))
-        # params_spec.update(validate=dict(required=False, type="bool", default=True))
-        # params_spec.update(upgrade=dict(required=False, type="dict", default={}))
-        # params_spec.update(options=dict(required=False, type="dict", default={}))
-        # params_spec.update(switches=dict(required=True, type="list", elements="dict"))
         return copy.deepcopy(params_spec)
 
     def validate_input(self):
@@ -1039,23 +1033,23 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                 msg += f"{switch.get('ip_address')} "
                 msg += "and global image policy is not defined."
                 self.module.fail_json(msg)
-            # TODO:1 compare this to the code in _merge_global_and_switch_configs() and remove if not needed.
-            if switch.get("stage") is None:
-                switch["stage"] = self.defaults["stage"]
-            if switch.get("upgrade") is None:
-                switch["upgrade"] = self.defaults["upgrade"]
-            if switch.get("options") is None:
-                switch["options"] = self.defaults["options"]
-            if switch["options"].get("nxos") is None:
-                switch["options"]["nxos"] = self.defaults["options"]["nxos"]
-            if switch["options"]["nxos"].get("mode") is None:
-                switch["options"]["nxos"]["mode"] = self.defaults["options"]["nxos"]["mode"]
-            if switch["options"].get("epld") is None:
-                switch["options"]["epld"] = self.defaults["options"]["epld"]
-            if switch["options"]["epld"].get("module") is None:
-                switch["options"]["epld"]["module"] = self.defaults["options"]["epld"]["module"]
-            if switch["options"]["epld"].get("golden") is None:
-                switch["options"]["epld"]["golden"] = self.defaults["options"]["epld"]["golden"]
+            # # TODO:1 compare this to the code in _merge_global_and_switch_configs() and remove if not needed.
+            # if switch.get("stage") is None:
+            #     switch["stage"] = self.defaults["stage"]
+            # if switch.get("upgrade") is None:
+            #     switch["upgrade"] = self.defaults["upgrade"]
+            # if switch.get("options") is None:
+            #     switch["options"] = self.defaults["options"]
+            # if switch["options"].get("nxos") is None:
+            #     switch["options"]["nxos"] = self.defaults["options"]["nxos"]
+            # if switch["options"]["nxos"].get("mode") is None:
+            #     switch["options"]["nxos"]["mode"] = self.defaults["options"]["nxos"]["mode"]
+            # if switch["options"].get("epld") is None:
+            #     switch["options"]["epld"] = self.defaults["options"]["epld"]
+            # if switch["options"]["epld"].get("module") is None:
+            #     switch["options"]["epld"]["module"] = self.defaults["options"]["epld"]["module"]
+            # if switch["options"]["epld"].get("golden") is None:
+            #     switch["options"]["epld"]["golden"] = self.defaults["options"]["epld"]["golden"]
 
 
     def _build_policy_attach_payload(self):
@@ -3449,7 +3443,11 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
             msg = f"REMOVE: {self.class_name}."
             msg += "_wait_for_image_stage_to_complete: "
             msg += f"seconds remaining: {timeout}, "
-            msg += f"serial_numbers_todo: {serial_numbers_todo}, "
+            msg += f"serial_numbers_todo: {serial_numbers_todo}"
+            self.log_msg(msg)
+            msg = f"REMOVE: {self.class_name}."
+            msg += "_wait_for_image_stage_to_complete: "
+            msg += f"seconds remaining: {timeout}, "
             msg += f"serial_numbers_done: {serial_numbers_done}"
             self.log_msg(msg)
             for serial_number in self.serial_numbers:
@@ -3736,7 +3734,11 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
             msg = f"REMOVE: {self.class_name}."
             msg += "_wait_for_image_validate_to_complete: "
             msg += f"seconds remaining: {timeout}, "
-            msg += f"serial_numbers_todo: {serial_numbers_todo}, "
+            msg += f"serial_numbers_todo: {serial_numbers_todo}"
+            self.log_msg(msg)
+            msg = f"REMOVE: {self.class_name}."
+            msg += "_wait_for_image_validate_to_complete: "
+            msg += f"seconds remaining: {timeout}, "
             msg += f"serial_numbers_done: {serial_numbers_done}"
             self.log_msg(msg)
             for serial_number in self.serial_numbers:
@@ -4207,7 +4209,11 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             msg = f"REMOVE: {self.class_name}."
             msg += "_wait_for_image_upgrade_to_complete: "
             msg += f"seconds remaining {timeout}, "
-            msg += f"ipv4_todo: {ipv4_todo}, "
+            msg += f"ipv4_todo: {ipv4_todo}"
+            self.log_msg(msg)
+            msg = f"REMOVE: {self.class_name}."
+            msg += "_wait_for_image_upgrade_to_complete: "
+            msg += f"seconds remaining {timeout}, "
             msg += f"ipv4_done: {ipv4_done}"
             self.log_msg(msg)
             for ipv4 in self.ip_addresses:
