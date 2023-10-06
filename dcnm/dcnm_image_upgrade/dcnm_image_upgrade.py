@@ -4064,35 +4064,39 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             self.ip_addresses.add(self.issu_detail.ip_address)
 
     def _merge_defaults_to_switch_config(self, config):
-        if not config.get("stage"):
+        if config.get("stage") is None:
             config["stage"] = self.defaults["stage"]
-        if not config.get("upgrade"):
+        if config.get("upgrade") is None:
             config["upgrade"] = self.defaults["upgrade"]
-        if not config.get("options"):
+        if config.get("upgrade").get("nxos") is None:
+            config["upgrade"]["nxos"] = self.defaults["upgrade"]["nxos"]
+        if config.get("upgrade").get("epld") is None:
+            config["upgrade"]["epld"] = self.defaults["upgrade"]["epld"]
+        if config.get("options") is None:
             config["options"] = self.defaults["options"]
-        if not config["options"].get("nxos"):
+        if config["options"].get("nxos") is None:
             config["options"]["nxos"] = self.defaults["options"]["nxos"]
-        if not config["options"]["nxos"].get("mode"):
+        if config["options"]["nxos"].get("mode") is None:
             config["options"]["nxos"]["mode"] = self.defaults["options"]["nxos"]["mode"]
-        if not config["options"]["nxos"].get("bios_force"):
+        if config["options"]["nxos"].get("bios_force") is None:
             config["options"]["nxos"]["bios_force"] = self.defaults["options"]["nxos"]["bios_force"]
-        if not config["options"].get("epld"):
+        if config["options"].get("epld") is None:
             config["options"]["epld"] = self.defaults["options"]["epld"]
-        if not config["options"]["epld"].get("module"):
+        if config["options"]["epld"].get("module") is None:
             config["options"]["epld"]["module"] = self.defaults["options"]["epld"]["module"]
-        if not config["options"]["epld"].get("golden"):
+        if config["options"]["epld"].get("golden") is None:
             config["options"]["epld"]["golden"] = self.defaults["options"]["epld"]["golden"]
-        if not config["options"].get("reboot"):
+        if config["options"].get("reboot") is None:
             config["options"]["reboot"] = self.defaults["options"]["reboot"]
-        if not config["options"]["reboot"].get("config_reload"):
+        if config["options"]["reboot"].get("config_reload") is None:
             config["options"]["reboot"]["config_reload"] = self.defaults["options"]["reboot"]["config_reload"]
-        if not config["options"]["reboot"].get("write_erase"):
+        if config["options"]["reboot"].get("write_erase") is None:
             config["options"]["reboot"]["write_erase"] = self.defaults["options"]["reboot"]["write_erase"]
-        if not config["options"].get("package"):
+        if config["options"].get("package") is None:
             config["options"]["package"] = self.defaults["options"]["package"]
-        if not config["options"]["package"].get("install"):
+        if config["options"]["package"].get("install") is None:
             config["options"]["package"]["install"] = self.defaults["options"]["package"]["install"]
-        if not config["options"]["package"].get("uninstall"):
+        if config["options"]["package"].get("uninstall") is None:
             config["options"]["package"]["uninstall"] = self.defaults["options"]["package"]["uninstall"]
         return config
 
