@@ -3762,7 +3762,12 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
                     msg = f"Seconds remaining {timeout}: validate image "
                     msg += f"{validated_state} for "
                     msg += f"{device_name}, {ip_address}, {serial_number}, "
-                    msg += f"image validated percent: {validated_percent}"
+                    msg += f"image validated percent: {validated_percent}. "
+                    msg += "Check the switch e.g. show install log detail, "
+                    msg += "show incompatibility-all nxos <image>.  Or "
+                    msg += "check NDFC Operations > Image Management > "
+                    msg += "Devices > View Details > Validate for "
+                    msg += "more details."
                     self.module.fail_json(msg)
 
                 if validated_state == "Success":
