@@ -3143,6 +3143,10 @@ class NdfcSwitchIssuDetailsBySerialNumber(NdfcSwitchIssuDetails):
             msg = f"{self.class_name}: set instance.serial_number "
             msg += f"before accessing property {item}."
             self.module.fail_json(msg)
+        if self.data_subclass.get(self.serial_number) is None:
+            msg = f"{self.class_name}: {self.serial_number} is not "
+            msg += f"defined in NDFC."
+            self.module.fail_json(msg)
         return self.make_none(self.data_subclass[self.serial_number].get(item))
 
     @property
@@ -3209,6 +3213,10 @@ class NdfcSwitchIssuDetailsByDeviceName(NdfcSwitchIssuDetails):
         if self.device_name is None:
             msg = f"{self.class_name}: set instance.device_name "
             msg += f"before accessing property {item}."
+            self.module.fail_json(msg)
+        if self.data_subclass.get(self.device_name) is None:
+            msg = f"{self.class_name}: {self.device_name} is not "
+            msg += f"defined in NDFC."
             self.module.fail_json(msg)
         return self.make_none(self.data_subclass[self.device_name].get(item))
 
