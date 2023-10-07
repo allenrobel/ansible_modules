@@ -90,49 +90,106 @@ options:
                 type: bool
                 required: false
                 default: True
+            reboot:
+                description:
+                - Reboot the switch after upgrade
+                type: bool
+                required: false
+                default: False
             upgrade:
-                nxos:
-                    description:
-                    - Enable (True) or disable (False) image upgrade
-                    type: bool
-                    required: false
-                    default: True
-                epld:
-                    description:
-                    - Enable (True) or disable (False) EPLD upgrade
-                    - If upgrade.nxos is false, epld and packages cannot both be true
-                    - If epld is true, nxos_option must be disruptive
-                    type: bool
-                    required: false
-                    default: False
-                packages:
-                    description:
-                    - Enable (True) or disable (False) package(s) upgrade
-                    - If upgrade.nxos is false, epld and packages cannot both be true
-                    type: bool
-                    required: false
-                    default: False
-                upgrade_option:
-                    description:
-                    - The type of upgrade to perform
-                    - Choose between distruptive, non_disruptive, force_non_disruptive
-                    type: string
-                    required: false
-                    default: distruptive
-                epld_options:
-                    module: 
+                description:
+                - A dictionary containing upgrade toggles for nxos and epld
+                type: dict
+                suboptions:
+                    nxos:
                         description:
-                        - The switch module to upgrade
-                        - Choose between ALL, or integer values
-                        type: string
+                        - Enable (True) or disable (False) image upgrade
+                        type: bool
                         required: false
-                        default: ALL
-                    golden:
+                        default: True
+                    epld:
                         description:
-                        - Enable (True) or disable (False) reverting to the golden EPLD image
+                        - Enable (True) or disable (False) EPLD upgrade
+                        - If upgrade.nxos is false, epld and packages cannot both be true
+                        - If epld is true, nxos_option must be disruptive
                         type: bool
                         required: false
                         default: False
+            options:
+                description:
+                - A dictionary containing options for each of the upgrade types
+                type: dict
+                suboptions:
+                    nxos:
+                        description:
+                        - A dictionary containing nxos upgrade options
+                        type: dict
+                        suboptions:
+                            mode:
+                                description:
+                                - nxos upgrade mode
+                                - Choose between distruptive, non_disruptive, force_non_disruptive
+                                type: string
+                                required: false
+                                default: distruptive
+                            bios_force:
+                                description:
+                                - Force BIOS upgrade
+                                type: bool
+                                required: false
+                                default: False
+                    epld:
+                        description:
+                        - A dictionary containing epld upgrade options
+                        type: dict
+                        suboptions:
+                            module:
+                                description:
+                                - The switch module to upgrade
+                                - Choose between ALL, or integer values
+                                type: string
+                                required: false
+                                default: ALL
+                            golden:
+                                description:
+                                - Enable (True) or disable (False) reverting to the golden EPLD image
+                                type: bool
+                                required: false
+                                default: False
+                    reboot:
+                        description:
+                        - A dictionary containing reboot options
+                        type: dict
+                        suboptions:
+                            config_reload:
+                                description:
+                                - Reload the configuration
+                                type: bool
+                                required: false
+                                default: False
+                            write_erase:
+                                description:
+                                - Erase the startup configuration
+                                type: bool
+                                required: false
+                                default: False
+                    package:
+                        description:
+                        - A dictionary containing package upgrade options
+                        type: dict
+                        suboptions:
+                            install:
+                                description:
+                                - Install the package
+                                type: bool
+                                required: false
+                                default: False
+                            uninstall:
+                                description:
+                                - Uninstall the package
+                                type: bool
+                                required: false
+                                default: False
             switches:
                 description:
                 - A list of devices to attach the image policy to.
@@ -147,14 +204,13 @@ options:
                         required: true
                     policy:
                         description:
-                        - The image policy name to attach to the device.
+                        - Image policy name
                         type: str
-                        required: false
-                        default: The global policy name
+                        required: true
+                        default: False
                     stage:
                         description:
                         - Stage (True) or unstage (False) an image policy
-                        - Overrides the global stage parameter
                         type: bool
                         required: false
                         default: True
@@ -165,51 +221,106 @@ options:
                         type: bool
                         required: false
                         default: True
+                    reboot:
+                        description:
+                        - Reboot the switch after upgrade
+                        type: bool
+                        required: false
+                        default: False
                     upgrade:
-                        nxos:
-                            description:
-                            - Enable (True) or disable (False) image upgrade
-                            type: bool
-                            required: false
-                            default: True
-                        epld:
-                            description:
-                            - Enable (True) or disable (False) EPLD upgrade
-                            - If upgrade.nxos is false, epld and packages cannot both be true
-                            - If epld is true, nxos_option must be disruptive
-                            type: bool
-                            required: false
-                            default: False
-                        packages:
-                            description:
-                            - Enable (True) or disable (False) package(s) upgrade
-                            - If upgrade.nxos is false, epld and packages cannot both be true
-                            type: bool
-                            required: false
-                            default: False
-                    options:
-                        nxos:
-                            mode:
+                        description:
+                        - A dictionary containing upgrade toggles for nxos and epld
+                        type: dict
+                        suboptions:
+                            nxos:
                                 description:
-                                - nxos upgrade mode
-                                - Choose between distruptive, non_disruptive, force_non_disruptive
-                                type: string
+                                - Enable (True) or disable (False) image upgrade
+                                type: bool
                                 required: false
-                                default: distruptive
-                        epld:
-                            module: 
+                                default: True
+                            epld:
                                 description:
-                                - The switch module to upgrade
-                                - Choose between ALL, or integer values
-                                type: string
-                                required: false
-                                default: ALL
-                            golden:
-                                description:
-                                - Enable (True) or disable (False) reverting to the golden EPLD image
+                                - Enable (True) or disable (False) EPLD upgrade
+                                - If upgrade.nxos is false, epld and packages cannot both be true
+                                - If epld is true, nxos_option must be disruptive
                                 type: bool
                                 required: false
                                 default: False
+                    options:
+                        description:
+                        - A dictionary containing options for each of the upgrade types
+                        type: dict
+                        suboptions:
+                            nxos:
+                                description:
+                                - A dictionary containing nxos upgrade options
+                                type: dict
+                                suboptions:
+                                    mode:
+                                        description:
+                                        - nxos upgrade mode
+                                        - Choose between distruptive, non_disruptive, force_non_disruptive
+                                        type: string
+                                        required: false
+                                        default: distruptive
+                                    bios_force:
+                                        description:
+                                        - Force BIOS upgrade
+                                        type: bool
+                                        required: false
+                                        default: False
+                            epld:
+                                description:
+                                - A dictionary containing epld upgrade options
+                                type: dict
+                                suboptions:
+                                    module:
+                                        description:
+                                        - The switch module to upgrade
+                                        - Choose between ALL, or integer values
+                                        type: string
+                                        required: false
+                                        default: ALL
+                                    golden:
+                                        description:
+                                        - Enable (True) or disable (False) reverting to the golden EPLD image
+                                        type: bool
+                                        required: false
+                                        default: False
+                            reboot:
+                                description:
+                                - A dictionary containing reboot options
+                                type: dict
+                                suboptions:
+                                    config_reload:
+                                        description:
+                                        - Reload the configuration
+                                        type: bool
+                                        required: false
+                                        default: False
+                                    write_erase:
+                                        description:
+                                        - Erase the startup configuration
+                                        type: bool
+                                        required: false
+                                        default: False
+                            package:
+                                description:
+                                - A dictionary containing package upgrade options
+                                type: dict
+                                suboptions:
+                                    install:
+                                        description:
+                                        - Install the package
+                                        type: bool
+                                        required: false
+                                        default: False
+                                    uninstall:
+                                        description:
+                                        - Uninstall the package
+                                        type: bool
+                                        required: false
+                                        default: False
 
 """
 
@@ -227,14 +338,17 @@ EXAMPLES = """
 #
 
 # Attach image policy NR3F to two devices
-# Stage the image on both devices but do not upgrade
-    -   name: stage/upgrade devices
+# Stage and validate the image on two devices but do not upgrade
+    -   name: stage/validate images
         cisco.dcnm.dcnm_image_upgrade:
             state: merged
             config:
                 policy: NR3F
                 stage: true
-                upgrade: false
+                validate: true
+                upgrade:
+                    nxos: false
+                    epld: false
                 switches:
                 -   ip_address: 192.168.1.1
                 -   ip_address: 192.168.1.2
@@ -3722,7 +3836,7 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
 
     def _wait_for_image_validate_to_complete(self):
         """
-        # Wait for image validation to complete
+        Wait for image validation to complete
         """
         serial_numbers_done = set()
         timeout = self.check_timeout
