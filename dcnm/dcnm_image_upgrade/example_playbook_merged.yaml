@@ -1,26 +1,73 @@
 -   hosts: ndfc
     gather_facts: false
     tasks:
-    -   name: stage/validate/upgrade devices
+    -   name: stage/upgrade devices
         cisco.dcnm.dcnm_image_upgrade:
-            state: merged                       # Mandatory, one of: merged, deleted, query
+            state: merged
             config:
-                policy: OLDER                   # Policy name to which switches are attached
-                                                # - mandatory if not specified in switches list
-                stage: true                     # Trigger stage image if the image is not staged
-                                                # - optional
-                                                # - default: true
-                                                # - ignored if state is deleted or query
-                upgrade: true                   # Trigger upgrade if image is staged
-                                                # - optional
-                                                # - default: true
-                                                # - ignored if state is deleted or query
-                switches:                       # Mandatory list of dict, per-switch override of the global config
+                policy: OR1F
+                stage: true
+                validate: true
+                upgrade:
+                    nxos: true
+                    epld: false
+                reboot: false
+                options:
+                    nxos:
+                        mode: disruptive
+                        bios_force: true
+                    epld:
+                        module: ALL
+                        golden: false
+                    reboot:
+                        config_reload: true
+                        write_erase: true
+                    package:
+                        install: false
+                        uninstall: false
+                switches:
+                # -   ip_address: 172.22.150.102
+                #     policy: KR5M
+                #     stage: true
+                #     validate: true
+                #     upgrade:
+                #         nxos: true
+                #         epld: true
+                #     options:
+                #         nxos:
+                #             mode: disruptive
+                #             bios_force: true
+                # -   ip_address: 172.22.150.100
+                # -   ip_address: 172.22.150.101
                 -   ip_address: 172.22.150.102
-                -   ip_address: 172.22.150.103
-                -   ip_address: 172.22.150.113
+                # -   ip_address: 172.22.150.103
+                # -   ip_address: 172.22.150.104
+                # -   ip_address: 172.22.150.105
+                # -   ip_address: 172.22.150.106
+                # -   ip_address: 172.22.150.107
+                # -   ip_address: 172.22.150.108
+                # -   ip_address: 172.22.150.109
+                # -   ip_address: 172.22.150.110
+                    # upgrade:
+                    #     nxos: false
+                    #     epld: true
+                    # options:
+                    #     epld:
+                    #         module: 27
+                    #         golden: true
+                # -   ip_address: 172.22.150.111
+                    # upgrade:
+                    #     nxos: false
+                    #     epld: true
+                    # options:
+                    #     epld:
+                    #         module: 27
+                    #         golden: true
+                # -   ip_address: 172.22.150.112
+                # -   ip_address: 172.22.150.113
+                # -   ip_address: 172.22.150.114
+                # -   ip_address: 172.22.150.115
         register: result
     -   name: print result
         ansible.builtin.debug:
             var: result
-
