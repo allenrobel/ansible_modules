@@ -407,10 +407,7 @@ EXAMPLES = """
 """
 class NdfcAnsibleImageUpgradeCommon:
     """
-    Base class for the following classes in this file:
-
-    NdfcAnsibleImageUpgrade()
-
+    Base class for the other classes in this file
     """
 
     def __init__(self, module):
@@ -3751,7 +3748,7 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
 
     def validate_serial_numbers(self):
         """
-        Fail if the validated state for any serial_number
+        Log a warning if the validated state for any serial_number
         is Failed.
 
         TODO:3 If validate == Failed, it may have been from the last operation.
@@ -4006,7 +4003,10 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         [
             {
                 'policy': 'KR3F',
+                'ip_address': '172.22.150.102',
+                'policy_changed': False
                 'stage': False,
+                'validate': True,
                 'upgrade': {
                     'nxos': True, 
                     'epld': False
@@ -4019,11 +4019,16 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
                     'epld': {
                         'module': 'ALL',
                         'golden': False
+                    },
+                    'reboot': {
+                        'config_reload': False,
+                        'write_erase': False
+                    },
+                    'package': {
+                        'install': False,
+                        'uninstall': False
                     }
                 },
-                'validate': False,
-                'ip_address': '172.22.150.102',
-                'policy_changed': False
             },
             etc...
         ]
@@ -4076,6 +4081,9 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
     def __init__(self, module):
         super().__init__(module)
         self.class_name = self.__class__.__name__
+        # Maximum number of modules/linecards in a switch
+        self.max_module_number = 9
+
         self._init_defaults()
         self._init_properties()
         self._populate_ndfc_version()
@@ -4129,6 +4137,16 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.properties["package_uninstall"] = False
         self.properties["reboot"] = False
         self.properties["write_erase"] = False
+
+        self.valid_nxos_mode = set()
+        self.valid_nxos_mode.add("disruptive")
+        self.valid_nxos_mode.add("non_disruptive")
+        self.valid_nxos_mode.add("force_non_disruptive")
+
+        self.valid_epld_module = set()
+        self.valid_epld_module.add("ALL")
+        for module in range(1, self.max_module_number):
+            self.valid_epld_module.add(str(module))
 
     def _populate_ndfc_version(self):
         """
@@ -4253,73 +4271,87 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.payload["devices"] = devices_to_upgrade
         self.payload["issuUpgrade"] = device.get("upgrade").get("nxos")
 
-        # The following three options are mutually-exclusive.
+        # nxos_mode: The choices for nxos_mode are mutually-exclusive.
         # If one is set to True, the others must be False.
         # nonDisruptive corresponds to NDFC Allow Non-Disruptive GUI option
         self.payload["issuUpgradeOptions1"] = {}
         self.payload["issuUpgradeOptions1"]["nonDisruptive"] = False
         self.payload["issuUpgradeOptions1"]["forceNonDisruptive"] = False
         self.payload["issuUpgradeOptions1"]["disruptive"] = False
+
         nxos_mode = device.get("options").get("nxos").get("mode")
+        if nxos_mode not in self.valid_nxos_mode:
+            msg = f"{self.class_name}.build_payload() options.nxos.mode must "
+            msg += f"be one of {self.valid_nxos_mode}. Got {nxos_mode}."
+            self.module.fail_json(msg)
         if nxos_mode == "non_disruptive":
             self.payload["issuUpgradeOptions1"]["nonDisruptive"] = True
-        elif nxos_mode == "disruptive":
+        if nxos_mode == "disruptive":
             self.payload["issuUpgradeOptions1"]["disruptive"] = True
-        elif nxos_mode == "force_non_disruptive":
+        if nxos_mode == "force_non_disruptive":
             self.payload["issuUpgradeOptions1"]["forceNonDisruptive"] = True
-        else:
-            msg = f"{self.class_name}.build_payload() options.nxos.mode must be "
-            msg += "one of non_disruptive, disruptive, or force_non_disruptive. "
-            msg += f"Got {nxos_mode}."
-            self.module.fail_json(msg)
 
         # biosForce corresponds to NDFC BIOS Force GUI option
+        bios_force = device.get("options").get("nxos").get("bios_force")
+        if not isinstance(bios_force, bool):
+            msg = f"{self.class_name}.build_payload() options.nxos.bios_force "
+            msg += f"must be a boolean. Got {bios_force}."
+            self.module.fail_json(msg)
         self.payload["issuUpgradeOptions2"] = {}
-        self.payload["issuUpgradeOptions2"]["biosForce"] = device.get(
-            "options").get(
-            "nxos").get(
-            "bios_force"
-        )
+        self.payload["issuUpgradeOptions2"]["biosForce"] = bios_force
 
         # EPLD
+        epld_module = device.get("options").get("epld").get("module")
+        epld_golden = device.get("options").get("epld").get("golden")
+        if epld_module not in self.valid_epld_module:
+            msg = f"{self.class_name}.build_payload() options.epld.module must "
+            msg += f"be one of {self.valid_epld_module}. Got {epld_module}."
+            self.module.fail_json(msg)
+        if not isinstance(epld_golden, bool):
+            msg = f"{self.class_name}.build_payload() options.epld.golden "
+            msg += f"must be a boolean. Got {epld_golden}."
+            self.module.fail_json(msg)
         self.payload["epldUpgrade"] = device.get("upgrade").get("epld")
         self.payload["epldOptions"] = {}
-        self.payload["epldOptions"]["moduleNumber"] = device.get(
-            "options").get(
-            "epld").get(
-            "module"
-        )
-        self.payload["epldOptions"]["golden"] = device.get(
-            "options").get(
-            "epld").get(
-            "golden"
-        )
+        self.payload["epldOptions"]["moduleNumber"] = epld_module
+        self.payload["epldOptions"]["golden"] = epld_golden
 
         # Reboot
-        self.payload["reboot"] = device.get("reboot")
+        reboot = device.get("reboot")
+        if not isinstance(reboot, bool):
+            msg = f"{self.class_name}.build_payload() reboot must "
+            msg += f"be a boolean. Got {reboot}."
+            self.module.fail_json(msg)
+        self.payload["reboot"] = reboot
+
+        # Reboot options
+        config_reload = device.get("options").get("reboot").get("config_reload")
+        write_erase = device.get("options").get("reboot").get("write_erase")
+        if not isinstance(config_reload, bool):
+            msg = f"{self.class_name}.build_payload() options.reboot.config_reload "
+            msg += f"must be a boolean. Got {config_reload}."
+            self.module.fail_json(msg)
+        if not isinstance(write_erase, bool):
+            msg = f"{self.class_name}.build_payload() options.reboot.write_erase "
+            msg += f"must be a boolean. Got {write_erase}."
+            self.module.fail_json(msg)
         self.payload["rebootOptions"] = {}
-        self.payload["rebootOptions"]["configReload"] = device.get(
-            "options").get(
-            "reboot").get(
-            "config_reload"
-        )
-        self.payload["rebootOptions"]["writeErase"] = device.get(
-            "options").get(
-            "reboot").get(
-            "write_erase"
-        )
+        self.payload["rebootOptions"]["configReload"] = config_reload
+        self.payload["rebootOptions"]["writeErase"] = write_erase
 
         # Packages
-        self.payload["pacakgeInstall"] = device.get(
-            "options").get(
-            "package").get(
-            "install"
-        )
-        self.payload["pacakgeUnInstall"] = device.get(
-            "options").get(
-            "package").get(
-            "uninstall"
-        )
+        package_install = device.get("options").get("package").get("install")
+        package_uninstall = device.get("options").get("package").get("uninstall")
+        if not isinstance(package_install, bool):
+            msg = f"{self.class_name}.build_payload() options.package.install "
+            msg += f"must be a boolean. Got {package_install}."
+            self.module.fail_json(msg)
+        if not isinstance(package_uninstall, bool):
+            msg = f"{self.class_name}.build_payload() options.package.uninstall "
+            msg += f"must be a boolean. Got {package_uninstall}."
+            self.module.fail_json(msg)
+        self.payload["pacakgeInstall"] = package_install
+        self.payload["pacakgeUnInstall"] = package_uninstall
 
     def commit(self):
         """
