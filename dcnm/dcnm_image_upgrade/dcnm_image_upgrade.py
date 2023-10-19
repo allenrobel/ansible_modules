@@ -405,6 +405,155 @@ EXAMPLES = """
                 -   ip_address: 192.168.1.2
 
 """
+class NdfcEndpoints:
+    """
+    Endpoints for NDFC API calls
+    """
+    def __init__(self):
+        self.endpoint_api_v1 = "/appcenter/cisco/ndfc/api/v1"
+
+        self.endpoint_feature_manager = f"{self.endpoint_api_v1}/fm"
+        self.endpoint_lan_fabric = f"{self.endpoint_api_v1}/lan-fabric"
+
+        self.endpoint_image_management = f"{self.endpoint_api_v1}"
+        self.endpoint_image_management += "/imagemanagement"
+
+        self.endpoint_image_upgrade = f"{self.endpoint_image_management}"
+        self.endpoint_image_upgrade += "/rest/imageupgrade"
+
+        self.endpoint_package_mgnt = f"{self.endpoint_image_management}"
+        self.endpoint_package_mgnt += "/rest/packagemgnt"
+
+        self.endpoint_policy_mgnt = f"{self.endpoint_image_management}"
+        self.endpoint_policy_mgnt += "/rest/policymgnt"
+
+        self.endpoint_staging_management = f"{self.endpoint_image_management}"
+        self.endpoint_staging_management += "/rest/stagingmanagement" 
+   
+    @property
+    def bootflash_info(self):
+        path = f"{self.endpoint_image_management}/rest/imagemgnt/bootFlash"
+        path += f"/bootflash-info"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "GET"
+        return endpoint
+
+    @property
+    def install_options(self):
+        path = f"{self.endpoint_image_upgrade}/install-options"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "POST"
+        return endpoint
+
+    @property
+    def image_stage(self):
+        path = f"{self.endpoint_staging_management}/stage-image"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "POST"
+        return endpoint
+
+    @property
+    def image_upgrade(self):
+        path = f"{self.endpoint_image_upgrade}/upgrade-image"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "POST"
+        return endpoint
+
+    @property
+    def image_validate(self):
+        path = f"{self.endpoint_staging_management}/validate-image"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "POST"
+        return endpoint
+
+    @property
+    def issu_info(self):
+        path = f"{self.endpoint_package_mgnt}/issu"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "GET"
+        return endpoint
+    
+    @property
+    def ndfc_version(self):
+        path = f"{self.endpoint_feature_manager}/about/version"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "GET"
+        return endpoint
+
+    @property
+    def policies_attached_info(self):
+        path = f"{self.endpoint_policy_mgnt}/all-attached-policies"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "GET"
+        return endpoint
+    
+    @property
+    def policies_info(self):
+        path = f"{self.endpoint_policy_mgnt}/policies"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "GET"
+        return endpoint
+
+    @property
+    def policy_attach(self):
+        path = f"{self.endpoint_policy_mgnt}/attach-policy"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "POST"
+        return endpoint
+
+    @property
+    def policy_create(self):
+        path = f"{self.endpoint_policy_mgnt}/platform-policy"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "POST"
+        return endpoint
+
+    @property
+    def policy_detach(self):
+        path = f"{self.endpoint_policy_mgnt}/detach-policy"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "DELETE"
+        return endpoint
+    
+    @property
+    def policy_info(self):
+        # Replace __POLICY_NAME__ with the policy_name to query
+        # e.g. path.replace("__POLICY_NAME__", "NR1F")
+        path = f"{self.endpoint_policy_mgnt}/image-policy/__POLICY_NAME__"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "GET"
+        return endpoint
+    
+    @property
+    def stage_info(self):
+        path = f"{self.endpoint_staging_management}/stage-info"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "GET"
+        return endpoint
+    
+    @property
+    def switches_info(self):
+        path = f"{self.endpoint_lan_fabric}/rest/inventory/allswitches"
+        endpoint = {}
+        endpoint["path"] = path
+        endpoint["verb"] = "GET"
+        return endpoint
+
+
 class NdfcAnsibleImageUpgradeCommon:
     """
     Base class for the other classes in this file
@@ -416,121 +565,8 @@ class NdfcAnsibleImageUpgradeCommon:
         self.debug = True
         self.fd = None
         self.logfile = "/tmp/dcnm_image_upgrade.log"
-        self._init_endpoints()
+        self.endpoints = NdfcEndpoints()
 
-    def _init_endpoints(self):
-        self.log_msg(f"{self.__class__.__name__}._init_endpoints()")
-        self.endpoint_api_v1 = "/appcenter/cisco/ndfc/api/v1"
-
-        self.endpoint_image_management = f"{self.endpoint_api_v1}/imagemanagement"
-        self.endpoint_feature_manager = f"{self.endpoint_api_v1}/fm"
-        self.endpoint_lan_fabric = f"{self.endpoint_api_v1}/lan-fabric"
-
-        self.endpoint_bootflash = (
-            f"{self.endpoint_image_management}/rest/imagemgnt/bootFlash"
-        )
-        self.endpoint_image_upgrade = (
-            f"{self.endpoint_image_management}/rest/imageupgrade"
-        )
-        self.endpoint_staging_management = (
-            f"{self.endpoint_image_management}/rest/stagingmanagement"
-        )
-        self.endpoint_package_mgnt = (
-            f"{self.endpoint_image_management}/rest/packagemgnt"
-        )
-        self.endpoint_policy_mgnt = f"{self.endpoint_image_management}/rest/policymgnt"
-
-        self.endpoints = {}
-        self.endpoints["bootflash_info"] = {}
-        self.endpoints["install_options"] = {}
-        self.endpoints["image_stage"] = {}
-        self.endpoints["image_upgrade"] = {}
-        self.endpoints["image_validate"] = {}
-        self.endpoints["issu_info"] = {}
-        self.endpoints["ndfc_version"] = {}
-        self.endpoints["policies_attached_info"] = {}
-        self.endpoints["policies_info"] = {}
-        self.endpoints["policy_attach"] = {}
-        self.endpoints["policy_create"] = {}
-        self.endpoints["policy_detach"] = {}
-        self.endpoints["policy_info"] = {}
-        self.endpoints["stage_info"] = {}
-        self.endpoints["switches_info"] = {}
-
-        self.endpoints["bootflash_info"][
-            "path"
-        ] = f"{self.endpoint_bootflash}/bootflash-info"
-        self.endpoints["bootflash_info"]["verb"] = "GET"
-
-        self.endpoints["install_options"][
-            "path"
-        ] = f"{self.endpoint_image_upgrade}/install-options"
-        self.endpoints["install_options"]["verb"] = "POST"
-
-        self.endpoints["image_stage"][
-            "path"
-        ] = f"{self.endpoint_staging_management}/stage-image"
-        self.endpoints["image_stage"]["verb"] = "POST"
-
-        self.endpoints["image_upgrade"][
-            "path"
-        ] = f"{self.endpoint_image_upgrade}/upgrade-image"
-        self.endpoints["image_upgrade"]["verb"] = "POST"
-
-        self.endpoints["image_validate"][
-            "path"
-        ] = f"{self.endpoint_staging_management}/validate-image"
-        self.endpoints["image_validate"]["verb"] = "POST"
-
-        self.endpoints["issu_info"]["path"] = f"{self.endpoint_package_mgnt}/issu"
-        self.endpoints["issu_info"]["verb"] = "GET"
-
-        self.endpoints["ndfc_version"][
-            "path"
-        ] = f"{self.endpoint_feature_manager}/about/version"
-        self.endpoints["ndfc_version"]["verb"] = "GET"
-
-        self.endpoints["policies_attached_info"][
-            "path"
-        ] = f"{self.endpoint_policy_mgnt}/all-attached-policies"
-        self.endpoints["policies_attached_info"]["verb"] = "GET"
-
-        self.endpoints["policies_info"][
-            "path"
-        ] = f"{self.endpoint_policy_mgnt}/policies"
-        self.endpoints["policies_info"]["verb"] = "GET"
-
-        self.endpoints["policy_attach"][
-            "path"
-        ] = f"{self.endpoint_policy_mgnt}/attach-policy"
-        self.endpoints["policy_attach"]["verb"] = "POST"
-
-        self.endpoints["policy_create"][
-            "path"
-        ] = f"{self.endpoint_policy_mgnt}/platform-policy"
-        self.endpoints["policy_create"]["verb"] = "POST"
-
-        self.endpoints["policy_detach"][
-            "path"
-        ] = f"{self.endpoint_policy_mgnt}/detach-policy"
-        self.endpoints["policy_detach"]["verb"] = "DELETE"
-
-        # Replace __POLICY_NAME__ with the policy_name to query
-        # e.g. path.replace("__POLICY_NAME__", "NR1F")
-        self.endpoints["policy_info"][
-            "path"
-        ] = f"{self.endpoint_policy_mgnt}/image-policy/__POLICY_NAME__"
-        self.endpoints["policy_info"]["verb"] = "GET"
-
-        self.endpoints["stage_info"][
-            "path"
-        ] = f"{self.endpoint_staging_management}/stage-info"
-        self.endpoints["stage_info"]["verb"] = "GET"
-
-        self.endpoints["switches_info"][
-            "path"
-        ] = f"{self.endpoint_lan_fabric}/rest/inventory/allswitches"
-        self.endpoints["switches_info"]["verb"] = "GET"
 
     def _handle_response(self, response, verb):
         if verb == "GET":
@@ -1202,8 +1238,8 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         """
         if len(self.payloads) == 0:
             return
-        path = self.endpoints["policy_attach"]["path"]
-        verb = self.endpoints["policy_attach"]["verb"]
+        path = self.endpoints.policy_attach.get("path")
+        verb = self.endpoints.policy_attach.get("verb")
         payload = {}
         payload["mappingList"] = self.payloads
         response = dcnm_send(self.module, verb, path, data=json.dumps(payload))
@@ -1275,7 +1311,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             return
         install_options = NdfcImageInstallOptions(self.module)
         for device in devices:
-            self.log_msg(f"REMOVE: {self.class_name}._verify_install_options: device: {device}")    
+            self.log_msg(f"REMOVE: {self.class_name}._verify_install_options: device: {device}")
             self.switch_details.ip_address = device.get("ip_address")
             install_options.serial_number = self.switch_details.serial_number
             install_options.policy_name = device["policy"]
@@ -1359,7 +1395,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             if (
                 switch.get("upgrade").get("nxos") is not False or
                 switch.get("upgrade").get("epld") is not False):
-                    upgrade_devices.append(switch)
+                upgrade_devices.append(switch)
 
         msg = f"REMOVE: {self.class_name}.handle_merged_state: stage_devices: {stage_devices}"
         self.log_msg(msg)
@@ -1509,8 +1545,8 @@ class NdfcSwitchDetails(NdfcAnsibleImageUpgradeCommon):
 
         Refresh switch_details with current switch details from NDFC
         """
-        path = self.endpoints["switches_info"]["path"]
-        verb = self.endpoints["switches_info"]["verb"]
+        path = self.endpoints.switches_info.get("path")
+        verb = self.endpoints.switches_info.get("verb")
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
         if self.ndfc_response["RETURN_CODE"] != 200:
@@ -1768,8 +1804,8 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
             msg += f"calling refresh()"
             self.module.fail_json(msg)
 
-        path = self.endpoints["install_options"]["path"]
-        verb = self.endpoints["install_options"]["verb"]
+        path = self.endpoints.install_options.get("path")
+        verb = self.endpoints.install_options.get("verb")
         self._build_payload()
         msg = f"REMOVE: {self.class_name}.refresh: "
         msg += f"payload: {self.payload}"
@@ -2199,8 +2235,8 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         respectively.
         """
         self.build_attach_payload()
-        path = self.endpoints["policy_attach"]["path"]
-        verb = self.endpoints["policy_attach"]["verb"]
+        path = self.endpoints.policy_attach.get("path")
+        verb = self.endpoints.policy_attach.get("verb")
         responses = []
         results = []
         for payload in self.payloads:
@@ -2223,8 +2259,8 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         endpoint: /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/detach-policy
         query_params: ?serialNumber=FDO211218GC,FDO21120U5D
         """
-        path = self.endpoints["policy_detach"]["path"]
-        verb = self.endpoints["policy_detach"]["verb"]
+        path = self.endpoints.policy_detach.get("path")
+        verb = self.endpoints.policy_detach.get("verb")
         query_params = ",".join(self.serial_numbers)
         path += f"?serialNumber={query_params}"
         response = dcnm_send(self.module, verb, path)
@@ -2240,8 +2276,8 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         verb: GET
         endpoint: /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/image-policy/__POLICY_NAME__
         """
-        path = self.endpoints["policy_info"]["path"]
-        verb = self.endpoints["policy_info"]["verb"]
+        path = self.endpoints.policy_info.get("path")
+        verb = self.endpoints.policy_info.get("verb")
         path = path.replace("__POLICY_NAME__", self.policy_name)
         response = dcnm_send(self.module, verb, path)
         result = self._handle_response(response, verb)
@@ -2366,8 +2402,8 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
         """
         Refresh self.image_policies with current image policies from NDFC
         """
-        path = self.endpoints["policies_info"]["path"]
-        verb = self.endpoints["policies_info"]["verb"]
+        path = self.endpoints.policies_info.get("path")
+        verb = self.endpoints.policies_info.get("verb")
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
 
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
@@ -2632,8 +2668,8 @@ class NdfcSwitchIssuDetails(NdfcAnsibleImageUpgradeCommon):
 
         Refresh current issu details from NDFC
         """
-        path = self.endpoints["issu_info"]["path"]
-        verb = self.endpoints["issu_info"]["verb"]
+        path = self.endpoints.issu_info.get("path")
+        verb = self.endpoints.issu_info.get("verb")
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
         if not self.ndfc_result["success"]:
@@ -3195,7 +3231,7 @@ class NdfcSwitchIssuDetailsByIpAddress(NdfcSwitchIssuDetails):
         Return None of the switch does not exist in NDFC.
         """
         return self.data_subclass.get(self.ip_address)
-        
+
     @property
     def ip_address(self):
         """
@@ -3493,8 +3529,10 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         self.prune_serial_numbers()
         self.validate_serial_numbers()
         self._wait_for_current_actions_to_complete()
-        path = self.endpoints["image_stage"]["path"]
-        verb = self.endpoints["image_stage"]["verb"]
+
+        path = self.endpoints.image_stage.get("path")
+        verb = self.endpoints.image_stage.get("verb")
+
         payload = {}
         if self.ndfc_version == "12.1.2e":
             # Yes, NDFC wants serialNum to be misspelled
@@ -3789,8 +3827,8 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
         self.prune_serial_numbers()
         self.validate_serial_numbers()
         self._wait_for_current_actions_to_complete()
-        path = self.endpoints["image_validate"]["path"]
-        verb = self.endpoints["image_validate"]["verb"]
+        path = self.endpoints.image_validate.get("path")
+        verb = self.endpoints.image_validate.get("verb")
         self.build_payload()
         self.properties["ndfc_response"] = dcnm_send(
             self.module, verb, path, data=json.dumps(self.payload)
@@ -4091,6 +4129,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
     def _init_defaults(self):
         self.defaults = {}
+        self.defaults["reboot"] = False
         self.defaults["stage"] = True
         self.defaults["validate"] = True
         self.defaults["upgrade"] = {}
@@ -4198,7 +4237,8 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             self.issu_detail.ip_address = device.get("ip_address")
             self.issu_detail.refresh()
             if self.issu_detail.upgrade == "Failed":
-                msg = "Image upgrade is failing for the following switch: "
+                msg = f"{self.class_name}.validate_devices: Image upgrade is "
+                msg += "failing for the following switch: "
                 msg += f"{self.issu_detail.device_name}, "
                 msg += f"{self.issu_detail.ip_address}, "
                 msg += f"{self.issu_detail.serial_number}. "
@@ -4211,6 +4251,10 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
     def _merge_defaults_to_switch_config(self, config):
         if config.get("stage") is None:
             config["stage"] = self.defaults["stage"]
+        if config.get("reboot") is None:
+            config["reboot"] = self.defaults["reboot"]
+        if config.get("validate") is None:
+            config["validate"] = self.defaults["validate"]
         if config.get("upgrade") is None:
             config["upgrade"] = self.defaults["upgrade"]
         if config.get("upgrade").get("nxos") is None:
@@ -4369,8 +4413,8 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         #self.prune_devices()
         self.validate_devices()
         self._wait_for_current_actions_to_complete()
-        path = self.endpoints["image_upgrade"]["path"]
-        verb = self.endpoints["image_upgrade"]["verb"]
+        path = self.endpoints.image_upgrade.get("path")
+        verb = self.endpoints.image_upgrade.get("verb")
         for device in self.devices:
             self.build_payload(device)
             self.log_msg(f"REMOVE: {self.class_name}.commit() upgrade payload: {self.payload}")
@@ -4831,8 +4875,8 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
         """
         Refresh self.ndfc_data with current version info from NDFC
         """
-        path = self.endpoints["ndfc_version"]["path"]
-        verb = self.endpoints["ndfc_version"]["verb"]
+        path = self.endpoints.ndfc_version.get("path")
+        verb = self.endpoints.ndfc_version.get("verb")
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
         msg = f"REMOVE: {self.class_name}.refresh() response: {self.ndfc_response}"
