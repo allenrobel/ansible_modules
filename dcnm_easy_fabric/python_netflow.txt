@@ -1,3 +1,0 @@
-'NETFLOW_EXPORTER_LIST': '{"NETFLOW_EXPORTER_LIST": [{"EXPORTER_NAME": "exporter1", "IP": "172.22.150.102", "VRF": "default", "SRC_IF_NAME": "Loopback0", "UDP_PORT": 6500}]}'
-'NETFLOW_RECORD_LIST': '{"NETFLOW_RECORD_LIST": [{"RECORD_NAME": "ipv4-record", "RECORD_TEMPLATE": "netflow_ipv4_record", "LAYER2_RECORD": "false"}]}'
-'NETFLOW_MONITOR_LIST': '{"NETFLOW_MONITOR_LIST": [{"MONITOR_NAME": "netflow-monitor", "RECORD_NAME": "ipv4-record", "EXPORTER1": "exporter1"}]}'

@@ -1,7 +1,0 @@
-  template peer LEAF
-    description LEAF_PEERS
-    remote-as 1
-    address-family l2vpn evpn
-    address-family ipv4 unicast
-      allowas-in 3
-
