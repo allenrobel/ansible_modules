@@ -1547,7 +1547,13 @@ class NdfcSwitchDetails(NdfcAnsibleImageUpgradeCommon):
         """
         path = self.endpoints.switches_info.get("path")
         verb = self.endpoints.switches_info.get("verb")
+        self.log_msg(f"REMOVE: {self.class_name}.refresh: path: {path}")
+        self.log_msg(f"REMOVE: {self.class_name}.refresh: verb: {verb}")
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
+        msg = f"REMOVE: {self.class_name}.refresh: self.ndfc_response_1 {self.ndfc_response}"
+        self.log_msg(msg)
+        msg = f"REMOVE: {self.class_name}.refresh: self.ndfc_response_2 {self.ndfc_response}"
+        self.log_msg(msg)
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
         if self.ndfc_response["RETURN_CODE"] != 200:
             msg = "Unable to retrieve switch information from NDFC. "
@@ -2404,9 +2410,13 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
         """
         path = self.endpoints.policies_info.get("path")
         verb = self.endpoints.policies_info.get("verb")
+
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
+        self.log_msg(f"{self.class_name}.refresh: ndfc_response: {self.ndfc_response}")
 
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
+        self.log_msg(f"{self.class_name}.refresh: ndfc_result: {self.ndfc_result}")
+
         msg = f"REMOVE: {self.class_name}.refresh: "
         msg += f"result: {self.ndfc_result}"
         if not self.ndfc_result["success"]:
