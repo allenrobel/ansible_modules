@@ -2,7 +2,7 @@ from dcnm_image_upgrade.dcnm_image_upgrade import NdfcEndpoints
 
 """
 ndfc_version: 12
-description: Verify that the NdfcEndpoints class returns the correct endpoints
+description: Verify that class NdfcEndpoints returns the correct endpoints
 """
 def test_dcnm_image_upgrade_endpoints_bootflash_info() -> None:
     """
