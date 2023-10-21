@@ -133,6 +133,22 @@ def test_dcnm_image_upgrade_common_handle_response_unknown_response_verb() -> No
     with pytest.raises(AnsibleFailJson, match=r"Unknown request verb \(FOO\)"):
         result = module._handle_response(response_data, verb)
 
+def test_dcnm_image_upgrade_common_make_boolean() -> None:
+    """
+    """
+    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
+    assert module.make_boolean("True") == True
+    assert module.make_boolean("False") == False
+    assert module.make_boolean("true") == True
+    assert module.make_boolean("false") == False
+    assert module.make_boolean(True) == True
+    assert module.make_boolean(False) == False
+    assert module.make_boolean("foo") == "foo"
+    assert module.make_boolean(1) == 1
+    assert module.make_boolean(0) == 0
+    assert module.make_boolean(None) == None
+    assert module.make_boolean({"foo": 10}) == {"foo": 10}
+    assert module.make_boolean([1,2,"3"]) == [1,2,"3"]
 
 '''
 # Example of using monkeypatch if we need to patch a property
