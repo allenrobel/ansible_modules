@@ -1,175 +1,115 @@
 from dcnm_image_upgrade.dcnm_image_upgrade import NdfcAnsibleImageUpgradeCommon
 from dcnm_image_upgrade.tests.unit.modules.dcnm.dcnm_module import loadPlaybookData
 from ansible_collections.ansible.netcommon.tests.unit.modules.utils import (
-    AnsibleExitJson,
     AnsibleFailJson,
-    ModuleTestCase,
 )
 import pytest
+from typing import Dict
 
-# Uncomment if we need this later...
-# from pytest import MonkeyPatch
 """
 ndfc_version: 12
 description: Verify functionality of class NdfcAnsibleImageUpgradeCommon
 """
+
+
+@pytest.fixture
+def module():
+    return NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
+
+
+def response_data(key: str) -> Dict[str, str]:
+    response = loadPlaybookData(response_file).get(key)
+    verb = response.get("METHOD")
+    print(f"{key} : {verb} : {response}")
+    return {"response": response, "verb": verb}
+
+
 class MockAnsibleModule:
-    params={}
+    params = {}
+
     def fail_json(msg) -> dict:
         raise AnsibleFailJson(msg)
-    # argument_spec={}
-    # supports_check_mode=True
+
 
 response_file = "dcnm_image_upgrade_responses"
 
-def test_dcnm_image_upgrade_common_handle_response_post_return_code_200() -> None:
-    """
-    """
-    response_key = "mock_post_return_code_200_MESSAGE_OK"
-    response_data = loadPlaybookData(response_file).get(response_key)
-    verb = response_data.get("METHOD")
 
-    print(f"{response_key}: {response_data}")
-
-    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
-    result = module._handle_response(response_data, verb)
+def test_handle_response_post_return_code_200(module) -> None:
+    """ """
+    data = response_data("mock_post_return_code_200_MESSAGE_OK")
+    result = module._handle_response(data.get("response"), data.get("verb"))
     assert result.get("success") == True
     assert result.get("changed") == True
 
-def test_dcnm_image_upgrade_common_handle_response_post_MESSAGE_not_OK() -> None:
-    """
-    """
-    response_key = "mock_post_return_code_400_MESSAGE_NOT_OK"
-    response_data = loadPlaybookData(response_file).get(response_key)
-    verb = response_data.get("METHOD")
 
-    print(f"{response_key}: {response_data}")
-
-    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
-    result = module._handle_response(response_data, verb)
+def test_handle_response_post_MESSAGE_not_OK(module) -> None:
+    """ """
+    data = response_data("mock_post_return_code_400_MESSAGE_NOT_OK")
+    result = module._handle_response(data.get("response"), data.get("verb"))
     assert result.get("success") == False
     assert result.get("changed") == False
 
-def test_dcnm_image_upgrade_common_handle_response_post_ERROR_key_present() -> None:
-    """
-    """
-    response_key = "mock_post_return_code_200_ERROR_key_present"
-    response_data = loadPlaybookData(response_file).get(response_key)
-    verb = response_data.get("METHOD")
 
-    print(f"{response_key}: {response_data}")
-
-    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
-    result = module._handle_response(response_data, verb)
+def test_handle_response_post_ERROR_key_present(module) -> None:
+    """ """
+    data = response_data("mock_post_return_code_200_ERROR_key_present")
+    result = module._handle_response(data.get("response"), data.get("verb"))
     assert result.get("success") == False
     assert result.get("changed") == False
 
-def test_dcnm_image_upgrade_common_handle_response_get_return_code_200_MESSAGE_OK() -> None:
-    """
-    """
-    response_key = "mock_get_return_code_200_MESSAGE_OK"
-    response_data = loadPlaybookData(response_file).get(response_key)
-    verb = response_data.get("METHOD")
 
-    print(f"{response_key}: {verb} : {response_data}")
-
-    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
-    result = module._handle_response(response_data, verb)
+def test_handle_response_get_return_code_200_MESSAGE_OK(module) -> None:
+    """ """
+    data = response_data("mock_get_return_code_200_MESSAGE_OK")
+    result = module._handle_response(data.get("response"), data.get("verb"))
     assert result.get("found") == True
     assert result.get("success") == True
 
-def test_dcnm_image_upgrade_common_handle_response_get_return_code_404_MESSAGE_not_found() -> None:
-    """
-    """
-    response_key = "mock_get_return_code_404_MESSAGE_not_found"
-    response_data = loadPlaybookData(response_file).get(response_key)
-    verb = response_data.get("METHOD")
 
-    print(f"{response_key}: {verb} : {response_data}")
-
-    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
-    result = module._handle_response(response_data, verb)
+def test_handle_response_get_return_code_404_MESSAGE_not_found(module) -> None:
+    """ """
+    data = response_data("mock_get_return_code_404_MESSAGE_not_found")
+    result = module._handle_response(data.get("response"), data.get("verb"))
     assert result.get("found") == False
     assert result.get("success") == True
 
-def test_dcnm_image_upgrade_common_handle_response_get_return_code_500_MESSAGE_OK() -> None:
-    """
-    """
-    response_key = "mock_get_return_code_500_MESSAGE_OK"
-    response_data = loadPlaybookData(response_file).get(response_key)
-    verb = response_data.get("METHOD")
 
-    print(f"{response_key}: {verb} : {response_data}")
-
-    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
-    result = module._handle_response(response_data, verb)
+def test_handle_response_get_return_code_500_MESSAGE_OK(module) -> None:
+    """ """
+    data = response_data("mock_get_return_code_500_MESSAGE_OK")
+    result = module._handle_response(data.get("response"), data.get("verb"))
     assert result.get("found") == False
     assert result.get("success") == False
 
-def test_dcnm_image_upgrade_common_handle_response_get_return_code_200_MESSAGE_not_OK() -> None:
-    """
-    """
-    response_key = "mock_get_return_code_200_MESSAGE_not_OK"
-    response_data = loadPlaybookData(response_file).get(response_key)
-    verb = response_data.get("METHOD")
 
-    print(f"{response_key}: {verb} : {response_data}")
-
-    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
-    result = module._handle_response(response_data, verb)
+def test_handle_response_get_return_code_200_MESSAGE_not_OK(module) -> None:
+    """ """
+    data = response_data("mock_get_return_code_200_MESSAGE_not_OK")
+    result = module._handle_response(data.get("response"), data.get("verb"))
     assert result.get("found") == False
     assert result.get("success") == False
 
-def test_dcnm_image_upgrade_common_handle_response_unknown_response_verb() -> None:
-    """
-    """
-    response_key = "mock_unknown_response_verb"
-    response_data = loadPlaybookData(response_file).get(response_key)
-    verb = response_data.get("METHOD")
 
-    print(f"{response_key}: {verb} : {response_data}")
-
-    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
+def test_handle_response_unknown_response_verb(module) -> None:
+    """ """
+    data = response_data("mock_unknown_response_verb")
     with pytest.raises(AnsibleFailJson, match=r"Unknown request verb \(FOO\)"):
-        result = module._handle_response(response_data, verb)
+        module._handle_response(data.get("response"), data.get("verb"))
 
-def test_dcnm_image_upgrade_common_make_boolean() -> None:
-    """
-    """
-    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
-    assert module.make_boolean("True") == True
-    assert module.make_boolean("False") == False
-    assert module.make_boolean("true") == True
-    assert module.make_boolean("false") == False
-    assert module.make_boolean(True) == True
-    assert module.make_boolean(False) == False
-    assert module.make_boolean("foo") == "foo"
-    assert module.make_boolean(1) == 1
-    assert module.make_boolean(0) == 0
-    assert module.make_boolean(None) == None
-    assert module.make_boolean({"foo": 10}) == {"foo": 10}
-    assert module.make_boolean([1,2,"3"]) == [1,2,"3"]
 
-'''
-# Example of using monkeypatch if we need to patch a property
-# Not needed so far, but keep this around for reference
-# Uncomment the pytest import at the top of the file if we need this later...
-def test_dcnm_image_upgrade_endpoints_image_stage_monkeypatch(monkeypatch) -> None:
-    """
-    :param monkeypatch:
-    :return: None
-    """
-    @property
-    def mock_image_stage(self) -> dict:
-        path = f"/stage-image"
-        endpoint = {}
-        endpoint["path"] = path
-        endpoint["verb"] = "POST"
-        return endpoint
+def test_dcnm_image_upgrade_common_make_boolean(module) -> None:
+    """ """
+    for value in ["True", "true", "TRUE", True]:
+        assert module.make_boolean(value) == True
+    for value in ["False", "false", "FALSE", False]:
+        assert module.make_boolean(value) == False
+    for value in ["foo", 1, 0, None, {"foo": 10}, [1, 2, "3"]]:
+        assert module.make_boolean(value) == value
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.NdfcEndpoints.image_stage", mock_image_stage)
 
-    endpoints = NdfcEndpoints()
-    assert endpoints.image_stage.get("verb") == "POST"
-    assert endpoints.image_stage.get("path") == "/stage-image"
-'''
+def test_dcnm_image_upgrade_common_make_none(module) -> None:
+    """ """
+    for value in ["", "none", "None", "NONE", "null", "Null", "NULL", None]:
+        assert module.make_none(value) == None
+    for value in ["foo", 1, 0, True, False, {"foo": 10}, [1, 2, "3"]]:
+        assert module.make_none(value) == value
