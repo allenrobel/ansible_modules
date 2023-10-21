@@ -1,5 +1,12 @@
 from dcnm_image_upgrade.dcnm_image_upgrade import NdfcAnsibleImageUpgradeCommon
 from dcnm_image_upgrade.tests.unit.modules.dcnm.dcnm_module import loadPlaybookData
+from ansible_collections.ansible.netcommon.tests.unit.modules.utils import (
+    AnsibleExitJson,
+    AnsibleFailJson,
+    ModuleTestCase,
+)
+import pytest
+
 # Uncomment if we need this later...
 # from pytest import MonkeyPatch
 """
@@ -8,6 +15,8 @@ description: Verify functionality of class NdfcAnsibleImageUpgradeCommon
 """
 class MockAnsibleModule:
     params={}
+    def fail_json(msg) -> dict:
+        raise AnsibleFailJson(msg)
     # argument_spec={}
     # supports_check_mode=True
 
@@ -110,6 +119,19 @@ def test_dcnm_image_upgrade_common_handle_response_get_return_code_200_MESSAGE_n
     result = module._handle_response(response_data, verb)
     assert result.get("found") == False
     assert result.get("success") == False
+
+def test_dcnm_image_upgrade_common_handle_response_unknown_response_verb() -> None:
+    """
+    """
+    response_key = "mock_unknown_response_verb"
+    response_data = loadPlaybookData(response_file).get(response_key)
+    verb = response_data.get("METHOD")
+
+    print(f"{response_key}: {verb} : {response_data}")
+
+    module = NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
+    with pytest.raises(AnsibleFailJson, match=r"Unknown request verb \(FOO\)"):
+        result = module._handle_response(response_data, verb)
 
 
 '''
