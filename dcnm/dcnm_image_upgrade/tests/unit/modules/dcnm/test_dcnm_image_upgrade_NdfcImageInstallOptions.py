@@ -33,14 +33,18 @@ def install_options_module(module):
     return NdfcImageInstallOptions(module)
 
 def test_policy_name_not_defined() -> None:
-    """ """
+    """
+    fail_json() should be called if policy_name is not set when refresh() is called.
+    """
     test_module = NdfcImageInstallOptions(MockAnsibleModule)
     test_module.serial_number = "FOO"
     with pytest.raises(AnsibleFailJson, match=r"NdfcImageInstallOptions.refresh: instance.policy_name must be set before calling refresh\(\)"):
         test_module.refresh()
 
 def test_serial_number_not_defined() -> None:
-    """ """
+    """
+    fail_json() should be called if serial_number is not set when refresh() is called.
+    """
     test_module = NdfcImageInstallOptions(MockAnsibleModule)
     test_module.policy_name = "FOO"
     with pytest.raises(AnsibleFailJson, match=r"NdfcImageInstallOptions.refresh: instance.serial_number must be set before calling refresh\(\)"):
