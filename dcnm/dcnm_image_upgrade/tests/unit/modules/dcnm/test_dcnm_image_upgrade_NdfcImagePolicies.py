@@ -31,6 +31,7 @@ def response_data(key: str) -> Dict[str, str]:
 def module():
     return NdfcImagePolicies(MockAnsibleModule)
 
+
 def test_init_properties(module) -> None:
     """
     Properties are initialized to None
@@ -46,7 +47,7 @@ def test_init_properties(module) -> None:
 def test_refresh_return_code_200(monkeypatch, module) -> None:
     """
     Properties are initialized based on 200 response from endpoint.
-    endpoint: /.../api/v1/imagemanagement/rest/policymgnt/policies
+    endpoint: .../api/v1/imagemanagement/rest/policymgnt/policies
     """
     key = "policymgnt_policies_get_return_code_200"
 
@@ -76,8 +77,7 @@ def test_refresh_return_code_200(monkeypatch, module) -> None:
 def test_ndfc_result_return_code_200(monkeypatch, module) -> None:
     """
     ndfc_result contains expected key/values on 200 response from endpoint.
-    {'found': True, 'success': True}
-    endpoint: /.../api/v1/imagemanagement/rest/policymgnt/policies
+    endpoint: .../api/v1/imagemanagement/rest/policymgnt/policies
     """
     key = "policymgnt_policies_get_return_code_200"
 
@@ -96,8 +96,7 @@ def test_ndfc_result_return_code_200(monkeypatch, module) -> None:
 def test_ndfc_result_return_code_404(monkeypatch, module) -> None:
     """
     fail_json is called on 404 response from malformed endpoint.
-
-    endpoint: /.../api/v1/imagemanagement/rest/policymgnt/policiess
+    endpoint: .../api/v1/imagemanagement/rest/policymgnt/policiess
     """
     key = "policymgnt_policies_get_return_code_404"
 
