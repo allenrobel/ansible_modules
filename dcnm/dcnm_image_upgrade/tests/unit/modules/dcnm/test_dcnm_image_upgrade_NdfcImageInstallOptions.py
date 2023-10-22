@@ -29,19 +29,26 @@ def module():
     return NdfcImageInstallOptions(MockAnsibleModule)
 
 def test_policy_name_not_defined(module) -> None:
-    """ """
+    """
+    fail_json() is called if policy_name is not set when refresh() is called.
+    """
     module.serial_number = "FOO"
     with pytest.raises(AnsibleFailJson, match=r"NdfcImageInstallOptions.refresh: instance.policy_name must be set before calling refresh\(\)"):
         module.refresh()
 
 def test_serial_number_not_defined(module) -> None:
-    """ """
+    """
+    fail_json() is called if serial_number is not set when refresh() is called.
+    """
     module.policy_name = "FOO"
     with pytest.raises(AnsibleFailJson, match=r"NdfcImageInstallOptions.refresh: instance.serial_number must be set before calling refresh\(\)"):
         module.refresh()
 
 def test_refresh_return_code_200(monkeypatch, module) -> None:
-    """ """
+    """
+    Properties are updated based on 200 response from endpoint.
+    endpoint: install-options
+    """
     key = "imageupgrade_install_options_post_return_code_200"
 
     def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
@@ -65,7 +72,9 @@ def test_refresh_return_code_200(monkeypatch, module) -> None:
     assert module.ndfc_result.get("success") == True
 
 def test_refresh_return_code_500(monkeypatch, module) -> None:
-    """ """
+    """
+    fail_json() should be called if the response RETURN_CODE != 200
+    """
     key = "imageupgrade_install_options_post_return_code_500"
 
     def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
@@ -81,8 +90,8 @@ def test_refresh_return_code_500(monkeypatch, module) -> None:
 
 def test_build_payload_defaults(module) -> None:
     """
-    Currect defaults should be applied to the payload if the user does not
-    specify them.  Specifically, issu, epld, and package_install.
+    Payload contains defaults if not specified by the user.
+    Defaults for issu, epld, and package_install are applied.
     """
     module.policy_name = "KRM5"
     module.serial_number = "BAR"
@@ -95,8 +104,8 @@ def test_build_payload_defaults(module) -> None:
 
 def test_build_payload_user_changed_defaults(module) -> None:
     """
-    Defaults should be overridden by the user if specified.  Specifically,
-    issu, epld, and package_install.
+    Payload contains user-specified values if the user sets them.
+    Defaults for issu, epld, and package_install overridden by user values.
     """
     module.policy_name = "KRM5"
     module.serial_number = "BAR"
