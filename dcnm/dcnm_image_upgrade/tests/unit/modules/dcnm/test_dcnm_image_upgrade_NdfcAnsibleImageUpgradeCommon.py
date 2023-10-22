@@ -1,5 +1,5 @@
 from dcnm_image_upgrade.dcnm_image_upgrade import NdfcAnsibleImageUpgradeCommon
-from dcnm_image_upgrade.tests.unit.modules.dcnm.dcnm_module import loadPlaybookData
+from dcnm_image_upgrade.tests.unit.modules.dcnm.fixture import load_fixture
 from ansible_collections.ansible.netcommon.tests.unit.modules.utils import (
     AnsibleFailJson,
 )
@@ -10,19 +10,8 @@ from typing import Dict
 ndfc_version: 12
 description: Verify functionality of class NdfcAnsibleImageUpgradeCommon
 """
-
-
-@pytest.fixture
-def module():
-    return NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
-
-
-def response_data(key: str) -> Dict[str, str]:
-    response = loadPlaybookData(response_file).get(key)
-    verb = response.get("METHOD")
-    print(f"{key} : {verb} : {response}")
-    return {"response": response, "verb": verb}
-
+class_name = "NdfcAnsibleImageUpgradeCommon"
+response_file = f"dcnm_image_upgrade_responses_{class_name}"
 
 class MockAnsibleModule:
     params = {}
@@ -30,9 +19,15 @@ class MockAnsibleModule:
     def fail_json(msg) -> dict:
         raise AnsibleFailJson(msg)
 
+@pytest.fixture
+def module():
+    return NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
 
-response_file = "dcnm_image_upgrade_responses"
-
+def response_data(key: str) -> Dict[str, str]:
+    response = load_fixture(response_file).get(key)
+    verb = response.get("METHOD")
+    print(f"{key} : {verb} : {response}")
+    return {"response": response, "verb": verb}
 
 def test_handle_response_post_return_code_200(module) -> None:
     """ """
