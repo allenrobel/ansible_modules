@@ -576,7 +576,7 @@ class NdfcAnsibleImageUpgradeCommon:
         return self._handle_unknown_request_verbs(response, verb)
 
     def _handle_unknown_request_verbs(self, response, verb):
-        msg = f"Unknown request verb ({verb}) in _handle_response()."
+        msg = f"Unknown request verb ({verb}) in _handle_response() for response {response}."
         self.module.fail_json(msg)
 
     def _handle_get_response(self, response):
@@ -835,7 +835,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         # options in our want item
         instance = NdfcImageInstallOptions(self.module)
         instance.policy_name = want["policy"]
-        msg = f"{self.class_name}._get_idempotent_want() "
+        msg = f"REMOVE: {self.class_name}._get_idempotent_want() "
         msg += f"calling NdfcImageInstallOptions.refresh() with "
         msg += f"serial_number {self.have.serial_number} "
         msg += f"ip_address {self.have.ip_address} "
@@ -848,7 +848,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
 
         if instance.epld_modules is None:
             idempotent_want["upgrade"]["epld"] = False
-        self.log_msg(f"{self.class_name}._get_idempotent_want() returned idempotent_want: {idempotent_want}")
+        self.log_msg(f"REMOVE: {self.class_name}._get_idempotent_want() returned idempotent_want: {idempotent_want}")
         return idempotent_want
 
     def get_need_merged(self):
@@ -1826,7 +1826,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         # TODO:2 should error message contain full response or just DATA.error?
         if self.ndfc_result["success"] is False:
             msg = f"{self.class_name}.refresh: "
-            msg += "Bad result when retrieving install-options from NDFC."
+            msg += "Bad result when retrieving install-options from NDFC. "
             msg += f"NDFC response: {self.ndfc_response}"
             self.module.fail_json(msg)
 
@@ -1963,7 +1963,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
         epldModules will be "null" if self.epld is False, so
         make_none() will convert to NoneType in this case.
         """
-        return self._get("epldModules")
+        return self.make_none(self._get("epldModules"))
 
     @property
     def err_message(self):
@@ -1998,7 +1998,7 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
                 12.1.2e
                 12.1.3b
         """
-        return self._get("installPacakges")
+        return self.make_none(self._get("installPacakges"))
 
     @property
     def ip_address(self):
