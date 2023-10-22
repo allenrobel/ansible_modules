@@ -24,10 +24,12 @@ def response_data(key: str) -> Dict[str, str]:
     print(f"{key} : : {response}")
     return response
 
+# TODO: use or remove
 @pytest.fixture
 def module():
     return NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
 
+# TODO: use or remove
 @pytest.fixture
 def install_options_module(module):
     return NdfcImageInstallOptions(module)
@@ -51,7 +53,10 @@ def test_serial_number_not_defined() -> None:
         test_module.refresh()
 
 def test_refresh_return_code_200(monkeypatch) -> None:
-    """ """
+    """
+    Verify properties are updated based on the response from NDFC
+    install-options endpoint
+    """
     test_module = NdfcImageInstallOptions(MockAnsibleModule)
     key = "imageupgrade_install_options_post_return_code_200"
 
@@ -76,7 +81,9 @@ def test_refresh_return_code_200(monkeypatch) -> None:
     assert test_module.ndfc_result.get("success") == True
 
 def test_refresh_return_code_500(monkeypatch) -> None:
-    """ """
+    """
+    fail_json() should be called if the response RETURN_CODE != 200
+    """
     test_module = NdfcImageInstallOptions(MockAnsibleModule)
     key = "imageupgrade_install_options_post_return_code_500"
 
