@@ -1,4 +1,6 @@
-from dcnm_image_upgrade.dcnm_image_upgrade import NdfcAnsibleImageUpgradeCommon, NdfcImageInstallOptions
+from dcnm_image_upgrade.dcnm_image_upgrade import (
+    NdfcImageInstallOptions
+)
 from dcnm_image_upgrade.tests.unit.modules.dcnm.fixture import load_fixture
 from ansible_collections.ansible.netcommon.tests.unit.modules.utils import (
     AnsibleFailJson,
@@ -33,7 +35,10 @@ def test_policy_name_not_defined(module) -> None:
     fail_json() is called if policy_name is not set when refresh() is called.
     """
     module.serial_number = "FOO"
-    with pytest.raises(AnsibleFailJson, match=r"NdfcImageInstallOptions.refresh: instance.policy_name must be set before calling refresh\(\)"):
+    error_message = "NdfcImageInstallOptions.refresh: "
+    error_message += "instance.policy_name must be set before "
+    error_message += r"calling refresh\(\)"
+    with pytest.raises(AnsibleFailJson, match=error_message):
         module.refresh()
 
 def test_serial_number_not_defined(module) -> None:
@@ -41,7 +46,10 @@ def test_serial_number_not_defined(module) -> None:
     fail_json() is called if serial_number is not set when refresh() is called.
     """
     module.policy_name = "FOO"
-    with pytest.raises(AnsibleFailJson, match=r"NdfcImageInstallOptions.refresh: instance.serial_number must be set before calling refresh\(\)"):
+    error_message = "NdfcImageInstallOptions.refresh: "
+    error_message += "instance.serial_number must be set before "
+    error_message += r"calling refresh\(\)"
+    with pytest.raises(AnsibleFailJson, match=error_message):
         module.refresh()
 
 def test_refresh_return_code_200(monkeypatch, module) -> None:
@@ -54,7 +62,9 @@ def test_refresh_return_code_200(monkeypatch, module) -> None:
     def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
         return response_data(key)
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send)
+    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
+        mock_dcnm_send
+    )
     module.policy_name = "KRM5"
     module.serial_number = "BAR"
     module.refresh()
@@ -68,7 +78,8 @@ def test_refresh_return_code_200(monkeypatch, module) -> None:
     assert module.platform == "N9K/N3K"
     assert module.serial_number == "BAR"
     assert module.version == "10.2.5"
-    assert module.comp_disp == "show install all impact nxos bootflash:nxos64-cs.10.2.5.M.bin"
+    comp_disp = "show install all impact nxos bootflash:nxos64-cs.10.2.5.M.bin"
+    assert module.comp_disp == comp_disp
     assert module.ndfc_result.get("success") == True
 
 def test_refresh_return_code_500(monkeypatch, module) -> None:
@@ -80,7 +91,9 @@ def test_refresh_return_code_500(monkeypatch, module) -> None:
     def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
         return response_data(key)
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send)
+    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
+        mock_dcnm_send
+    )
     module.policy_name = "KRM5"
     module.serial_number = "BAR"
     error_message = "NdfcImageInstallOptions.refresh: "
