@@ -100,7 +100,7 @@ def test_refresh_return_code_500(monkeypatch) -> None:
 
 def test_build_payload_defaults() -> None:
     """
-    Currect defaults should be applied to the payload if the user does not
+    Defaults should be applied to the payload if the user does not
     specify them.  Specifically, issu, epld, and package_install.
     """
     test_module = NdfcImageInstallOptions(MockAnsibleModule)
