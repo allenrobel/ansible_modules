@@ -1901,6 +1901,10 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
 
     @issu.setter
     def issu(self, value):
+        if not isinstance(value, bool):
+            msg = f"{self.class_name}.issu.setter: "
+            msg += "issu must be a boolean value"
+            self.module.fail_json(msg)
         self.properties["issu"] = value
 
     @property
@@ -1917,6 +1921,10 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
 
     @epld.setter
     def epld(self, value):
+        if not isinstance(value, bool):
+            msg = f"{self.class_name}.epld.setter: "
+            msg += "epld must be a boolean value"
+            self.module.fail_json(msg)
         self.properties["epld"] = value
 
     @property
@@ -1932,6 +1940,10 @@ class NdfcImageInstallOptions(NdfcAnsibleImageUpgradeCommon):
 
     @package_install.setter
     def package_install(self, value):
+        if not isinstance(value, bool):
+            msg = f"{self.class_name}.package_install.setter: "
+            msg += "package_install must be a boolean value"
+            self.module.fail_json(msg)
         self.properties["package_install"] = value
 
     # Retrievable properties
