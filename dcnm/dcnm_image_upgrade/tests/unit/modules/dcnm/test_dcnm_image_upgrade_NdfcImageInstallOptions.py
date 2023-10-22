@@ -131,3 +131,30 @@ def test_build_payload_user_changed_defaults(module) -> None:
     assert module.payload.get("issu") == False
     assert module.payload.get("epld") == True
     assert module.payload.get("packageInstall") == True
+
+def test_invalid_value_issu(module) -> None:
+    """
+    fail_json() is called if issu is not a boolean.
+    """
+    error_message = "NdfcImageInstallOptions.issu.setter: issu must be a "
+    error_message += "boolean value"
+    with pytest.raises(AnsibleFailJson, match=error_message):
+        module.issu = "FOO"
+
+def test_invalid_value_epld(module) -> None:
+    """
+    fail_json() is called if epld is not a boolean.
+    """
+    error_message = "NdfcImageInstallOptions.epld.setter: epld must be a "
+    error_message += "boolean value"
+    with pytest.raises(AnsibleFailJson, match=error_message):
+        module.epld = "FOO"
+
+def test_invalid_value_package_install(module) -> None:
+    """
+    fail_json() is called if package_install is not a boolean.
+    """
+    error_message = "NdfcImageInstallOptions.package_install.setter: "
+    error_message += "package_install must be a boolean value"
+    with pytest.raises(AnsibleFailJson, match=error_message):
+        module.package_install = "FOO"
