@@ -129,5 +129,5 @@ def test_policy_name_not_found(monkeypatch, module) -> None:
     module.refresh()
     module.policy_name = "FOO"
     error_message = "NdfcImagePolicies._get: policy_name FOO is not defined in NDFC"
-    with pytest.raises(AnsibleFailJson, match=rf"{error_message}"):
+    with pytest.raises(AnsibleFailJson, match=error_message):
         module.policy_type == "PLATFORM"
