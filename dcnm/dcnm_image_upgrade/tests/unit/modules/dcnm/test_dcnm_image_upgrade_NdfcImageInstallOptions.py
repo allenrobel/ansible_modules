@@ -39,14 +39,14 @@ def test_policy_name_not_defined() -> None:
     with pytest.raises(AnsibleFailJson, match=r"NdfcImageInstallOptions.refresh: instance.policy_name must be set before calling refresh\(\)"):
         test_module.refresh()
 
-def test_policy_serial_number_not_defined() -> None:
+def test_serial_number_not_defined() -> None:
     """ """
     test_module = NdfcImageInstallOptions(MockAnsibleModule)
     test_module.policy_name = "FOO"
     with pytest.raises(AnsibleFailJson, match=r"NdfcImageInstallOptions.refresh: instance.serial_number must be set before calling refresh\(\)"):
         test_module.refresh()
 
-def test_policy_refresh_return_code_200(monkeypatch) -> None:
+def test_refresh_return_code_200(monkeypatch) -> None:
     """ """
     test_module = NdfcImageInstallOptions(MockAnsibleModule)
     key = "imageupgrade_install_options_post_return_code_200"
@@ -68,9 +68,10 @@ def test_policy_refresh_return_code_200(monkeypatch) -> None:
     assert test_module.platform == "N9K/N3K"
     assert test_module.serial_number == "BAR"
     assert test_module.version == "10.2.5"
+    assert test_module.comp_disp == "show install all impact nxos bootflash:nxos64-cs.10.2.5.M.bin"
     assert test_module.ndfc_result.get("success") == True
 
-def test_policy_refresh_return_code_500(monkeypatch) -> None:
+def test_refresh_return_code_500(monkeypatch) -> None:
     """ """
     test_module = NdfcImageInstallOptions(MockAnsibleModule)
     key = "imageupgrade_install_options_post_return_code_500"
@@ -86,3 +87,35 @@ def test_policy_refresh_return_code_500(monkeypatch) -> None:
     with pytest.raises(AnsibleFailJson, match=rf"{error_message}"):
         test_module.refresh()
 
+def test_build_payload_defaults() -> None:
+    """
+    Currect defaults should be applied to the payload if the user does not
+    specify them.  Specifically, issu, epld, and package_install.
+    """
+    test_module = NdfcImageInstallOptions(MockAnsibleModule)
+    test_module.policy_name = "KRM5"
+    test_module.serial_number = "BAR"
+    test_module._build_payload()
+    assert test_module.payload.get("devices")[0].get("policyName") == "KRM5"
+    assert test_module.payload.get("devices")[0].get("serialNumber") == "BAR"
+    assert test_module.payload.get("issu") == True
+    assert test_module.payload.get("epld") == False
+    assert test_module.payload.get("packageInstall") == False
+
+def test_build_payload_user_changed_defaults() -> None:
+    """
+    Defaults should be overridden by the user if specified.  Specifically,
+    issu, epld, and package_install.
+    """
+    test_module = NdfcImageInstallOptions(MockAnsibleModule)
+    test_module.policy_name = "KRM5"
+    test_module.serial_number = "BAR"
+    test_module.issu = False
+    test_module.epld = True
+    test_module.package_install = True
+    test_module._build_payload()
+    assert test_module.payload.get("devices")[0].get("policyName") == "KRM5"
+    assert test_module.payload.get("devices")[0].get("serialNumber") == "BAR"
+    assert test_module.payload.get("issu") == False
+    assert test_module.payload.get("epld") == True
+    assert test_module.payload.get("packageInstall") == True
