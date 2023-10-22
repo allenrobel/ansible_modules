@@ -739,6 +739,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self.switch_details = NdfcSwitchDetails(self.module)
         self.log_msg(f"{self.class_name}.__init__: instantiate NdfcImagePolicies")
         self.image_policies = NdfcImagePolicies(self.module)
+        self.image_policies.refresh()
 
     def get_have(self):
         """
@@ -2161,6 +2162,7 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         self.class_name = self.__class__.__name__
         self._init_properties()
         self.image_policies = NdfcImagePolicies(self.module)
+        self.image_policies.refresh()
         self.switch_details = NdfcSwitchIssuDetailsBySerialNumber(self.module)
 
     def _init_properties(self):
@@ -2385,7 +2387,7 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
 
     Usage (where module is an instance of AnsibleModule):
 
-    instance = NdfcImagePolicies(module)
+    instance = NdfcImagePolicies(module).refresh()
     instance.policy_name = "NR3F"
     if instance.name is None:
         print("policy NR3F does not exist on NDFC")
@@ -2407,7 +2409,7 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
         self.class_name = self.__class__.__name__
         self.log_msg(f"{self.class_name}.__init__ entered")
         self._init_properties()
-        self.refresh()
+        #self.refresh()
 
     def _init_properties(self):
         self.properties = {}
@@ -2464,10 +2466,38 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
             self.module.fail_json(msg)
         if self.properties['ndfc_data'].get(self.policy_name) is None:
             msg = f"{self.class_name}._get: "
-            msg = f"instance.policy_name {self.policy_name} is not "
-            msg += f"defined in NDFC."
+            msg += f"policy_name {self.policy_name} is not defined in NDFC"
             self.module.fail_json(msg)
-        return self.properties["ndfc_data"][self.policy_name].get(item)
+        return_item = self.make_boolean(self.properties["ndfc_data"][self.policy_name].get(item))
+        return_item = self.make_none(return_item)
+        return return_item
+
+    @property
+    def description(self):
+        """
+        Return the policyDescr of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("policyDescr")
+
+    @property
+    def epld_image_name(self):
+        """
+        Return the epldImgName of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("epldImgName")
+
+    @property
+    def name(self):
+        """
+        Return the name of the policy matching self.policy_name,
+        if it exists.
+        Return None otherwise
+        """
+        return self._get("policyName")
 
     @property
     def ndfc_data(self):
@@ -2529,16 +2559,7 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
         if it exists.
         Return None otherwise
         """
-        return self._get("nxosVersion")
-
-    @property
-    def name(self):
-        """
-        Return the name of the policy matching self.policy_name,
-        if it exists.
-        Return None otherwise
-        """
-        return self._get("policyName")
+        return self._get("packageName")
 
     @property
     def platform(self):
@@ -2550,15 +2571,6 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
         return self._get("platform")
 
     @property
-    def description(self):
-        """
-        Return the policyDescr of the policy matching self.policy_name,
-        if it exists.
-        Return None otherwise
-        """
-        return self._get("policyDescr")
-
-    @property
     def platform_policies(self):
         """
         Return the platformPolicies of the policy matching self.policy_name,
@@ -2568,13 +2580,14 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
         return self._get("platformPolicies")
 
     @property
-    def epld_image_name(self):
+    def ref_count(self):
         """
-        Return the epldImgName of the policy matching self.policy_name,
-        if it exists.
+        Return the reference count of the policy matching self.policy_name,
+        if it exists.  The reference count is the number of switches using
+        this policy.
         Return None otherwise
         """
-        return self._get("epldImgName")
+        return self._get("ref_count")
 
     @property
     def rpm_images(self):
