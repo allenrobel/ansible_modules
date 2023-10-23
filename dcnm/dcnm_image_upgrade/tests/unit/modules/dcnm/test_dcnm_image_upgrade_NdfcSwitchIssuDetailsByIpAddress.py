@@ -10,7 +10,7 @@ from typing import Any, Dict
 
 """
 ndfc_version: 12
-description: Verify functionality of class NdfcSwitchIssuDetails
+description: Verify functionality of subclass NdfcSwitchIssuDetailsByIpAddress
 """
 # Here, we are using the superclass name, since we are sharing the
 # same response file across all subclasses.
