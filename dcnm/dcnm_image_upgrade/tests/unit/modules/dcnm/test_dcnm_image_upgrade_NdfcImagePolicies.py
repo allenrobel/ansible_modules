@@ -153,7 +153,7 @@ def test_ndfc_result_return_code_200_ndfc_has_no_defined_image_policies(monkeypa
 
 def test_policy_name_not_found(monkeypatch, module) -> None:
     """
-    fail_json() should be called if response does not contain policy_name.
+    fail_json() is called if response does not contain policy_name.
     i.e. image policy with name FOO has not yet been created on NDFC.
     """
     key = "policymgnt_policies_get_return_code_200"
