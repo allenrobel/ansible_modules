@@ -11,7 +11,6 @@ from typing import Any, Dict
 """
 ndfc_version: 12
 description: Verify functionality of class NdfcImagePolicies
-TODO: Need more tests for this class.
 """
 class_name = "NdfcImagePolicies"
 response_file = f"dcnm_image_upgrade_responses_{class_name}"
