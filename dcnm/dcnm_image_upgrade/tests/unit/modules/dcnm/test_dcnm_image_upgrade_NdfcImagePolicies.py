@@ -112,9 +112,49 @@ def test_ndfc_result_return_code_404(monkeypatch, module) -> None:
     with pytest.raises(AnsibleFailJson, match=error_message):
         module.refresh()
 
+def test_ndfc_result_return_code_200_empty_data(monkeypatch, module) -> None:
+    """
+    fail_json is called on 200 response with empty DATA key.
+    endpoint: .../api/v1/imagemanagement/rest/policymgnt/policiess
+    """
+    key = "policymgnt_policies_get_return_code_200_empty_DATA"
+
+    def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
+        print(f"mock_dcnm_send: {response_data(key)}")
+        return response_data(key)
+
+    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
+        mock_dcnm_send
+    )
+    error_message = "NdfcImagePolicies.refresh: Bad response when retrieving "
+    error_message += "image policy information from NDFC."
+    with pytest.raises(AnsibleFailJson, match=error_message):
+        module.refresh()
+
+def test_ndfc_result_return_code_200_ndfc_has_no_defined_image_policies(monkeypatch, module) -> None:
+    """
+    fail_json is called on 200 response with DATA.lastOperDataObject length 0.
+    endpoint: .../api/v1/imagemanagement/rest/policymgnt/policiess
+    """
+    key = "policymgnt_policies_get_return_code_200"
+    key += "_ndfc_has_no_defined_image_policies"
+
+    def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
+        print(f"mock_dcnm_send: {response_data(key)}")
+        return response_data(key)
+
+    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
+        mock_dcnm_send
+    )
+    error_message = "NdfcImagePolicies.refresh: "
+    error_message += "NDFC has no defined image policies."
+    with pytest.raises(AnsibleFailJson, match=error_message):
+        module.refresh()
+
 def test_policy_name_not_found(monkeypatch, module) -> None:
     """
     fail_json() should be called if response does not contain policy_name.
+    i.e. image policy with name FOO has not yet been created on NDFC.
     """
     key = "policymgnt_policies_get_return_code_200"
 
@@ -127,6 +167,40 @@ def test_policy_name_not_found(monkeypatch, module) -> None:
     )
     module.refresh()
     module.policy_name = "FOO"
-    error_message = "NdfcImagePolicies._get: policy_name FOO is not defined in NDFC"
+    error_message = "NdfcImagePolicies._get: "
+    error_message += "policy_name FOO is not defined in NDFC"
     with pytest.raises(AnsibleFailJson, match=error_message):
         module.policy_type == "PLATFORM"
+
+def test_get_with_policy_name_None(module) -> None:
+    """
+    fail_json is called when _get() is called prior to setting policy_name.
+    """
+    error_message = "NdfcImagePolicies._get: instance.policy_name must be "
+    error_message += "set before accessing property imageName."
+    with pytest.raises(AnsibleFailJson, match=error_message):
+        module._get("imageName")
+
+def test_ndfc_result_return_code_200_policy_name_missing_in_response(monkeypatch, module) -> None:
+    """
+    fail_json is called on 200 response with missing policyName key.
+    endpoint: .../api/v1/imagemanagement/rest/policymgnt/policiess
+
+    NOTE: This is to cover a check in NdfcImagePolicies.refresh() for a scenario that should never happen.
+    TODO: Consider removing this check, and this testcase.
+    """
+    key = "policymgnt_policies_get_return_code_200"
+    key += "_policyName_missing_in_response"
+
+    def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
+        print(f"mock_dcnm_send: {response_data(key)}")
+        return response_data(key)
+
+    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
+        mock_dcnm_send
+    )
+    error_message = "NdfcImagePolicies.refresh: "
+    error_message += "Cannot parse NDFC policy information"
+    with pytest.raises(AnsibleFailJson, match=error_message):
+        module.refresh()
+
