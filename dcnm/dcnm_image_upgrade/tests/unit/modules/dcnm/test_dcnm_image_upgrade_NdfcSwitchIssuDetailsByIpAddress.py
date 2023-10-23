@@ -51,7 +51,7 @@ def test_init_properties(module) -> None:
 
 def test_refresh_return_code_200(monkeypatch, module) -> None:
     """
-    Properties are initialized based on 200 response from endpoint.
+    NDFC response data for 200 response has expected types.
     endpoint: .../api/v1/imagemanagement/rest/packagemgnt/issu
 
     """
@@ -84,11 +84,55 @@ def test_properties_are_set_to_expected_values(monkeypatch, module) -> None:
     )
     module.refresh()
     module.ip_address = "172.22.150.102"
+    assert module.device_name == "leaf1"
     assert module.serial_number == "FDO21120U5D"
     # change ip_address to a different switch, expect different information
     module.ip_address = "172.22.150.108"
-    assert module.serial_number == "FDO2112189M"
     assert module.device_name == "cvd-2313-leaf"
+    assert module.serial_number == "FDO2112189M"
+    # verify remaining properties using current ip_address
+    assert module.eth_switch_id == 39890
+    assert module.fabric == "hard"
+    assert module.fcoe_enabled == False
+    assert module.group == "hard"
+    # NOTE: For "id" see switch_id below
+    assert module.image_staged == "Success"
+    assert module.image_staged_percent == 100
+    assert module.ip_address == "172.22.150.108"
+    assert module.issu_allowed == None
+    assert module.last_upg_action == "2023-Oct-06 03:43"
+    assert module.mds == False
+    assert module.mode == "Normal"
+    assert module.model == "N9K-C93180YC-EX"
+    assert module.model_type == 0
+    assert module.peer == None
+    assert module.platform == "N9K"
+    assert module.policy == "KR5M"
+    assert module.reason == "Upgrade"
+    assert module.role == "leaf"
+    assert module.status == "In-Sync"
+    assert module.status_percent == 100
+    # NOTE: switch_id appears in the response data as "id"
+    # NOTE: "id" is a python reserved keyword, so we changed the property name
+    assert module.switch_id == 2
+    assert module.sys_name == "cvd-2313-leaf"
+    assert module.system_mode == "Normal"
+    assert module.upg_groups == None
+    assert module.upgrade == "Success"
+    assert module.upgrade_percent == 100
+    assert module.validated == "Success"
+    assert module.validated_percent == 100
+    assert module.version == "10.2(5)"
+    # NOTE: Two vdc_id values exist in the response data for each switch.
+    # NOTE: Namely, "vdcId" and "vdc_id"
+    # NOTE: Properties are provided for both, as follows.
+    # NOTE: vdc_id == vdcId
+    # NOTE: vdc_id2 == vdc_id
+    assert module.vdc_id == 0
+    assert module.vdc_id2 == -1
+    assert module.vpc_peer == None
+    assert module.vpc_role == None
+
 
 def test_ndfc_result_return_code_200(monkeypatch, module) -> None:
     """
