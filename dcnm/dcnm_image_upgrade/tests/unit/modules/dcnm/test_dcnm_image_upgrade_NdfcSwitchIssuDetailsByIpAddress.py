@@ -35,7 +35,7 @@ def module():
 
 def test_init_properties(module) -> None:
     """
-    Properties are initialized to None
+    Properties are initialized to expected values
     """
     action_keys = {"imageStaged", "upgrade", "validated"}
 
