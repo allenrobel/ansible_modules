@@ -46,6 +46,7 @@ def test_init_properties(module) -> None:
     assert module.properties.get("ndfc_data") == None
     assert module.properties.get("ndfc_response") == None
     assert module.properties.get("ndfc_result") == None
+    assert module.properties.get("ip_address") == None
 
 
 def test_refresh_return_code_200(monkeypatch, module) -> None:
