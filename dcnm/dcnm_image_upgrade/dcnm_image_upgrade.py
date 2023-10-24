@@ -748,6 +748,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         Determine current switch ISSU state on NDFC
         """
         self.have = NdfcSwitchIssuDetailsByIpAddress(self.module)
+        self.have.refresh()
 
     def get_want(self):
         """
@@ -1458,6 +1459,7 @@ class NdfcAnsibleImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         Caller: main()
         """
         instance = NdfcSwitchIssuDetailsByIpAddress(self.module)
+        instance.refresh()
         msg = f"REMOVE: {self.class_name}.handle_query_state: "
         msg += f"Entered. self.need {self.need}"
         self.log_msg(msg)
@@ -2164,6 +2166,7 @@ class NdfcImagePolicyAction(NdfcAnsibleImageUpgradeCommon):
         self.image_policies = NdfcImagePolicies(self.module)
         self.image_policies.refresh()
         self.switch_details = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+        self.switch_details.refresh()
 
     def _init_properties(self):
         self.properties = {}
@@ -2461,7 +2464,7 @@ class NdfcImagePolicies(NdfcAnsibleImageUpgradeCommon):
     def _get(self, item):
         if self.policy_name is None:
             msg = f"{self.class_name}._get: "
-            msg = f"instance.policy_name must be set before "
+            msg += f"instance.policy_name must be set before "
             msg += f"accessing property {item}."
             self.module.fail_json(msg)
         if self.properties['ndfc_data'].get(self.policy_name) is None:
@@ -2624,11 +2627,8 @@ class NdfcSwitchIssuDetails(NdfcAnsibleImageUpgradeCommon):
 
     Usage: See subclasses.
 
-    Switch details are retrieved on instantiation of this class.
-    Switch details can be refreshed by calling instance.refresh().
-
     Endpoint:
-    /appcenter/cisco/ndfc/api/v1/lan-fabric/rest/inventory/allswitches
+    /appcenter/cisco/ndfc/api/v1/imagemanagement/rest/packagemgnt/issu
 
     Response body:
     {
@@ -2682,7 +2682,6 @@ class NdfcSwitchIssuDetails(NdfcAnsibleImageUpgradeCommon):
         super().__init__(module)
         self.class_name = self.__class__.__name__
         self._init_properties()
-        self.refresh()
 
     def _init_properties(self):
         self.properties = {}
@@ -2697,23 +2696,44 @@ class NdfcSwitchIssuDetails(NdfcAnsibleImageUpgradeCommon):
         self.properties["action_keys"].add("upgrade")
         self.properties["action_keys"].add("validated")
 
-    def refresh(self):
-        """
-        Caller: __init__()
 
+    def refresh(self) -> None:
+        """
         Refresh current issu details from NDFC
         """
         path = self.endpoints.issu_info.get("path")
         verb = self.endpoints.issu_info.get("verb")
+
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
+        self.log_msg(f"{self.class_name}.refresh: ndfc_response: {self.ndfc_response}")
+
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
-        if not self.ndfc_result["success"]:
+        self.log_msg(f"{self.class_name}.refresh: ndfc_result: {self.ndfc_result}")
+
+        msg = f"REMOVE: {self.class_name}.refresh: "
+        msg += f"result: {self.ndfc_result}"
+        # ndfc_result for 404 response
+        # {'found': False, 'success': True}
+        if self.ndfc_result["success"] == False or self.ndfc_result["found"] == False:
             msg = f"{self.class_name}.refresh: "
-            msg += "Unable to retrieve switch information from NDFC"
+            msg += "Bad result when retriving switch "
+            msg += "information from NDFC"
             self.module.fail_json(msg)
+
+        data = self.ndfc_response.get("DATA").get("lastOperDataObject")
+        if data is None:
+            msg = f"{self.class_name}.refresh: "
+            msg += "NDFC has no switch ISSU information."
+            self.module.fail_json(msg)
+        if len(data) == 0:
+            msg = f"{self.class_name}.refresh: "
+            msg += "NDFC has no switch ISSU information."
+            self.module.fail_json(msg)
+
         self.properties["ndfc_data"] = self.ndfc_response.get("DATA", {}).get(
             "lastOperDataObject", []
         )
+        self.log_msg(f"{self.class_name}.refresh: ndfc_response: {self.ndfc_response}")
 
     @property
     def actions_in_progress(self):
@@ -3217,6 +3237,7 @@ class NdfcSwitchIssuDetailsByIpAddress(NdfcSwitchIssuDetails):
     Usage (where module is an instance of AnsibleModule):
 
     instance = NdfcSwitchIssuDetailsByIpAddress(module)
+    instance.refresh()
     instance.ip_address = 10.1.1.1
     image_staged = instance.image_staged
     image_upgraded = instance.image_upgraded
@@ -3229,7 +3250,7 @@ class NdfcSwitchIssuDetailsByIpAddress(NdfcSwitchIssuDetails):
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
-        self.refresh()
+        #self.refresh()
 
     def _init_properties(self):
         super()._init_properties()
@@ -3289,6 +3310,7 @@ class NdfcSwitchIssuDetailsBySerialNumber(NdfcSwitchIssuDetails):
     Usage (where module is an instance of AnsibleModule):
 
     instance = NdfcSwitchIssuDetailsBySerialNumber(module)
+    instance.refresh()
     instance.serial_number = "FDO211218GC"
     instance.refresh()
     image_staged = instance.image_staged
@@ -3303,7 +3325,7 @@ class NdfcSwitchIssuDetailsBySerialNumber(NdfcSwitchIssuDetails):
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
-        self.refresh()
+        #self.refresh()
 
     def _init_properties(self):
         super()._init_properties()
@@ -3361,6 +3383,7 @@ class NdfcSwitchIssuDetailsByDeviceName(NdfcSwitchIssuDetails):
     Usage (where module is an instance of AnsibleModule):
 
     instance = NdfcSwitchIssuDetailsByDeviceName(module)
+    instance.refresh()
     instance.device_name = "leaf_1"
     image_staged = instance.image_staged
     image_upgraded = instance.image_upgraded
@@ -3374,7 +3397,7 @@ class NdfcSwitchIssuDetailsByDeviceName(NdfcSwitchIssuDetails):
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
-        self.refresh()
+        #self.refresh()
 
     def _init_properties(self):
         super()._init_properties()
@@ -3491,7 +3514,10 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         super().__init__(module)
         self.class_name = self.__class__.__name__
         self._init_properties()
-        self._populate_ndfc_version()
+        self.serial_numbers_done = set()
+        #self._populate_ndfc_version()
+        # self.issu_detail = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+        # self.issu_detail.refresh()
         self.issu_detail = NdfcSwitchIssuDetailsBySerialNumber(self.module)
 
     def _init_properties(self):
@@ -3512,6 +3538,7 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
             imports resulting in RecursionError
         """
         instance = NdfcVersion(self.module)
+        instance.refresh()
         self.ndfc_version = instance.version
 
     def prune_serial_numbers(self):
@@ -3519,7 +3546,8 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         If the image is already staged on a switch, remove that switch's
         serial number from the list of serial numbers to stage.
         """
-        for serial_number in self.serial_numbers:
+        serial_numbers = copy.copy(self.serial_numbers)
+        for serial_number in serial_numbers:
             self.issu_detail.serial_number = serial_number
             self.issu_detail.refresh()
             if self.issu_detail.image_staged == "Success":
@@ -3547,6 +3575,8 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
                 msg += f"Check the switch connectivity to NDFC "
                 msg += "and try again."
                 self.module.fail_json(msg)
+            else:
+                self.log_msg(f"Image staging is not failing for the following switch: {self.issu_detail.serial_number}")
 
     def commit(self):
         """
@@ -3569,6 +3599,7 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         verb = self.endpoints.image_stage.get("verb")
 
         payload = {}
+        self._populate_ndfc_version()
         if self.ndfc_version == "12.1.2e":
             # Yes, NDFC wants serialNum to be misspelled
             payload["sereialNum"] = self.serial_numbers
@@ -3595,13 +3626,14 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         Wait for all actions to complete before staging image.
         Actions include image staging, image upgrade, and image validation.
         """
-        serial_numbers = copy.copy(self.serial_numbers)
+        self.serial_numbers_done = set()
+        serial_numbers_todo = set(copy.copy(self.serial_numbers))
         timeout = self.check_timeout
-        while len(serial_numbers) > 0 and timeout > 0:
+        while self.serial_numbers_done != serial_numbers_todo and timeout > 0:
             sleep(self.check_interval)
             timeout -= self.check_interval
             for serial_number in self.serial_numbers:
-                if serial_number not in serial_numbers:
+                if serial_number in self.serial_numbers_done:
                     continue
                 self.issu_detail.serial_number = serial_number
                 self.issu_detail.refresh()
@@ -3611,16 +3643,18 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
                     msg += f"{serial_number} no actions in progress. "
                     msg += f"OK to proceed. {timeout} seconds remaining."
                     self.log_msg(msg)
-                    serial_numbers.remove(serial_number)
+                    self.serial_numbers_done.add(serial_number)
 
     def _wait_for_image_stage_to_complete(self):
         """
         # Wait for image stage to complete
         """
-        serial_numbers_done = set()
+        # We're promiting serial_numbers_done to a class-level attribute
+        # so that it can be used in unit test asserts.
+        self.serial_numbers_done = set()
         timeout = self.check_timeout
         serial_numbers_todo = set(copy.copy(self.serial_numbers))
-        while serial_numbers_done != serial_numbers_todo and timeout > 0:
+        while self.serial_numbers_done != serial_numbers_todo and timeout > 0:
             sleep(self.check_interval)
             timeout -= self.check_interval
             msg = f"REMOVE: {self.class_name}."
@@ -3631,10 +3665,10 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
             msg = f"REMOVE: {self.class_name}."
             msg += "_wait_for_image_stage_to_complete: "
             msg += f"seconds remaining: {timeout}, "
-            msg += f"serial_numbers_done: {sorted(list(serial_numbers_done))}"
+            msg += f"serial_numbers_done: {sorted(list(self.serial_numbers_done))}"
             self.log_msg(msg)
             for serial_number in self.serial_numbers:
-                if serial_number in serial_numbers_done:
+                if serial_number in self.serial_numbers_done:
                     continue
                 self.issu_detail.serial_number = serial_number
                 self.issu_detail.refresh()
@@ -3663,7 +3697,7 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
                     msg += f"for {device_name}, {serial_number}, {ip_address}. "
                     msg += f"image staged percent: {staged_percent}"
                     self.log_msg(msg)
-                    serial_numbers_done.add(serial_number)
+                    self.serial_numbers_done.add(serial_number)
 
                 if staged_status == None:
                     msg = f"REMOVE: {self.class_name}."
@@ -3731,6 +3765,14 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         """
         return self.properties.get("check_interval")
 
+    @check_interval.setter
+    def check_interval(self, value):
+        if not isinstance(value, int):
+            msg = f"{self.__class__.__name__}: instance.check_interval must "
+            msg += f"be an integer."
+            self.module.fail_json(msg)
+        self.properties["check_interval"] = value
+
     @property
     def check_timeout(self):
         """
@@ -3779,6 +3821,7 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
         self._init_properties()
         self._populate_ndfc_version()
         self.issu_detail = NdfcSwitchIssuDetailsBySerialNumber(self.module)
+        self.issu_detail.refresh()
 
     def _init_properties(self):
         self.properties = {}
@@ -3801,6 +3844,7 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
             imports resulting in RecursionError
         """
         instance = NdfcVersion(self.module)
+        instance.refresh()
         self.ndfc_version = instance.version
 
     def prune_serial_numbers(self):
@@ -4161,6 +4205,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
         self._init_properties()
         self._populate_ndfc_version()
         self.issu_detail = NdfcSwitchIssuDetailsByIpAddress(self.module)
+        self.issu_detail.refresh()
 
     def _init_defaults(self):
         self.defaults = {}
@@ -4231,6 +4276,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
             imports resulting in RecursionError
         """
         instance = NdfcVersion(self.module)
+        instance.refresh()
         self.ndfc_version = instance.version
 
     # def prune_devices(self):
@@ -4245,6 +4291,7 @@ class NdfcImageUpgrade(NdfcAnsibleImageUpgradeCommon):
     #     # issu = NdfcSwitchIssuDetailsBySerialNumber(self.module)
     #     pruned_devices = set()
     #     instance = NdfcSwitchIssuDetailsByIpAddress(self.module)
+    #     instance.refresh()
     #     for device in self.devices:
     #         msg = f"REMOVE: {self.class_name}.prune_devices() device: {device}"
     #         self.log_msg(msg)
@@ -4876,6 +4923,7 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
     Usage (where module is an instance of AnsibleModule):
 
     instance = NdfcVersion(module)
+    instance.refresh()
     if instance.version == "12.1.2e":
         do 12.1.2e stuff
     else:
@@ -4898,7 +4946,6 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
         super().__init__(module)
         self.class_name = self.__class__.__name__
         self._init_properties()
-        self.refresh()
 
     def _init_properties(self):
         self.properties = {}
@@ -4914,11 +4961,13 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
         verb = self.endpoints.ndfc_version.get("verb")
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
+
         msg = f"REMOVE: {self.class_name}.refresh() response: {self.ndfc_response}"
         self.log_msg(msg)
         msg = f"REMOVE: {self.class_name}.refresh() result: {self.ndfc_result}"
         self.log_msg(msg)
-        if not self.ndfc_result["success"]:
+
+        if self.ndfc_result["success"] == False or self.ndfc_result["found"] == False:
             msg = f"{self.class_name}.refresh() failed: {self.ndfc_result}"
             self.module.fail_json(msg)
         self.properties["ndfc_data"] = self.ndfc_response.get("DATA")
