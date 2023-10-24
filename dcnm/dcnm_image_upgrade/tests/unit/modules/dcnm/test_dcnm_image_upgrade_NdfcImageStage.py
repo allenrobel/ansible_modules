@@ -13,30 +13,22 @@ from typing import Any, Dict
 ndfc_version: 12
 description: Verify functionality of subclass NdcImageStage
 """
-class_name = "NdfcImageStage"
-response_file = f"dcnm_image_upgrade_responses_{class_name}"
-
-# Here, we are using the superclass name, since we are sharing the
-# same response file across all subclasses.
-class_name = "NdfcSwitchIssuDetails"
-response_file_issu_details = f"dcnm_image_upgrade_responses_{class_name}"
-
-class_name = "NdfcVersion"
-response_file_ndfc_version = f"dcnm_image_upgrade_responses_{class_name}"
-
 def response_data_issu_details(key: str) -> Dict[str, str]:
-    response = load_fixture(response_file_issu_details).get(key)
+    response_file = f"dcnm_image_upgrade_responses_NdfcSwitchIssuDetails"
+    response = load_fixture(response_file).get(key)
     print(f"response_data_issu_details: {key} : {response}")
     return response
 
 def response_data_ndfc_version(key: str) -> Dict[str, str]:
-    response = load_fixture(response_file_ndfc_version).get(key)
-    print(f"response_data: {key} : {response}")
+    response_file = f"dcnm_image_upgrade_responses_NdfcVersion"
+    response = load_fixture(response_file).get(key)
+    print(f"response_data_ndfc_version: {key} : {response}")
     return response
 
-def response_data(key: str) -> Dict[str, str]:
+def response_data_ndfc_image_stage(key: str) -> Dict[str, str]:
+    response_file = f"dcnm_image_upgrade_responses_NdfcImageStage"
     response = load_fixture(response_file).get(key)
-    print(f"response_data: {key} : {response}")
+    print(f"response_data_ndfc_image_stage: {key} : {response}")
     return response
 
 @pytest.fixture
