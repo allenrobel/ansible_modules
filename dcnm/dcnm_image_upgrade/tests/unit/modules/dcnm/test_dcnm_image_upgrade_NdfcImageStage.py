@@ -167,7 +167,7 @@ def test_wait_for_image_stage_to_complete(monkeypatch, module, mock_issu_details
     assert "FDO21120U5D" in module.serial_numbers_done
     assert "FDO2112189M" in module.serial_numbers_done
 
-def test_wait_for_image_stage_to_complete_fail_json(monkeypatch, module, mock_issu_details) -> None:
+def test_wait_for_image_stage_to_complete_stage_failed(monkeypatch, module, mock_issu_details) -> None:
     """
     _wait_for_image_stage_to_complete looks at the imageStaged status for each
     serial number and waits for it to be "Success" or "Failed".
@@ -175,10 +175,10 @@ def test_wait_for_image_stage_to_complete_fail_json(monkeypatch, module, mock_is
     In the case where any serial number is "Failed", the module calls fail_json.
 
     Expectations:
-    1. module.serial_numbers_done should be a set()
-    2. module.serial_numbers_done should be length 1
-    3. module.serial_numbers_done should contain FDO21120U5D
-    4. The module call fail_json on serial number FDO2112189M
+    1. module.serial_numbers_done is a set()
+    2. module.serial_numbers_done has length 1
+    3. module.serial_numbers_done contains FDO21120U5D, imageStaged is "Success"
+    4. Call fail_json on serial number FDO2112189M, imageStaged is "Failed"
     """
 
     def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
@@ -195,7 +195,49 @@ def test_wait_for_image_stage_to_complete_fail_json(monkeypatch, module, mock_is
         "FDO2112189M",
     ]
     module.check_interval = 0
-    with pytest.raises(AnsibleFailJson):
+    error_message = "Seconds remaining 1800: stage image failed for "
+    error_message += "cvd-2313-leaf, FDO2112189M, 172.22.150.108. image "
+    error_message += "staged percent: 90"
+    with pytest.raises(AnsibleFailJson, match=error_message):
+        module._wait_for_image_stage_to_complete()
+    assert isinstance(module.serial_numbers_done, set)
+    assert len(module.serial_numbers_done) == 1
+    assert "FDO21120U5D" in module.serial_numbers_done
+    assert "FDO2112189M" not in module.serial_numbers_done
+
+def test_wait_for_image_stage_to_complete_timout(monkeypatch, module, mock_issu_details) -> None:
+    """
+    See test_wait_for_image_stage_to_complete for functional details.
+
+    Expectations:
+    1.  module.serial_numbers_done should be a set()
+    2.  module.serial_numbers_done should be length 1
+    3.  module.serial_numbers_done should contain FDO21120U5D
+    3.  module.serial_numbers_done should not contain FDO2112189M
+    4.  The function should call fail_json due to timeout
+    """
+
+    def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
+        key = "NdfcImageStage_test_wait_for_image_stage_to_complete_timeout"
+        return response_data_issu_details(key)
+
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
+    )
+
+    module.issu_detail = mock_issu_details
+    module.serial_numbers = [
+        "FDO21120U5D",
+        "FDO2112189M",
+    ]
+    module.check_interval = 1
+    module.check_timeout = 1
+
+    error_message = "NdfcImageStage._wait_for_image_stage_to_complete: "
+    error_message += "Timed out waiting for image stage to complete. "
+    error_message += "serial_numbers_done: FDO21120U5D, "
+    error_message += "serial_numbers_todo: FDO21120U5D,FDO2112189M"
+    with pytest.raises(AnsibleFailJson, match=error_message):
         module._wait_for_image_stage_to_complete()
     assert isinstance(module.serial_numbers_done, set)
     assert len(module.serial_numbers_done) == 1
@@ -239,3 +281,42 @@ def test_wait_for_current_actions_to_complete(monkeypatch, module, mock_issu_det
     assert len(module.serial_numbers_done) == 2
     assert "FDO21120U5D" in module.serial_numbers_done
     assert "FDO2112189M" in module.serial_numbers_done
+
+def test_wait_for_current_actions_to_complete_timout(monkeypatch, module, mock_issu_details) -> None:
+    """
+    See test_wait_for_current_actions_to_complete for functional details.
+
+    Expectations:
+    1.  module.serial_numbers_done should be a set()
+    2.  module.serial_numbers_done should be length 1
+    3.  module.serial_numbers_done should contain FDO21120U5D
+    3.  module.serial_numbers_done should not contain FDO2112189M
+    4.  The function should call fail_json due to timeout
+    """
+
+    def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
+        key = "NdfcImageStage_test_wait_for_current_actions_to_complete_timeout"
+        return response_data_issu_details(key)
+
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
+    )
+
+    module.issu_detail = mock_issu_details
+    module.serial_numbers = [
+        "FDO21120U5D",
+        "FDO2112189M",
+    ]
+    module.check_interval = 1
+    module.check_timeout = 1
+
+    error_message = "NdfcImageStage._wait_for_current_actions_to_complete: "
+    error_message += "Timed out waiting for actions to complete. "
+    error_message += "serial_numbers_done: FDO21120U5D, "
+    error_message += "serial_numbers_todo: FDO21120U5D,FDO2112189M"
+    with pytest.raises(AnsibleFailJson, match=error_message):
+        module._wait_for_current_actions_to_complete()
+    assert isinstance(module.serial_numbers_done, set)
+    assert len(module.serial_numbers_done) == 1
+    assert "FDO21120U5D" in module.serial_numbers_done
+    assert "FDO2112189M" not in module.serial_numbers_done
