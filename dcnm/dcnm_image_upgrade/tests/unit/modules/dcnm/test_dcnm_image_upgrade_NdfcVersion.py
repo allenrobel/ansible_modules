@@ -497,7 +497,7 @@ def test_version_major(monkeypatch, module, key, expected) -> None:
 
     Expectations:
 
-    1.  NdfcVersion.version returns above values
+    1.  NdfcVersion.version_major returns above values
         given corresponding responses
 
     Expected results:
@@ -514,3 +514,82 @@ def test_version_major(monkeypatch, module, key, expected) -> None:
     )
     module.refresh()
     assert module.version_major == expected
+
+@pytest.mark.parametrize(
+        "key, expected",
+        [
+            ("NdfcVersion_version_12.1.3b", "1"),
+            ("NdfcVersion_version_none", None)
+        ]
+)
+def test_version_minor(monkeypatch, module, key, expected) -> None:
+    """
+    Function description:
+
+    version_minor returns the minor version of NDFC
+    It derives this from the "version" key in the NDFC response
+    by splitting the string on "." and returning the second element
+
+    NdfcVersion.version_minor returns:
+        - If NDFC response "version" key is present, the minor version
+        - If NDFC response "version" key is not present, None
+
+    Expectations:
+
+    1.  NdfcVersion.version_minor returns above values
+        given corresponding responses
+
+    Expected results:
+
+    1. NdfcVersion_version_12.1.3b == "1"
+    2. NdfcVersion_version_none == None
+    """
+
+    def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
+        return response_data_ndfc_version(key)
+
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
+    )
+    module.refresh()
+    assert module.version_minor == expected
+
+@pytest.mark.parametrize(
+        "key, expected",
+        [
+            ("NdfcVersion_version_12.1.3b", "3b"),
+            ("NdfcVersion_version_none", None)
+        ]
+)
+def test_version_patch(monkeypatch, module, key, expected) -> None:
+    """
+    Function description:
+
+    version_patch returns the patch version of NDFC
+    It derives this from the "version" key in the NDFC response
+    by splitting the string on "." and returning the third element
+
+    NdfcVersion.version_patch returns:
+        - If NDFC response "version" key is present, the patch version
+        - If NDFC response "version" key is not present, None
+
+    Expectations:
+
+    1.  NdfcVersion.version_patch returns above values
+        given corresponding responses
+
+    Expected results:
+
+    1. NdfcVersion_version_12.1.3b == "3b"
+    2. NdfcVersion_version_none == None
+    """
+
+    def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
+        return response_data_ndfc_version(key)
+
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
+    )
+    module.refresh()
+    assert module.version_patch == expected
+
