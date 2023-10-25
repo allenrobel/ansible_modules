@@ -3250,7 +3250,6 @@ class NdfcSwitchIssuDetailsByIpAddress(NdfcSwitchIssuDetails):
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
-        #self.refresh()
 
     def _init_properties(self):
         super()._init_properties()
@@ -3325,7 +3324,6 @@ class NdfcSwitchIssuDetailsBySerialNumber(NdfcSwitchIssuDetails):
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
-        #self.refresh()
 
     def _init_properties(self):
         super()._init_properties()
@@ -3397,7 +3395,6 @@ class NdfcSwitchIssuDetailsByDeviceName(NdfcSwitchIssuDetails):
     def __init__(self, module):
         super().__init__(module)
         self._init_properties()
-        #self.refresh()
 
     def _init_properties(self):
         super()._init_properties()
@@ -3852,19 +3849,17 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
         super().__init__(module)
         self.class_name = self.__class__.__name__
         self._init_properties()
-        self._populate_ndfc_version()
         self.issu_detail = NdfcSwitchIssuDetailsBySerialNumber(self.module)
-        self.issu_detail.refresh()
 
     def _init_properties(self):
         self.properties = {}
-        self.properties["serial_numbers"] = None
-        self.properties["non_disruptive"] = False
+        self.properties["check_interval"] = 10  # seconds
+        self.properties["check_timeout"] = 1800  # seconds
         self.properties["ndfc_data"] = None
         self.properties["ndfc_result"] = None
         self.properties["ndfc_response"] = None
-        self.properties["check_interval"] = 10  # seconds
-        self.properties["check_timeout"] = 1800  # seconds
+        self.properties["non_disruptive"] = False
+        self.properties["serial_numbers"] = None
 
     def _populate_ndfc_version(self):
         """
@@ -3885,7 +3880,8 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
         If the image is already validated on a switch, remove that switch's
         serial number from the list of serial numbers to validate.
         """
-        for serial_number in self.serial_numbers:
+        serial_numbers = copy.copy(self.serial_numbers)
+        for serial_number in serial_numbers:
             self.issu_detail.serial_number = serial_number
             self.issu_detail.refresh()
             if self.issu_detail.validated == "Success":
@@ -3959,7 +3955,7 @@ class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
 
     def _wait_for_current_actions_to_complete(self):
         """
-        NDFC will not stage an image if there are any actions in progress.
+        NDFC will not validate an image if there are any actions in progress.
         Wait for all actions to complete before validating image.
         Actions include image staging, image upgrade, and image validation.
         """
