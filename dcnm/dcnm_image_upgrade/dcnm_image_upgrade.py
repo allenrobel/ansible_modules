@@ -4995,17 +4995,23 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
         self.properties["ndfc_response"] = dcnm_send(self.module, verb, path)
         self.properties["ndfc_result"] = self._handle_response(self.ndfc_response, verb)
 
-        msg = f"REMOVE: {self.class_name}.refresh() response: {self.ndfc_response}"
+        msg = f"REMOVE: {self.class_name}.refresh() ndfc_response: {self.ndfc_response}"
         self.log_msg(msg)
-        msg = f"REMOVE: {self.class_name}.refresh() result: {self.ndfc_result}"
+
+        msg = f"REMOVE: {self.class_name}.refresh() ndfc_result: {self.ndfc_result}"
         self.log_msg(msg)
 
         if self.ndfc_result["success"] == False or self.ndfc_result["found"] == False:
             msg = f"{self.class_name}.refresh() failed: {self.ndfc_result}"
             self.module.fail_json(msg)
-        msg = f"REMOVE: {self.class_name}.refresh() response: {self.ndfc_response}"
-        self.log_msg(msg)
+
         self.properties["ndfc_data"] = self.ndfc_response.get("DATA")
+        if self.ndfc_data is None:
+            msg = f"{self.class_name}.refresh() failed: NDFC response "
+            msg += "does not contain DATA key. NDFC response: "
+            msg += f"{self.ndfc_response}"
+            self.module.fail_json(msg)
+
         msg = f"REMOVE: {self.class_name}.refresh() ndfc_data: {self.ndfc_data}"
         self.log_msg(msg)
 
@@ -5091,14 +5097,14 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
     @property
     def ndfc_result(self):
         """
-        Return the POST result from NDFC
+        Return the GET result from NDFC
         """
         return self.properties.get("ndfc_result")
 
     @property
     def ndfc_response(self):
         """
-        Return the POST response from NDFC
+        Return the GET response from NDFC
         """
         return self.properties.get("ndfc_response")
 
@@ -5151,6 +5157,8 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
             if version is 12.1.2e, return 12
             None
         """
+        if self.version is None:
+            return None
         return (self._get("version").split("."))[0]
 
     @property
@@ -5166,6 +5174,8 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
             if version is 12.1.2e, return 1
             None
         """
+        if self.version is None:
+            return None
         return (self._get("version").split("."))[1]
 
     @property
@@ -5181,6 +5191,8 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
             if version is 12.1.2e, return 2e
             None
         """
+        if self.version is None:
+            return None
         return (self._get("version").split("."))[2]
 
 
