@@ -5003,10 +5003,14 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
         if self.ndfc_result["success"] == False or self.ndfc_result["found"] == False:
             msg = f"{self.class_name}.refresh() failed: {self.ndfc_result}"
             self.module.fail_json(msg)
+        msg = f"REMOVE: {self.class_name}.refresh() response: {self.ndfc_response}"
+        self.log_msg(msg)
         self.properties["ndfc_data"] = self.ndfc_response.get("DATA")
+        msg = f"REMOVE: {self.class_name}.refresh() ndfc_data: {self.ndfc_data}"
+        self.log_msg(msg)
 
     def _get(self, item):
-        return self.ndfc_data.get(item)
+        return self.make_boolean(self.make_none(self.ndfc_data.get(item)))
 
     @property
     def dev(self):
@@ -5020,7 +5024,7 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
             False
             None
         """
-        return self.make_boolean(self._get("dev"))
+        return self._get("dev")
 
     @property
     def install(self):
