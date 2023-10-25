@@ -3637,6 +3637,12 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
                     continue
                 self.issu_detail.serial_number = serial_number
                 self.issu_detail.refresh()
+                msg = f"REMOVE: {self.class_name}."
+                msg += "_wait_for_current_actions_to_complete: "
+                msg += f"{serial_number} actions in progress: "
+                msg += f"{self.issu_detail.actions_in_progress}, "
+                msg += f"{timeout} seconds remaining."
+                self.log_msg(msg)
                 if self.issu_detail.actions_in_progress is False:
                     msg = f"REMOVE: {self.class_name}."
                     msg += "_wait_for_current_actions_to_complete: "
@@ -3644,6 +3650,16 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
                     msg += f"OK to proceed. {timeout} seconds remaining."
                     self.log_msg(msg)
                     self.serial_numbers_done.add(serial_number)
+        if self.serial_numbers_done != serial_numbers_todo:
+            msg = f"{self.class_name}."
+            msg += "_wait_for_current_actions_to_complete: "
+            msg += f"Timed out waiting for actions to complete. "
+            msg += f"serial_numbers_done: "
+            msg += f"{','.join(sorted(self.serial_numbers_done))}, "
+            msg += f"serial_numbers_todo: "
+            msg += f"{','.join(sorted(serial_numbers_todo))}"
+            self.log_msg(msg)
+            self.module.fail_json(msg)
 
     def _wait_for_image_stage_to_complete(self):
         """
@@ -3716,6 +3732,16 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
                     msg += f"{device_name}, {serial_number}, {ip_address}. "
                     msg += f"image staged percent: {staged_percent}"
                     self.log_msg(msg)
+        if self.serial_numbers_done != serial_numbers_todo:
+            msg = f"{self.class_name}."
+            msg += "_wait_for_image_stage_to_complete: "
+            msg += f"Timed out waiting for image stage to complete. "
+            msg += f"serial_numbers_done: "
+            msg += f"{','.join(sorted(self.serial_numbers_done))}, "
+            msg += f"serial_numbers_todo: "
+            msg += f"{','.join(sorted(serial_numbers_todo))}"
+            self.log_msg(msg)
+            self.module.fail_json(msg)
 
     @property
     def serial_numbers(self):
@@ -3780,6 +3806,13 @@ class NdfcImageStage(NdfcAnsibleImageUpgradeCommon):
         """
         return self.properties.get("check_timeout")
 
+    @check_timeout.setter
+    def check_timeout(self, value):
+        if not isinstance(value, int):
+            msg = f"{self.__class__.__name__}: instance.check_timeout must "
+            msg += f"be an integer."
+            self.module.fail_json(msg)
+        self.properties["check_timeout"] = value
 
 # ==============================================================================
 class NdfcImageValidate(NdfcAnsibleImageUpgradeCommon):
