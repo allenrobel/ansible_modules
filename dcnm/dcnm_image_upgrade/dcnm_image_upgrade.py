@@ -5054,20 +5054,6 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
         return self.make_boolean(self._get("isHaEnabled"))
 
     @property
-    def is_upgrade_inprogress(self):
-        """
-        Return True if an NDFC upgrade is in progress.
-        Return False if an NDFC upgrade is not in progress.
-        Return None otherwise
-
-        Possible values:
-            True
-            False
-            None
-        """
-        return self.make_boolean(self._get("is_upgrade_inprogress"))
-
-    @property
     def is_media_controller(self):
         """
         Return True if NDFC is a media controller.
@@ -5080,6 +5066,20 @@ class NdfcVersion(NdfcAnsibleImageUpgradeCommon):
             None
         """
         return self.make_boolean(self._get("isMediaController"))
+
+    @property
+    def is_upgrade_inprogress(self):
+        """
+        Return True if an NDFC upgrade is in progress.
+        Return False if an NDFC upgrade is not in progress.
+        Return None otherwise
+
+        Possible values:
+            True
+            False
+            None
+        """
+        return self.make_boolean(self._get("is_upgrade_inprogress"))
 
     @property
     def ndfc_data(self):
