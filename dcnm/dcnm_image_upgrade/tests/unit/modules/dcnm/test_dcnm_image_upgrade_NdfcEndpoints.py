@@ -4,6 +4,21 @@ from dcnm_image_upgrade.dcnm_image_upgrade import NdfcEndpoints
 ndfc_version: 12
 description: Verify that class NdfcEndpoints returns the correct endpoints
 """
+def test_dcnm_image_upgrade_endpoints_init() -> None:
+    """
+    Endpoints.__init__
+    """
+    endpoints = NdfcEndpoints()
+    endpoints.__init__()
+    assert endpoints.endpoint_api_v1 == "/appcenter/cisco/ndfc/api/v1"
+    assert endpoints.endpoint_feature_manager == "/appcenter/cisco/ndfc/api/v1/fm"
+    assert endpoints.endpoint_image_management == "/appcenter/cisco/ndfc/api/v1/imagemanagement"
+    assert endpoints.endpoint_image_upgrade == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade"
+    assert endpoints.endpoint_lan_fabric == "/appcenter/cisco/ndfc/api/v1/lan-fabric"
+    assert endpoints.endpoint_package_mgnt == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/packagemgnt"
+    assert endpoints.endpoint_policy_mgnt == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt"
+    assert endpoints.endpoint_staging_management == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement"
+
 def test_dcnm_image_upgrade_endpoints_bootflash_info() -> None:
     """
     Endpoints.bootflash_info
@@ -127,21 +142,21 @@ def test_dcnm_image_upgrade_endpoints_switches_info() -> None:
 
 # Example of using monkeypatch if we need to patch a property
 # Not needed in this case, but keep this around for reference
-def test_dcnm_image_upgrade_endpoints_image_stage_monkeypatch(monkeypatch) -> None:
-    """
-    :param monkeypatch:
-    :return: None
-    """
-    @property
-    def mock_image_stage(self) -> dict:
-        path = f"/stage-image"
-        endpoint = {}
-        endpoint["path"] = path
-        endpoint["verb"] = "POST"
-        return endpoint
+# def test_dcnm_image_upgrade_endpoints_image_stage_monkeypatch(monkeypatch) -> None:
+#     """
+#     :param monkeypatch:
+#     :return: None
+#     """
+#     @property
+#     def mock_image_stage(self) -> dict:
+#         path = f"/stage-image"
+#         endpoint = {}
+#         endpoint["path"] = path
+#         endpoint["verb"] = "POST"
+#         return endpoint
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.NdfcEndpoints.image_stage", mock_image_stage)
+#     monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.NdfcEndpoints.image_stage", mock_image_stage)
 
-    endpoints = NdfcEndpoints()
-    assert endpoints.image_stage.get("verb") == "POST"
-    assert endpoints.image_stage.get("path") == "/stage-image"
+#     endpoints = NdfcEndpoints()
+#     assert endpoints.image_stage.get("verb") == "POST"
+#     assert endpoints.image_stage.get("path") == "/stage-image"
