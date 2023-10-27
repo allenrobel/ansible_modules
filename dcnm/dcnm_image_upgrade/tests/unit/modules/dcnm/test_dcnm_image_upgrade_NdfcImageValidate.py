@@ -51,7 +51,6 @@ def mock_issu_details() -> NdfcSwitchIssuDetailsBySerialNumber:
     return NdfcSwitchIssuDetailsBySerialNumber(MockAnsibleModule)
 
 
-
 def test_init_properties(module) -> None:
     """
     Properties are initialized to expected values
@@ -138,7 +137,10 @@ def test_validate_serial_numbers_failed(monkeypatch, module, mock_issu_details) 
     with pytest.raises(AnsibleFailJson, match=error_message):
         module.validate_serial_numbers()
 
-def test_wait_for_image_validate_to_complete(monkeypatch, module, mock_issu_details) -> None:
+
+def test_wait_for_image_validate_to_complete(
+    monkeypatch, module, mock_issu_details
+) -> None:
     """
     _wait_for_image_validate_to_complete looks at the "validated" status for each
     serial number and waits for it to be "Success" or "Failed".
@@ -173,7 +175,10 @@ def test_wait_for_image_validate_to_complete(monkeypatch, module, mock_issu_deta
     assert "FDO21120U5D" in module.serial_numbers_done
     assert "FDO2112189M" in module.serial_numbers_done
 
-def test_wait_for_image_validate_to_complete_validate_failed(monkeypatch, module, mock_issu_details) -> None:
+
+def test_wait_for_image_validate_to_complete_validate_failed(
+    monkeypatch, module, mock_issu_details
+) -> None:
     """
     _wait_for_image_validate_to_complete looks at the "validate" status for each
     serial number and waits for it to be "Success" or "Failed".
@@ -214,7 +219,10 @@ def test_wait_for_image_validate_to_complete_validate_failed(monkeypatch, module
     assert "FDO21120U5D" in module.serial_numbers_done
     assert "FDO2112189M" not in module.serial_numbers_done
 
-def test_wait_for_image_validate_to_complete_timeout(monkeypatch, module, mock_issu_details) -> None:
+
+def test_wait_for_image_validate_to_complete_timeout(
+    monkeypatch, module, mock_issu_details
+) -> None:
     """
     See test_wait_for_image_stage_to_complete for functional details.
 
@@ -253,14 +261,17 @@ def test_wait_for_image_validate_to_complete_timeout(monkeypatch, module, mock_i
     assert "FDO21120U5D" in module.serial_numbers_done
     assert "FDO2112189M" not in module.serial_numbers_done
 
-def test_wait_for_current_actions_to_complete(monkeypatch, module, mock_issu_details) -> None:
+
+def test_wait_for_current_actions_to_complete(
+    monkeypatch, module, mock_issu_details
+) -> None:
     """
     _wait_for_current_actions_to_complete waits until staging, validation,
     and upgrade actions are complete for all serial numbers.  It calls
     NdfcSwitchIssuDetailsBySerialNumber.actions_in_progress() and expects
     this to return False.  actions_in_progress() returns True until none of
     the following keys has a value of "In-Progress":
-    
+
     ["imageStaged", "upgrade", "validated"]
 
     Expectations:
@@ -291,7 +302,10 @@ def test_wait_for_current_actions_to_complete(monkeypatch, module, mock_issu_det
     assert "FDO21120U5D" in module.serial_numbers_done
     assert "FDO2112189M" in module.serial_numbers_done
 
-def test_wait_for_current_actions_to_complete_timeout(monkeypatch, module, mock_issu_details) -> None:
+
+def test_wait_for_current_actions_to_complete_timeout(
+    monkeypatch, module, mock_issu_details
+) -> None:
     """
     See test_wait_for_current_actions_to_complete for functional details.
 

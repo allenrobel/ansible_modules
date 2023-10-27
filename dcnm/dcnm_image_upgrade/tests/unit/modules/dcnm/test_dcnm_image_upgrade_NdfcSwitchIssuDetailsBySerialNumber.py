@@ -1,12 +1,11 @@
-from dcnm_image_upgrade.dcnm_image_upgrade import (
-    NdfcSwitchIssuDetailsBySerialNumber
-)
-from dcnm_image_upgrade.tests.unit.modules.dcnm.fixture import load_fixture
-from ansible_collections.ansible.netcommon.tests.unit.modules.utils import (
-    AnsibleFailJson,
-)
-import pytest
 from typing import Any, Dict
+
+import pytest
+from ansible_collections.ansible.netcommon.tests.unit.modules.utils import \
+    AnsibleFailJson
+from dcnm_image_upgrade.dcnm_image_upgrade import \
+    NdfcSwitchIssuDetailsBySerialNumber
+from dcnm_image_upgrade.tests.unit.modules.dcnm.fixture import load_fixture
 
 """
 ndfc_version: 12
@@ -17,16 +16,19 @@ description: Verify functionality of subclass NdfcSwitchIssuDetailsBySerialNumbe
 class_name = "NdfcSwitchIssuDetails"
 response_file = f"dcnm_image_upgrade_responses_{class_name}"
 
+
 class MockAnsibleModule:
     params = {}
 
     def fail_json(msg) -> AnsibleFailJson:
         raise AnsibleFailJson(msg)
 
+
 def response_data(key: str) -> Dict[str, str]:
     response = load_fixture(response_file).get(key)
     print(f"response_data: {key} : {response}")
     return response
+
 
 @pytest.fixture
 def module():
@@ -61,12 +63,13 @@ def test_refresh_return_code_200(monkeypatch, module) -> None:
         print(f"mock_dcnm_send: {response_data(key)}")
         return response_data(key)
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
-        mock_dcnm_send
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
     )
     module.refresh()
     assert isinstance(module.ndfc_response, dict)
     assert isinstance(module.ndfc_data, list)
+
 
 def test_properties_are_set_to_expected_values(monkeypatch, module) -> None:
     """
@@ -79,8 +82,8 @@ def test_properties_are_set_to_expected_values(monkeypatch, module) -> None:
         print(f"mock_dcnm_send: {response_data(key)}")
         return response_data(key)
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
-        mock_dcnm_send
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
     )
     module.refresh()
     module.serial_number = "FDO21120U5D"
@@ -145,13 +148,14 @@ def test_ndfc_result_return_code_200(monkeypatch, module) -> None:
         print(f"mock_dcnm_send: {response_data(key)}")
         return response_data(key)
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
-        mock_dcnm_send
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
     )
     module.refresh()
     assert isinstance(module.ndfc_result, dict)
     assert module.ndfc_result.get("found") == True
     assert module.ndfc_result.get("success") == True
+
 
 def test_ndfc_result_return_code_404(monkeypatch, module) -> None:
     """
@@ -164,12 +168,13 @@ def test_ndfc_result_return_code_404(monkeypatch, module) -> None:
         print(f"mock_dcnm_send: {response_data(key)}")
         return response_data(key)
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
-        mock_dcnm_send
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
     )
     error_message = "Bad result when retriving switch information from NDFC"
     with pytest.raises(AnsibleFailJson, match=error_message):
         module.refresh()
+
 
 def test_ndfc_result_return_code_200_empty_data(monkeypatch, module) -> None:
     """
@@ -182,15 +187,18 @@ def test_ndfc_result_return_code_200_empty_data(monkeypatch, module) -> None:
         print(f"mock_dcnm_send: {response_data(key)}")
         return response_data(key)
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
-        mock_dcnm_send
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
     )
     error_message = "NdfcSwitchIssuDetailsBySerialNumber.refresh: "
     error_message += "NDFC has no switch ISSU information."
     with pytest.raises(AnsibleFailJson, match=error_message):
         module.refresh()
 
-def test_ndfc_result_return_code_200_ndfc_switch_issu_info_length_0(monkeypatch, module) -> None:
+
+def test_ndfc_result_return_code_200_ndfc_switch_issu_info_length_0(
+    monkeypatch, module
+) -> None:
     """
     fail_json is called on 200 response with DATA.lastOperDataObject length 0.
     endpoint: .../api/v1/imagemanagement/rest/policymgnt/policiess
@@ -202,8 +210,8 @@ def test_ndfc_result_return_code_200_ndfc_switch_issu_info_length_0(monkeypatch,
         print(f"mock_dcnm_send: {response_data(key)}")
         return response_data(key)
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
-        mock_dcnm_send
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
     )
     error_message = "NdfcSwitchIssuDetailsBySerialNumber.refresh: "
     error_message += "NDFC has no switch ISSU information."

@@ -1,12 +1,10 @@
-from dcnm_image_upgrade.dcnm_image_upgrade import (
-    NdfcImageInstallOptions
-)
-from dcnm_image_upgrade.tests.unit.modules.dcnm.fixture import load_fixture
-from ansible_collections.ansible.netcommon.tests.unit.modules.utils import (
-    AnsibleFailJson,
-)
-import pytest
 from typing import Any, Dict
+
+import pytest
+from ansible_collections.ansible.netcommon.tests.unit.modules.utils import \
+    AnsibleFailJson
+from dcnm_image_upgrade.dcnm_image_upgrade import NdfcImageInstallOptions
+from dcnm_image_upgrade.tests.unit.modules.dcnm.fixture import load_fixture
 
 """
 ndfc_version: 12
@@ -15,20 +13,24 @@ description: Verify functionality of class NdfcImageInstallOptions
 class_name = "NdfcImageInstallOptions"
 response_file = f"dcnm_image_upgrade_responses_{class_name}"
 
+
 class MockAnsibleModule:
     params = {}
 
     def fail_json(msg) -> AnsibleFailJson:
         raise AnsibleFailJson(msg)
 
+
 def response_data(key: str) -> Dict[str, str]:
     response = load_fixture(response_file).get(key)
     print(f"{key} : : {response}")
     return response
 
+
 @pytest.fixture
 def module():
     return NdfcImageInstallOptions(MockAnsibleModule)
+
 
 def test_policy_name_not_defined(module) -> None:
     """
@@ -41,6 +43,7 @@ def test_policy_name_not_defined(module) -> None:
     with pytest.raises(AnsibleFailJson, match=error_message):
         module.refresh()
 
+
 def test_serial_number_not_defined(module) -> None:
     """
     fail_json() is called if serial_number is not set when refresh() is called.
@@ -52,6 +55,7 @@ def test_serial_number_not_defined(module) -> None:
     with pytest.raises(AnsibleFailJson, match=error_message):
         module.refresh()
 
+
 def test_refresh_return_code_200(monkeypatch, module) -> None:
     """
     Properties are updated based on 200 response from endpoint.
@@ -62,8 +66,8 @@ def test_refresh_return_code_200(monkeypatch, module) -> None:
     def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
         return response_data(key)
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
-        mock_dcnm_send
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
     )
     module.policy_name = "KRM5"
     module.serial_number = "BAR"
@@ -82,6 +86,7 @@ def test_refresh_return_code_200(monkeypatch, module) -> None:
     assert module.comp_disp == comp_disp
     assert module.ndfc_result.get("success") == True
 
+
 def test_refresh_return_code_500(monkeypatch, module) -> None:
     """
     fail_json() should be called if the response RETURN_CODE != 200
@@ -91,8 +96,8 @@ def test_refresh_return_code_500(monkeypatch, module) -> None:
     def mock_dcnm_send(*args, **kwargs) -> Dict[str, Any]:
         return response_data(key)
 
-    monkeypatch.setattr("dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send",
-        mock_dcnm_send
+    monkeypatch.setattr(
+        "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
     )
     module.policy_name = "KRM5"
     module.serial_number = "BAR"
@@ -100,6 +105,7 @@ def test_refresh_return_code_500(monkeypatch, module) -> None:
     error_message += "Bad result when retrieving install-options from NDFC"
     with pytest.raises(AnsibleFailJson, match=rf"{error_message}"):
         module.refresh()
+
 
 def test_build_payload_defaults(module) -> None:
     """
@@ -114,6 +120,7 @@ def test_build_payload_defaults(module) -> None:
     assert module.payload.get("issu") == True
     assert module.payload.get("epld") == False
     assert module.payload.get("packageInstall") == False
+
 
 def test_build_payload_user_changed_defaults(module) -> None:
     """
@@ -132,6 +139,7 @@ def test_build_payload_user_changed_defaults(module) -> None:
     assert module.payload.get("epld") == True
     assert module.payload.get("packageInstall") == True
 
+
 def test_invalid_value_issu(module) -> None:
     """
     fail_json() is called if issu is not a boolean.
@@ -141,6 +149,7 @@ def test_invalid_value_issu(module) -> None:
     with pytest.raises(AnsibleFailJson, match=error_message):
         module.issu = "FOO"
 
+
 def test_invalid_value_epld(module) -> None:
     """
     fail_json() is called if epld is not a boolean.
@@ -149,6 +158,7 @@ def test_invalid_value_epld(module) -> None:
     error_message += "boolean value"
     with pytest.raises(AnsibleFailJson, match=error_message):
         module.epld = "FOO"
+
 
 def test_invalid_value_package_install(module) -> None:
     """

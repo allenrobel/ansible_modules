@@ -1,10 +1,11 @@
-from dcnm_image_upgrade.dcnm_image_upgrade import NdfcAnsibleImageUpgradeCommon, NdfcEndpoints
-from dcnm_image_upgrade.tests.unit.modules.dcnm.fixture import load_fixture
-from ansible_collections.ansible.netcommon.tests.unit.modules.utils import (
-    AnsibleFailJson,
-)
-import pytest
 from typing import Dict
+
+import pytest
+from ansible_collections.ansible.netcommon.tests.unit.modules.utils import \
+    AnsibleFailJson
+from dcnm_image_upgrade.dcnm_image_upgrade import (
+    NdfcAnsibleImageUpgradeCommon, NdfcEndpoints)
+from dcnm_image_upgrade.tests.unit.modules.dcnm.fixture import load_fixture
 
 """
 ndfc_version: 12
@@ -13,21 +14,25 @@ description: Verify functionality of class NdfcAnsibleImageUpgradeCommon
 class_name = "NdfcAnsibleImageUpgradeCommon"
 response_file = f"dcnm_image_upgrade_responses_{class_name}"
 
+
 class MockAnsibleModule:
     params = {}
 
     def fail_json(msg) -> dict:
         raise AnsibleFailJson(msg)
 
+
 @pytest.fixture
 def module():
     return NdfcAnsibleImageUpgradeCommon(MockAnsibleModule)
+
 
 def response_data(key: str) -> Dict[str, str]:
     response = load_fixture(response_file).get(key)
     verb = response.get("METHOD")
     print(f"{key} : {verb} : {response}")
     return {"response": response, "verb": verb}
+
 
 def test_init_(module) -> None:
     """
@@ -42,12 +47,18 @@ def test_init_(module) -> None:
 
 
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("mock_post_return_code_200_MESSAGE_OK", {"success": True, "changed": True}),
-            ("mock_post_return_code_400_MESSAGE_NOT_OK", {"success": False, "changed": False}),
-            ("mock_post_return_code_200_ERROR_key_present", {"success": False, "changed": False})
-        ]
+    "key, expected",
+    [
+        ("mock_post_return_code_200_MESSAGE_OK", {"success": True, "changed": True}),
+        (
+            "mock_post_return_code_400_MESSAGE_NOT_OK",
+            {"success": False, "changed": False},
+        ),
+        (
+            "mock_post_return_code_200_ERROR_key_present",
+            {"success": False, "changed": False},
+        ),
+    ],
 )
 def test_handle_response_post(module, key, expected) -> None:
     """
@@ -61,13 +72,16 @@ def test_handle_response_post(module, key, expected) -> None:
 
 
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("mock_get_return_code_200_MESSAGE_OK", {"success": True, "found": True}),
-            ("mock_get_return_code_200_MESSAGE_not_OK", {"success": False, "found": False}),
-            ("mock_get_return_code_404_MESSAGE_not_found", {"success": True, "found": False}),
-            ("mock_get_return_code_500_MESSAGE_OK", {"success": False, "found": False})
-        ]
+    "key, expected",
+    [
+        ("mock_get_return_code_200_MESSAGE_OK", {"success": True, "found": True}),
+        ("mock_get_return_code_200_MESSAGE_not_OK", {"success": False, "found": False}),
+        (
+            "mock_get_return_code_404_MESSAGE_not_found",
+            {"success": True, "found": False},
+        ),
+        ("mock_get_return_code_500_MESSAGE_OK", {"success": False, "found": False}),
+    ],
 )
 def test_handle_response_get(module, key, expected) -> None:
     """
@@ -91,13 +105,16 @@ def test_handle_response_unknown_response_verb(module) -> None:
 
 
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("mock_get_return_code_200_MESSAGE_OK", {"success": True, "found": True}),
-            ("mock_get_return_code_200_MESSAGE_not_OK", {"success": False, "found": False}),
-            ("mock_get_return_code_404_MESSAGE_not_found", {"success": True, "found": False}),
-            ("mock_get_return_code_500_MESSAGE_OK", {"success": False, "found": False})
-        ]
+    "key, expected",
+    [
+        ("mock_get_return_code_200_MESSAGE_OK", {"success": True, "found": True}),
+        ("mock_get_return_code_200_MESSAGE_not_OK", {"success": False, "found": False}),
+        (
+            "mock_get_return_code_404_MESSAGE_not_found",
+            {"success": True, "found": False},
+        ),
+        ("mock_get_return_code_500_MESSAGE_OK", {"success": False, "found": False}),
+    ],
 )
 def test_handle_get_response(module, key, expected) -> None:
     """
@@ -111,13 +128,20 @@ def test_handle_get_response(module, key, expected) -> None:
     assert result.get("success") == expected.get("success")
     assert result.get("changed") == expected.get("changed")
 
+
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("mock_post_return_code_200_MESSAGE_OK", {"success": True, "changed": True}),
-            ("mock_post_return_code_400_MESSAGE_NOT_OK", {"success": False, "changed": False}),
-            ("mock_post_return_code_200_ERROR_key_present", {"success": False, "changed": False})
-        ]
+    "key, expected",
+    [
+        ("mock_post_return_code_200_MESSAGE_OK", {"success": True, "changed": True}),
+        (
+            "mock_post_return_code_400_MESSAGE_NOT_OK",
+            {"success": False, "changed": False},
+        ),
+        (
+            "mock_post_return_code_200_ERROR_key_present",
+            {"success": False, "changed": False},
+        ),
+    ],
 )
 def test_handle_post_put_delete_response(module, key, expected) -> None:
     """
@@ -130,31 +154,33 @@ def test_handle_post_put_delete_response(module, key, expected) -> None:
     assert result.get("success") == expected.get("success")
     assert result.get("changed") == expected.get("changed")
 
+
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("True", True),
-            ("true", True),
-            ("TRUE", True),
-            ("True", True),
-            ("False", False),
-            ("false", False),
-            ("FALSE", False),
-            ("False", False),
-            ("foo", "foo"),
-            (0, 0),
-            (1, 1),
-            (None, None),
-            (None, None),
-            ({"foo": 10}, {"foo": 10}),
-            ([1, 2, "3"], [1, 2, "3"]),
-        ]
+    "key, expected",
+    [
+        ("True", True),
+        ("true", True),
+        ("TRUE", True),
+        ("True", True),
+        ("False", False),
+        ("false", False),
+        ("FALSE", False),
+        ("False", False),
+        ("foo", "foo"),
+        (0, 0),
+        (1, 1),
+        (None, None),
+        (None, None),
+        ({"foo": 10}, {"foo": 10}),
+        ([1, 2, "3"], [1, 2, "3"]),
+    ],
 )
 def test_make_boolean(module, key, expected) -> None:
     """
     verify that make_boolean() returns expected values for all cases
     """
     assert module.make_boolean(key) == expected
+
 
 # def test_dcnm_image_upgrade_common_make_boolean(module) -> None:
 #     """
@@ -168,31 +194,33 @@ def test_make_boolean(module, key, expected) -> None:
 #     for value in ["foo", 1, 0, None, {"foo": 10}, [1, 2, "3"]]:
 #         assert module.make_boolean(value) == value
 
+
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("", None),
-            ("none", None),
-            ("None", None),
-            ("NONE", None),
-            ("null", None),
-            ("Null", None),
-            ("NULL", None),
-            ("None", None),
-            ("foo", "foo"),
-            (0, 0),
-            (1, 1),
-            (True, True),
-            (False, False),
-            ({"foo": 10}, {"foo": 10}),
-            ([1, 2, "3"], [1, 2, "3"]),
-        ]
+    "key, expected",
+    [
+        ("", None),
+        ("none", None),
+        ("None", None),
+        ("NONE", None),
+        ("null", None),
+        ("Null", None),
+        ("NULL", None),
+        ("None", None),
+        ("foo", "foo"),
+        (0, 0),
+        (1, 1),
+        (True, True),
+        (False, False),
+        ({"foo": 10}, {"foo": 10}),
+        ([1, 2, "3"], [1, 2, "3"]),
+    ],
 )
 def test_make_none(module, key, expected) -> None:
     """
     verify that make_none() returns expected values for all cases
     """
     assert module.make_none(key) == expected
+
 
 # def test_dcnm_image_upgrade_common_make_none(module) -> None:
 #     """
@@ -204,6 +232,7 @@ def test_make_none(module, key, expected) -> None:
 #     for value in ["foo", 1, 0, True, False, {"foo": 10}, [1, 2, "3"]]:
 #         assert module.make_none(value) == value
 
+
 def test_log_msg_disabled(module) -> None:
     """
     verify that make_none() returns expected values for all cases
@@ -211,6 +240,7 @@ def test_log_msg_disabled(module) -> None:
     ERROR_MESSAGE = "This is an error message"
     module.debug = False
     assert module.log_msg(ERROR_MESSAGE) == None
+
 
 def test_log_msg_enabled(tmp_path, module) -> None:
     """
@@ -227,6 +257,7 @@ def test_log_msg_enabled(tmp_path, module) -> None:
 
     assert filename.read_text(encoding="UTF-8") == ERROR_MESSAGE + "\n"
     assert len(list(tmp_path.iterdir())) == 1
+
 
 def test_log_msg_enabled_fail_json(tmp_path, module) -> None:
     """

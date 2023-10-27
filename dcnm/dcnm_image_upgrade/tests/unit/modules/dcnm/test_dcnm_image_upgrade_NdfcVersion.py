@@ -6,10 +6,9 @@ description: Verify functionality of NdfcVersion
 from typing import Any, Dict
 
 import pytest
-from ansible_collections.ansible.netcommon.tests.unit.modules.utils import (
-    AnsibleFailJson,
-)
-from dcnm_image_upgrade.dcnm_image_upgrade import (NdfcVersion)
+from ansible_collections.ansible.netcommon.tests.unit.modules.utils import \
+    AnsibleFailJson
+from dcnm_image_upgrade.dcnm_image_upgrade import NdfcVersion
 from dcnm_image_upgrade.tests.unit.modules.dcnm.fixture import load_fixture
 
 
@@ -18,6 +17,7 @@ def response_data_ndfc_version(key: str) -> Dict[str, str]:
     response = load_fixture(response_file).get(key)
     print(f"response_data_ndfc_version: {key} : {response}")
     return response
+
 
 class MockAnsibleModule:
     params = {}
@@ -46,13 +46,14 @@ def test_init_properties(module) -> None:
     assert module.properties.get("ndfc_response") == None
     assert module.properties.get("ndfc_result") == None
 
+
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_dev_false", False),
-            ("NdfcVersion_dev_true", True),
-            ("NdfcVersion_dev_none", None)
-        ]
+    "key, expected",
+    [
+        ("NdfcVersion_dev_false", False),
+        ("NdfcVersion_dev_true", True),
+        ("NdfcVersion_dev_none", None),
+    ],
 )
 def test_dev(monkeypatch, module, key, expected) -> None:
     """
@@ -85,11 +86,11 @@ def test_dev(monkeypatch, module, key, expected) -> None:
 
 
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_install_EASYFABRIC", "EASYFABRIC"),
-            ("NdfcVersion_install_none", None)
-        ]
+    "key, expected",
+    [
+        ("NdfcVersion_install_EASYFABRIC", "EASYFABRIC"),
+        ("NdfcVersion_install_none", None),
+    ],
 )
 def test_install(monkeypatch, module, key, expected) -> None:
     """
@@ -119,13 +120,14 @@ def test_install(monkeypatch, module, key, expected) -> None:
     module.refresh()
     assert module.install == expected
 
+
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_is_ha_enabled_true", True),
-            ("NdfcVersion_is_ha_enabled_false", False),
-            ("NdfcVersion_is_ha_enabled_none", None)
-        ]
+    "key, expected",
+    [
+        ("NdfcVersion_is_ha_enabled_true", True),
+        ("NdfcVersion_is_ha_enabled_false", False),
+        ("NdfcVersion_is_ha_enabled_none", None),
+    ],
 )
 def test_is_ha_enabled(monkeypatch, module, key, expected) -> None:
     """
@@ -157,14 +159,13 @@ def test_is_ha_enabled(monkeypatch, module, key, expected) -> None:
     assert module.is_ha_enabled == expected
 
 
-
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_is_media_controller_true", True),
-            ("NdfcVersion_is_media_controller_false", False),
-            ("NdfcVersion_is_media_controller_none", None)
-        ]
+    "key, expected",
+    [
+        ("NdfcVersion_is_media_controller_true", True),
+        ("NdfcVersion_is_media_controller_false", False),
+        ("NdfcVersion_is_media_controller_none", None),
+    ],
 )
 def test_is_media_controller(monkeypatch, module, key, expected) -> None:
     """
@@ -196,13 +197,14 @@ def test_is_media_controller(monkeypatch, module, key, expected) -> None:
     module.refresh()
     assert module.is_media_controller == expected
 
+
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_is_upgrade_inprogress_true", True),
-            ("NdfcVersion_is_upgrade_inprogress_false", False),
-            ("NdfcVersion_is_upgrade_inprogress_none", None)
-        ]
+    "key, expected",
+    [
+        ("NdfcVersion_is_upgrade_inprogress_true", True),
+        ("NdfcVersion_is_upgrade_inprogress_false", False),
+        ("NdfcVersion_is_upgrade_inprogress_none", None),
+    ],
 )
 def test_is_upgrade_inprogress(monkeypatch, module, key, expected) -> None:
     """
@@ -263,6 +265,7 @@ def test_ndfc_data_present(monkeypatch, module) -> None:
     module.refresh()
     assert isinstance(module.ndfc_data, dict)
 
+
 def test_ndfc_data_not_present(monkeypatch, module) -> None:
     """
     Function description:
@@ -287,6 +290,7 @@ def test_ndfc_data_not_present(monkeypatch, module) -> None:
     )
     with pytest.raises(AnsibleFailJson):
         module.refresh()
+
 
 def test_ndfc_result_200(monkeypatch, module) -> None:
     """
@@ -313,7 +317,8 @@ def test_ndfc_result_200(monkeypatch, module) -> None:
         "dcnm_image_upgrade.dcnm_image_upgrade.dcnm_send", mock_dcnm_send
     )
     module.refresh()
-    assert module.ndfc_result == {'found': True, 'success': True}
+    assert module.ndfc_result == {"found": True, "success": True}
+
 
 def test_ndfc_result_404(monkeypatch, module) -> None:
     """
@@ -341,6 +346,7 @@ def test_ndfc_result_404(monkeypatch, module) -> None:
     )
     with pytest.raises(AnsibleFailJson):
         module.refresh()
+
 
 def test_ndfc_result_500(monkeypatch, module) -> None:
     """
@@ -371,11 +377,7 @@ def test_ndfc_result_500(monkeypatch, module) -> None:
 
 
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_mode_LAN", "LAN"),
-            ("NdfcVersion_mode_none", None)
-        ]
+    "key, expected", [("NdfcVersion_mode_LAN", "LAN"), ("NdfcVersion_mode_none", None)]
 )
 def test_mode(monkeypatch, module, key, expected) -> None:
     """
@@ -407,11 +409,8 @@ def test_mode(monkeypatch, module, key, expected) -> None:
 
 
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_uuid_UUID", "foo-uuid"),
-            ("NdfcVersion_uuid_none", None)
-        ]
+    "key, expected",
+    [("NdfcVersion_uuid_UUID", "foo-uuid"), ("NdfcVersion_uuid_none", None)],
 )
 def test_uuid(monkeypatch, module, key, expected) -> None:
     """
@@ -441,12 +440,10 @@ def test_uuid(monkeypatch, module, key, expected) -> None:
     module.refresh()
     assert module.uuid == expected
 
+
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_version_12.1.3b", "12.1.3b"),
-            ("NdfcVersion_version_none", None)
-        ]
+    "key, expected",
+    [("NdfcVersion_version_12.1.3b", "12.1.3b"), ("NdfcVersion_version_none", None)],
 )
 def test_version(monkeypatch, module, key, expected) -> None:
     """
@@ -476,12 +473,10 @@ def test_version(monkeypatch, module, key, expected) -> None:
     module.refresh()
     assert module.version == expected
 
+
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_version_12.1.3b", "12"),
-            ("NdfcVersion_version_none", None)
-        ]
+    "key, expected",
+    [("NdfcVersion_version_12.1.3b", "12"), ("NdfcVersion_version_none", None)],
 )
 def test_version_major(monkeypatch, module, key, expected) -> None:
     """
@@ -515,12 +510,10 @@ def test_version_major(monkeypatch, module, key, expected) -> None:
     module.refresh()
     assert module.version_major == expected
 
+
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_version_12.1.3b", "1"),
-            ("NdfcVersion_version_none", None)
-        ]
+    "key, expected",
+    [("NdfcVersion_version_12.1.3b", "1"), ("NdfcVersion_version_none", None)],
 )
 def test_version_minor(monkeypatch, module, key, expected) -> None:
     """
@@ -554,12 +547,10 @@ def test_version_minor(monkeypatch, module, key, expected) -> None:
     module.refresh()
     assert module.version_minor == expected
 
+
 @pytest.mark.parametrize(
-        "key, expected",
-        [
-            ("NdfcVersion_version_12.1.3b", "3b"),
-            ("NdfcVersion_version_none", None)
-        ]
+    "key, expected",
+    [("NdfcVersion_version_12.1.3b", "3b"), ("NdfcVersion_version_none", None)],
 )
 def test_version_patch(monkeypatch, module, key, expected) -> None:
     """
@@ -592,4 +583,3 @@ def test_version_patch(monkeypatch, module, key, expected) -> None:
     )
     module.refresh()
     assert module.version_patch == expected
-

@@ -4,6 +4,8 @@ from dcnm_image_upgrade.dcnm_image_upgrade import NdfcEndpoints
 ndfc_version: 12
 description: Verify that class NdfcEndpoints returns the correct endpoints
 """
+
+
 def test_dcnm_image_upgrade_endpoints_init() -> None:
     """
     Endpoints.__init__
@@ -12,12 +14,28 @@ def test_dcnm_image_upgrade_endpoints_init() -> None:
     endpoints.__init__()
     assert endpoints.endpoint_api_v1 == "/appcenter/cisco/ndfc/api/v1"
     assert endpoints.endpoint_feature_manager == "/appcenter/cisco/ndfc/api/v1/fm"
-    assert endpoints.endpoint_image_management == "/appcenter/cisco/ndfc/api/v1/imagemanagement"
-    assert endpoints.endpoint_image_upgrade == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade"
+    assert (
+        endpoints.endpoint_image_management
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement"
+    )
+    assert (
+        endpoints.endpoint_image_upgrade
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade"
+    )
     assert endpoints.endpoint_lan_fabric == "/appcenter/cisco/ndfc/api/v1/lan-fabric"
-    assert endpoints.endpoint_package_mgnt == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/packagemgnt"
-    assert endpoints.endpoint_policy_mgnt == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt"
-    assert endpoints.endpoint_staging_management == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement"
+    assert (
+        endpoints.endpoint_package_mgnt
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/packagemgnt"
+    )
+    assert (
+        endpoints.endpoint_policy_mgnt
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt"
+    )
+    assert (
+        endpoints.endpoint_staging_management
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_bootflash_info() -> None:
     """
@@ -25,7 +43,11 @@ def test_dcnm_image_upgrade_endpoints_bootflash_info() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.bootflash_info.get("verb") == "GET"
-    assert endpoints.bootflash_info.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imagemgnt/bootFlash/bootflash-info"
+    assert (
+        endpoints.bootflash_info.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imagemgnt/bootFlash/bootflash-info"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_install_options() -> None:
     """
@@ -33,7 +55,11 @@ def test_dcnm_image_upgrade_endpoints_install_options() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.install_options.get("verb") == "POST"
-    assert endpoints.install_options.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade/install-options"
+    assert (
+        endpoints.install_options.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade/install-options"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_image_stage() -> None:
     """
@@ -41,7 +67,10 @@ def test_dcnm_image_upgrade_endpoints_image_stage() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.image_stage.get("verb") == "POST"
-    assert endpoints.image_stage.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/stage-image"
+    assert (
+        endpoints.image_stage.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/stage-image"
+    )
 
 
 def test_dcnm_image_upgrade_endpoints_image_upgrade() -> None:
@@ -50,7 +79,11 @@ def test_dcnm_image_upgrade_endpoints_image_upgrade() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.image_upgrade.get("verb") == "POST"
-    assert endpoints.image_upgrade.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade/upgrade-image"
+    assert (
+        endpoints.image_upgrade.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/imageupgrade/upgrade-image"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_image_validate() -> None:
     """
@@ -58,7 +91,11 @@ def test_dcnm_image_upgrade_endpoints_image_validate() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.image_validate.get("verb") == "POST"
-    assert endpoints.image_validate.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/validate-image"
+    assert (
+        endpoints.image_validate.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/validate-image"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_issu_info() -> None:
     """
@@ -66,7 +103,11 @@ def test_dcnm_image_upgrade_endpoints_issu_info() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.issu_info.get("verb") == "GET"
-    assert endpoints.issu_info.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/packagemgnt/issu"
+    assert (
+        endpoints.issu_info.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/packagemgnt/issu"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_ndfc_version() -> None:
     """
@@ -74,7 +115,11 @@ def test_dcnm_image_upgrade_endpoints_ndfc_version() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.ndfc_version.get("verb") == "GET"
-    assert endpoints.ndfc_version.get("path") == "/appcenter/cisco/ndfc/api/v1/fm/about/version"
+    assert (
+        endpoints.ndfc_version.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/fm/about/version"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_policies_attached_info() -> None:
     """
@@ -82,7 +127,11 @@ def test_dcnm_image_upgrade_endpoints_policies_attached_info() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.policies_attached_info.get("verb") == "GET"
-    assert endpoints.policies_attached_info.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/all-attached-policies"
+    assert (
+        endpoints.policies_attached_info.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/all-attached-policies"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_policies_info() -> None:
     """
@@ -90,7 +139,11 @@ def test_dcnm_image_upgrade_endpoints_policies_info() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.policies_info.get("verb") == "GET"
-    assert endpoints.policies_info.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/policies"
+    assert (
+        endpoints.policies_info.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/policies"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_policy_attach() -> None:
     """
@@ -98,7 +151,11 @@ def test_dcnm_image_upgrade_endpoints_policy_attach() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.policy_attach.get("verb") == "POST"
-    assert endpoints.policy_attach.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/attach-policy"
+    assert (
+        endpoints.policy_attach.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/attach-policy"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_policy_create() -> None:
     """
@@ -106,7 +163,11 @@ def test_dcnm_image_upgrade_endpoints_policy_create() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.policy_create.get("verb") == "POST"
-    assert endpoints.policy_create.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/platform-policy"
+    assert (
+        endpoints.policy_create.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/platform-policy"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_policy_detach() -> None:
     """
@@ -114,7 +175,11 @@ def test_dcnm_image_upgrade_endpoints_policy_detach() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.policy_detach.get("verb") == "DELETE"
-    assert endpoints.policy_detach.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/detach-policy"
+    assert (
+        endpoints.policy_detach.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/detach-policy"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_policy_info() -> None:
     """
@@ -122,7 +187,11 @@ def test_dcnm_image_upgrade_endpoints_policy_info() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.policy_info.get("verb") == "GET"
-    assert endpoints.policy_info.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/image-policy/__POLICY_NAME__"
+    assert (
+        endpoints.policy_info.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/policymgnt/image-policy/__POLICY_NAME__"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_stage_info() -> None:
     """
@@ -130,7 +199,11 @@ def test_dcnm_image_upgrade_endpoints_stage_info() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.stage_info.get("verb") == "GET"
-    assert endpoints.stage_info.get("path") == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/stage-info"
+    assert (
+        endpoints.stage_info.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/imagemanagement/rest/stagingmanagement/stage-info"
+    )
+
 
 def test_dcnm_image_upgrade_endpoints_switches_info() -> None:
     """
@@ -138,7 +211,11 @@ def test_dcnm_image_upgrade_endpoints_switches_info() -> None:
     """
     endpoints = NdfcEndpoints()
     assert endpoints.switches_info.get("verb") == "GET"
-    assert endpoints.switches_info.get("path") == "/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/inventory/allswitches"
+    assert (
+        endpoints.switches_info.get("path")
+        == "/appcenter/cisco/ndfc/api/v1/lan-fabric/rest/inventory/allswitches"
+    )
+
 
 # Example of using monkeypatch if we need to patch a property
 # Not needed in this case, but keep this around for reference
